@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons'; // For icons
-import { RootLayout } from '../navigation/RootLayout'; // Assuming RootLayout exists
+import { RootLayout } from '../navigation/RootLayout';
 
 export const MoodResultScreen = ({ navigation }) => {
   return (

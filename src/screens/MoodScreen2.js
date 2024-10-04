@@ -1,12 +1,41 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useContext } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import {RootLayout} from '../navigation/RootLayout'
+import { AuthenticatedUserContext } from '../providers';
+import { getFirestore, doc, addDoc, collection } from 'firebase/firestore';
+import { auth, firestore } from '../config';
 
-export const MoodScreen2 = ({ navigation }) => {
+export const MoodScreen2 = ({ route, navigation }) => {
   const [description, setDescription] = useState('');
+  const { userType } = useContext(AuthenticatedUserContext);
+  const { mood } = route.params;
+
+  const handleSave = async () => {
+    const user = auth.currentUser;
+
+    if (user) {
+      try {
+        const userId = user.uid;
+        const userMoodRef = doc(firestore, 'users', userId);
+        const moodRef = collection(userMoodRef, 'moodTrackings');
+        await addDoc(moodRef, {
+          mood,
+          description,
+          timestamp: new Date(),
+        });
+        Alert.alert('Success', 'Your mood has been saved.');
+        navigation.navigate('MoodResult');
+      } catch (error) {
+        console.error('Error saving mood:', error);
+        Alert.alert('Error', 'Failed to save your mood. Please try again.');
+      }
+    } else {
+      console.error('User not authenticated!');
+    }
+  };
 
   return (
-    <RootLayout screenName={'MoodScreen2'} navigation={navigation}>
+    <RootLayout screenName={'Mood'} navigation={navigation} userType={userType}>
     <View style={styles.container}>
       
       {/* Prompt Message */}
@@ -26,8 +55,11 @@ export const MoodScreen2 = ({ navigation }) => {
       />
 
       {/* Next Button */}
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('MoodResult')}>
-        <Text style={styles.buttonText}>Next</Text>
+      <TouchableOpacity 
+        style={styles.button} 
+        onPress={handleSave}
+      >
+        <Text style={styles.buttonText}>Save</Text>
       </TouchableOpacity>
     </View>
     </RootLayout>
@@ -55,13 +87,13 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 10,
     padding: 10,
-    height: 150, // Makes it larger like a textarea
+    height: 150,
     fontSize: 16,
     textAlignVertical: 'top',
     marginBottom: 20,
   },
   button: {
-    backgroundColor: '#6200EE', // Purple button
+    backgroundColor: '#6200EE',
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',

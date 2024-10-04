@@ -1,8 +1,10 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useContext } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, interpolateColor } from 'react-native-reanimated';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
+import { RootLayout } from '../navigation/RootLayout';
+import { AuthenticatedUserContext } from '../providers';
 
 const { width, height } = Dimensions.get('window');
 const GRID_SIZE = 10;
@@ -15,7 +17,7 @@ const GRID_WIDTH = GRID_SIZE * (DOT_SIZE + GAP_SIZE) - GAP_SIZE;
 const colorPalette = {
   highEnergyLowPleasant: { base: '#CC3300', highlight: '#FF6347' },
   lowEnergyLowPleasant: { base: '#CC9900', highlight: '#FFD700' },
-  highEnergyHighPleasant: { base: '#006699', highlight: '#4682B4' },
+  highEnergyHighPleasant: { base: '#006699' , highlight: '#4682B4' },
   lowEnergyHighPleasant: { base: '#006600', highlight: '#32CD32' }
 };
 
@@ -134,6 +136,7 @@ const MoodDot = ({ x, y, colorInfo, panX, panY, moodIndex }) => {
 
 
 export const MoodMeterScreen = ({ navigation }) => {
+  const { userType } = useContext(AuthenticatedUserContext);
   const [selectedMood, setSelectedMood] = useState('');
   const [selectedColor, setSelectedColor] = useState(null);
   const panX = useSharedValue(0);
@@ -189,40 +192,44 @@ export const MoodMeterScreen = ({ navigation }) => {
 
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>How are you feeling right now?</Text>
-
-      <View style={styles.leftLabelContainer}>
-        <Text style={styles.energyLabel}>High Energy</Text>
-        <Text style={styles.energyLabel}>Low Energy</Text>
-      </View>
-
-      <PanGestureHandler onGestureEvent={handleGesture}>
-        <View style={styles.gridContainer}>
-          {renderMoodDots}
+    <RootLayout screenName={'Mood'} navigation={navigation} userType={userType}>
+      <View style={styles.container}>
+        <Text style={styles.title}>How are you feeling right now?</Text>
+        <View style={styles.leftLabelContainer}>
+          <Text style={styles.energyLabel}>High Energy</Text>
+          <Text style={styles.energyLabel}>Low Energy</Text>
         </View>
-      </PanGestureHandler>
 
-      <View style={styles.bottomLabelContainer}>
-        <Text style={styles.pleasantnessLabel}>Low Pleasantness</Text>
-        <Text style={styles.pleasantnessLabel}>High Pleasantness</Text>
-      </View>
+        <PanGestureHandler onGestureEvent={handleGesture}>
+          <View style={styles.gridContainer}>
+             {renderMoodDots}
+          </View>
+        </PanGestureHandler>
 
-      <View style={styles.moodTextContainer}>
-        <Text style={styles.moodText}>
-          {selectedMood ? "You are feeling " : "Select a mood"}
-        </Text>
-        {selectedMood && (
-          <Text style={[styles.moodText, styles.highlightedMood, { color: selectedColor }]}>
-           {selectedMood}
+        <View style={styles.bottomLabelContainer}>
+          <Text style={styles.pleasantnessLabel}>Low Pleasantness</Text>
+          <Text style={styles.pleasantnessLabel}>High Pleasantness</Text>
+        </View>
+
+        <View style={styles.moodTextContainer}>
+          <Text style={styles.moodText}>
+            {selectedMood ? "You are feeling " : "Select a mood"}
           </Text>
-        )}
-      </View>
+          {selectedMood && (
+            <Text style={[styles.moodText, styles.highlightedMood, { color: selectedColor }]}>
+              {selectedMood}
+            </Text>
+          )}
+        </View>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Mood2')}>
-        <Text style={styles.buttonText}>Next</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: selectedColor }]} 
+          onPress={() => navigation.navigate('Mood2', { mood: selectedMood })}
+        >
+          <Text style={styles.buttonText}>Next</Text>
+        </TouchableOpacity>
+      </View>
+    </RootLayout>
   );
 };
 
@@ -232,7 +239,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#FFFFFF',
   },
   title: {
     fontSize: 26,
@@ -303,11 +310,10 @@ pleasantnessLabel:{
     marginLeft: 4,
   },
   button: {
-    marginTop: 20,
-    backgroundColor: "#4682B4",
+    marginBottom: 20,
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
+    paddingHorizontal: 25,
+    borderRadius: 10,
     bottom: -70,
   },
   buttonText: {
