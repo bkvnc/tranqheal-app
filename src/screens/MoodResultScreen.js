@@ -4,7 +4,7 @@ import { RootLayout } from '../navigation/RootLayout';
 
 export const MoodResultScreen = ({ navigation }) => {
   return (
-    <RootLayout screenName={'MoodResultScreen'} navigation={navigation}>
+    <RootLayout screenName={'Mood'} navigation={navigation}>
       <View style={styles.container}>
        
         {/* Message Box */}
