@@ -5,10 +5,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { RootLayout } from '../navigation/RootLayout';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { auth, firestore } from '../config';
+import { auth, firestore, storage } from '../config';
 import { AuthenticatedUserContext } from '../providers';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../config';
 
 
 export const ProfileScreen = () => {

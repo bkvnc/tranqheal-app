@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
     backgroundColor: Colors.white,
-    elevation: 3, // for shadow on Android
+    elevation: 3,
   },
   logo: {
     width: 150,
@@ -108,12 +108,12 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   iconContainer: {
-    padding: 5, // Adjust the padding to your liking
-    borderRadius: 20, // Rounded corners
+    padding: 5,
+    borderRadius: 20,
   },
   activeIconContainer: {
     padding: 10,
     borderRadius: 20,
-    backgroundColor: Colors.lightpurple, // Change this to your desired highlight color
+    backgroundColor: Colors.lightpurple,
   },
 });

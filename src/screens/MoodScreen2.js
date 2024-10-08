@@ -9,8 +9,10 @@ export const MoodScreen2 = ({ route, navigation }) => {
   const [description, setDescription] = useState('');
   const { userType } = useContext(AuthenticatedUserContext);
   const { mood } = route.params;
+
   const handleSave = async () => {
     const user = auth.currentUser;
+
     if (user) {
       try {
         const userId = user.uid;
@@ -35,7 +37,7 @@ export const MoodScreen2 = ({ route, navigation }) => {
   return (
     <RootLayout screenName={'Mood'} navigation={navigation} userType={userType}>
     <View style={styles.container}>
-
+      
       {/* Prompt Message */}
       <View style={styles.promptContainer}>
         <Text style={styles.promptText}>
@@ -96,4 +98,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
   },
-})
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+});
