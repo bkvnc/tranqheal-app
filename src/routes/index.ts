@@ -1,3 +1,4 @@
+
 import { lazy } from 'react';
 
 const Calendar = lazy(() => import('../pages/Calendar'));
@@ -47,6 +48,8 @@ const RemoveProfessional = lazy(() => import('../pages/CustomPages/ProfessionalM
 //FORUM MANAGEMENT
  const BlacklistedWords = lazy(() => import('../pages/CustomPages/ForumManagement/BlackListedWords'));
  const ManageForum = lazy(() => import('../pages/CustomPages/ForumManagement/ManageForum'));
+
+
 
 
 const coreRoutes = [
