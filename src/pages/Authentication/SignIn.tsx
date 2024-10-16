@@ -4,20 +4,41 @@ import Logo from '../../images/tranqheal/tq_logo_white.png';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import { useState } from 'react';
+import Alert from '../UiElements/Alerts';
 
 const SignIn = () => {
-   const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const navigate = useNavigate(); // Initialize useNavigate
+
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Simple email regex
+    return re.test(String(email).toLowerCase());
+  };
 
   const handleSignIn = async (event: React.FormEvent) => {
     event.preventDefault();
+    setAlert(null);
+
+    // Validation
+    if (!validateEmail(email)) {
+      setAlert({ type: 'error', message:'Please enter a valid email address.'});
+      return;
+    }
+    
+    if (password.length < 6) {
+      setAlert({ type: 'error', message:'Password must be at least 6 characters long.'});
+      return;
+    }
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
       console.log("User signed in successfully");
       navigate('/'); // Redirect to homepage on successful login
     } catch (error) {
       console.error("Error signing in", error);
+      setAlert({ type: 'error', message:'Failed to sign in. Please check your credentials.'}); // Set error state for authentication errors
     }
   };
 
@@ -157,6 +178,7 @@ const SignIn = () => {
           </div>
 
           <div className="w-full border-stroke dark:border-strokedark xl:w-1/2 xl:border-l-2">
+          {alert && <Alert type={alert.type} message={alert.message} />}
             <div className="w-full p-4 sm:p-12.5 xl:p-17.5">
               <h2 className="mb-9 text-2xl font-bold text-black dark:text-white sm:text-title-xl2">
                 Sign In to TranqHeal

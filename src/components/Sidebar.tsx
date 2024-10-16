@@ -408,7 +408,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen}: SidebarProps) => {
               </SidebarLinkGroup>
               </>
               )}
-          
+            {userData?.userType === 'admin' && (
+              <>
+            
               {/* <!-- Menu Item Mental Health ORganization Management --> */}
               <SidebarLinkGroup
                 activeCondition={
@@ -513,7 +515,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen}: SidebarProps) => {
                   );
                 }}
               </SidebarLinkGroup>
-          
+              </>
+            )}
           
 
             {/* <!-- Menu Item Forum Management --> */}    

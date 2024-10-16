@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
-import { Camera, Upload, AlertCircle } from 'lucide-react';
+import { Camera, Upload } from 'lucide-react';
 import Alert from '../pages/UiElements/Alerts';
 
 interface UserData {
@@ -118,7 +118,7 @@ const Profile: React.FC = () => {
         
         <div className="relative h-64">
           <img
-            src={userData?.backgroundPicture || '/path/to/default/cover.png'}
+            src={userData?.backgroundPicture || '../images/cover/cover-01.png'}
             alt="profile cover"
             className="w-full h-full object-cover"
           />
@@ -143,7 +143,7 @@ const Profile: React.FC = () => {
           <div className="absolute -top-20 left-1/2 transform -translate-x-1/2">
             <div className="relative">
               <img 
-                src={userData?.profilePicture || '/path/to/default/profile.png'}
+                src={userData?.profilePicture || '../images/profile/profile-01.jpg'}
                 alt="profile"
                 className="w-40 h-40 rounded-full border-4 border-white dark:border-gray-700 shadow-lg object-cover"
               />
