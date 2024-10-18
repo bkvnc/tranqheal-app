@@ -1,36 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import { getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
-import { Camera, Upload, AlertCircle } from 'lucide-react';
+import { Camera, Upload } from 'lucide-react';
+import Alert from '../pages/UiElements/Alerts';
 
 interface UserData {
-  organizationName: string;
+  organizationName?: string;
+  adminName?: string;
   profilePicture?: string;
   backgroundPicture?: string;
+  userType: 'organization' | 'admin';
 }
 
-interface AlertMessage {
-  type: 'success' | 'error';
-  message: string;
-}
 
 const Profile: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [backgroundPicture, setBackgroundPicture] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<AlertMessage | null>(null);
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null); // Updated alert state
 
   useEffect(() => {
     const fetchUserData = async () => {
       const user = auth.currentUser;
       if (user) {
-        const userDocRef = doc(db, 'organizations', user.uid);
-        const userDoc = await getDoc(userDocRef);
+        // First, try to fetch from 'organizations' collection
+        let userDocRef = doc(db, 'organizations', user.uid);
+        let userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+          // If not found in 'organizations', try 'admins' collection
+          userDocRef = doc(db, 'admins', user.uid);
+          userDoc = await getDoc(userDocRef);
+        }
+
         if (userDoc.exists()) {
           setUserData(userDoc.data() as UserData);
         } else {
           console.log('No such document!');
+
         }
       }
     };
@@ -49,7 +57,7 @@ const Profile: React.FC = () => {
         } else {
           setBackgroundPicture(base64String);
         }
-        setAlertMessage({ type: 'success', message: `${type.charAt(0).toUpperCase() + type.slice(1)} picture selected. Click "Upload" to save changes.` });
+        setAlert({ type: "success", message: 'picture selected. Click "Upload" to save changes."' });
       };
       reader.readAsDataURL(file);
     }
@@ -57,20 +65,21 @@ const Profile: React.FC = () => {
 
   const handleImageUpload = async (type: 'profile' | 'background') => {
     const user = auth.currentUser;
-    if (!user) {
-      setAlertMessage({ type: 'error', message: 'User not authenticated. Please log in and try again.' });
+    if (!user || !userData) {
+      setAlert({ type: "error", message: "User not authenticated or data not loaded. Please log in and try again." });
       return;
     }
 
     const imageData = type === 'profile' ? profilePicture : backgroundPicture;
     if (!imageData) {
-      setAlertMessage({ type: 'error', message: `No ${type} picture selected. Please choose an image first.` });
+      setAlert({ type: "error", message: `No ${type} picture selected. Please choose an image first.` });
       return;
     }
 
     setIsUploading(true);
     try {
-      const userDocRef = doc(db, 'organizations', user.uid);
+      const collectionName = userData.userType === 'organization' ? 'organizations' : 'admins';
+      const userDocRef = doc(db, collectionName, user.uid);
       await updateDoc(userDocRef, {
         [type === 'profile' ? 'profilePicture' : 'backgroundPicture']: imageData,
       });
@@ -86,27 +95,30 @@ const Profile: React.FC = () => {
         setBackgroundPicture(null);
       }
 
-      setAlertMessage({ type: 'success', message: `${type.charAt(0).toUpperCase() + type.slice(1)} picture uploaded successfully! The page will refresh in 3 seconds.` });
+      setAlert({ type: "success", message: "User data updated successfully." });
       
       // Set a timeout to refresh the page after 3 seconds
       setTimeout(() => {
         window.location.reload();
-      }, 3000);
+      }, 1000);
 
     } catch (error) {
       console.error('Error uploading image:', error);
-      setAlertMessage({ type: 'error', message: `Failed to upload ${type} picture. Please try again.` });
+      setAlert({ type: "error", message: `Failed to upload ${type} picture. Please try again.` });
     } finally {
       setIsUploading(false);
     }
   };
 
   return (
+    
     <div className="max-w-4xl mx-auto p-4">
+      
       <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+        
         <div className="relative h-64">
           <img
-            src={userData?.backgroundPicture || '/path/to/default/cover.png'}
+            src={userData?.backgroundPicture || '../images/cover/cover-01.png'}
             alt="profile cover"
             className="w-full h-full object-cover"
           />
@@ -131,7 +143,7 @@ const Profile: React.FC = () => {
           <div className="absolute -top-20 left-1/2 transform -translate-x-1/2">
             <div className="relative">
               <img 
-                src={userData?.profilePicture || '/path/to/default/profile.png'}
+                src={userData?.profilePicture || '../images/profile/profile-01.jpg'}
                 alt="profile"
                 className="w-40 h-40 rounded-full border-4 border-white dark:border-gray-700 shadow-lg object-cover"
               />
@@ -151,24 +163,15 @@ const Profile: React.FC = () => {
               </label>
             </div>
           </div>
-
+         
           <div className="text-center mt-16">
             <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">
-              {userData ? userData.organizationName : 'Loading...'}
+              {userData ? (userData.userType === 'organization' ? userData.organizationName : userData.adminName) : 'Loading...'}
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 mt-2">Organization</p>
+            <p className="text-gray-600 dark:text-gray-300 mt-2">
+              {userData ? (userData.userType === 'organization' ? 'Organization' : 'Admin') : ''}
+            </p>
           </div>
-
-          {alertMessage && (
-            <div className={`mt-4 p-4 border rounded-lg flex items-center space-x-2 ${
-              alertMessage.type === 'success' 
-                ? 'bg-green-100 dark:bg-green-900 border-green-400 text-green-700 dark:text-green-400' 
-                : 'bg-red-100 dark:bg-red-900 border-red-400 text-red-700 dark:text-red-400'
-            }`}>
-              <AlertCircle className={`h-5 w-5 ${alertMessage.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
-              <span className="font-medium">{alertMessage.message}</span>
-            </div>
-          )}
 
           {(profilePicture || backgroundPicture) && (
             <div className="mt-6 text-center">
@@ -202,9 +205,13 @@ const Profile: React.FC = () => {
               )}
             </div>
           )}
+           
         </div>
+        {alert && <Alert type={alert.type} message={alert.message} />} {/* Use Alert component */}
       </div>
+      
     </div>
+    
   );
 };
 

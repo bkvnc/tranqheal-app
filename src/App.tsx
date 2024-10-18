@@ -66,7 +66,7 @@ function App() {
             })}
           </Route>
         ) : (
-          <Route path="*" element={<SignIn />} /> // Redirect to SignIn if not authenticated
+          <Route path="*" element={<SignIn />} /> // Redirect to Signin if not authenticated
         )}
       </Routes>
     </>

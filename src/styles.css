@@ -1,0 +1,47 @@
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    text-align: center;
+  }
+  
+  .alert-error {
+    background-color: #f8d7da; /* Light red background */
+    color: #721c24; /* Dark red text */
+    border: 1px solid #f5c6cb; /* Border color */
+  }
+  
+  .alert-success {
+    background-color: #d4edda; /* Light green background */
+    color: #155724; /* Dark green text */
+    border: 1px solid #c3e6cb; /* Border color */
+  }
+  
+  /* styles.css */
+
+/* Error message styling */
+.error-message {
+  color: red; /* Change the text color to red */
+  font-size: 0.875rem; /* Font size for the error message */
+  margin-top: 0.25rem; /* Space between input and error message */
+}
+
+/* Input field with error border */
+.error-input {
+  border-color: red; /* Change border color to red for error states */
+}
+
+/* Additional styles for your inputs, if needed */
+.input {
+  border: 1px solid #d1d5db; /* Default border color (light gray) */
+  border-radius: 0.375rem; /* Rounded corners */
+  padding: 0.75rem; /* Padding inside the input */
+  width: 100%; /* Full width */
+}
+
+/* Optional: Styles for focus state */
+.input:focus {
+  border-color: #3b82f6; /* Change border color on focus (blue) */
+  outline: none; /* Remove outline */
+}
