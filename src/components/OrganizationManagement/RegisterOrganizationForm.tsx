@@ -22,13 +22,23 @@ interface FormData {
 }
 
 interface UserData {
-    email: string;
-    userType: UserType;
-    createdAt: any;
     organizationName?: string;
+    address?: string;
+    phoneNumber?: string;
+    email?: string;
+    servicesOffered?: string[];
+    timeStart?: string;
+    timeEnd?: string;
+    days?: string[];
+    username?: string;
+    userType?: string;
     adminName?: string;
     profilePicture?: string;
     backgroundPicture?: string;
+    createdAt?: any;
+    lastLogin?: any;
+    status?: string;
+    subscriptionPlan?: string;
 }
 
 const Register: React.FC = () => {

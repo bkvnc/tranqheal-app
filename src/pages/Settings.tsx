@@ -11,7 +11,7 @@ type UserData = {
   organizationName?: string;
   address?: string;
   phoneNumber?: string;
-  emailAddress?: string;
+  email?: string;
   servicesOffered?: string[];
   timeStart?: string;
   timeEnd?: string;
@@ -356,17 +356,17 @@ const Settings = () => {
                       </div>
                     )}
                   <div className="mb-5.5 mt-5">
-                    <label className="mb-3 block text-sm font-medium text-black dark:text-white" htmlFor="emailAddress">
+                    <label className="mb-3 block text-sm font-medium text-black dark:text-white" htmlFor="email">
                       Email Address
                     </label>
                     <div className="relative">
                       <input
                         className="w-full rounded border border-stroke bg-gray py-3 pl-11.5 pr-4.5 text-black focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-primary"
                         type="email"
-                        name="emailAddress"
-                        id="emailAddress"
+                        name="email"
+                        id="email"
                         placeholder="Enter email address"
-                        value={userData.emailAddress || ""}
+                        value={userData.email || ""}
                         onChange={handleChange}
                       />
                     </div>

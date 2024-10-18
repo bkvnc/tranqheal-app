@@ -128,7 +128,13 @@ const AllOrganizationTable: React.FC = () => {
       </div>
 
       {/* Organization Data Rows */}
-      {organizations.map((org) => (
+      
+      {organizations.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center">No organizations found</td>
+                </tr>
+              ) : (
+                        organizations.map((org) => (
         <div key={org.orgId} className="grid grid-cols-6 border-t border-stroke py-4.5 px-4 dark:border-strokedark sm:grid-cols-10 md:px-6 2xl:px-7.5">
           <div className="col-span-2 flex items-center">
             <p className="text-sm text-black dark:text-white">{org.organizationName}</p>
@@ -148,7 +154,8 @@ const AllOrganizationTable: React.FC = () => {
             <p className="text-sm text-black dark:text-white">{org.subscriptionPlan}</p>
           </div>
         </div>
-      ))}
+      ))
+    )}
 
       {/* Pagination Controls */}
       <div className="flex justify-center mt-4">

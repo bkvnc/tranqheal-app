@@ -2,9 +2,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import LogoDark from '../../images/tranqheal/tq_logo_white.png';
 import Logo from '../../images/tranqheal/tq_logo_white.png';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../config/firebase';
+import { auth, db } from '../../config/firebase';
+import { doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { useState } from 'react';
 import Alert from '../UiElements/Alerts';
+
+
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
@@ -23,22 +26,47 @@ const SignIn = () => {
 
     // Validation
     if (!validateEmail(email)) {
-      setAlert({ type: 'error', message:'Please enter a valid email address.'});
+      setAlert({ type: 'error', message: 'Please enter a valid email address.' });
       return;
     }
     
     if (password.length < 6) {
-      setAlert({ type: 'error', message:'Password must be at least 6 characters long.'});
+      setAlert({ type: 'error', message: 'Password must be at least 6 characters long.' });
       return;
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log("User signed in successfully");
-      navigate('/'); // Redirect to homepage on successful login
+
+      const user = userCredential.user;
+
+      // Check if user is in organizations or admins
+      const orgRef = doc(db, 'organizations', user.uid);
+      const adminRef = doc(db, 'admins', user.uid);
+
+      const orgSnap = await getDoc(orgRef);
+      const adminSnap = await getDoc(adminRef);
+
+      if (orgSnap.exists()) {
+        // User is an organization
+        await updateDoc(orgRef, {
+          lastLogin: Timestamp.now()
+        });
+        navigate('/'); // Navigate to organization dashboard or home
+      } else if (adminSnap.exists()) {
+        // User is an admin
+        await updateDoc(adminRef, {
+          lastLogin: Timestamp.now()
+        });
+        navigate('/'); // Navigate to admin dashboard or home
+      } else {
+        // User not found in either collection
+        setAlert({ type: 'error', message: 'User not found. Please check your credentials.' });
+      }
     } catch (error) {
       console.error("Error signing in", error);
-      setAlert({ type: 'error', message:'Failed to sign in. Please check your credentials.'}); // Set error state for authentication errors
+      setAlert({ type: 'error', message: 'Failed to sign in. Please check your credentials.' });
     }
   };
 
