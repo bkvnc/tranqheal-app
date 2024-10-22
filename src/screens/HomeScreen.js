@@ -7,9 +7,9 @@ import { auth, firestore } from '../config';
 import { AuthenticatedUserContext } from '../providers';
 
 export const HomeScreen = ({ navigation }) => {
-    const { userType } = useContext(AuthenticatedUserContext);
-    const [profileData, setProfileData] = useState(null);
-    const [refreshing, setRefreshing] = useState(false);
+  const { userType } = useContext(AuthenticatedUserContext);
+  const [profileData, setProfileData] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchProfileData = async () => {
     const userId = auth.currentUser.uid;
