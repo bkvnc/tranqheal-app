@@ -4,7 +4,8 @@
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react-jsx" // Use "react" for older React versions
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.js", "**/*.ts", "**/*.tsx"]
 }
