@@ -6,7 +6,7 @@ import SignUp from './pages/Authentication/SignUp';
 import Loader from './common/Loader';
 import routes from './routes';
 import Dasboard from './pages/Dashboard/Home';
-import { auth } from './config/firebase'; // Assuming Firebase auth setup
+import { auth } from './config/firebase'; // Assuming Firebase has auth setup
 
 const DefaultLayout = lazy(() => import('./layout/DefaultLayout'));
 
