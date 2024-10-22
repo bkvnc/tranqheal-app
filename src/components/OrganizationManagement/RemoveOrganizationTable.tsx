@@ -10,6 +10,7 @@ import {
   endBefore,
   QueryDocumentSnapshot,
   deleteDoc,
+  updateDoc,
   doc,
   Timestamp,
 } from "firebase/firestore";
@@ -113,6 +114,22 @@ const RemoveOrganizationTable: React.FC = () => {
     }
   };
 
+  const handleEditOrganizationStatus = async (orgId: string, newStatus: string) => {
+    try {
+      const orgRef = doc(db, "organizations", orgId);
+      await updateDoc(orgRef, { status: newStatus });
+      setOrganizations((prev) =>
+        prev.map((org) =>
+          org.orgId === orgId ? { ...org, status: newStatus } : org
+        )
+      );
+      setAlert({ type: "success", message: `Organization status updated to ${newStatus}` });
+    } catch (error) {
+      console.error("Error updating organization status: ", error);
+      setAlert({ type: "error", message: "Error updating organization status." });
+    }
+  };
+
   const handleDeleteOrganization = async (orgId: string) => {
     try {
       const orgRef = doc(db, "organizations", orgId);
@@ -141,7 +158,7 @@ const RemoveOrganizationTable: React.FC = () => {
     org.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
 
   return (
     <>
@@ -151,7 +168,7 @@ const RemoveOrganizationTable: React.FC = () => {
           <div className="flex items-center">
             <input
               type="text"
-              placeholder="Search responder by name or email"
+              placeholder="Search organization by name or email"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="mb-3 w-100 rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
@@ -207,12 +224,23 @@ const RemoveOrganizationTable: React.FC = () => {
                       </p>
                     </td>
                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                      <p className="text-sm text-black dark:text-white">{org.status}</p>
-                    </td>
+                    {org.status === "active" ? (
+                      <p className="inline-flex rounded-full bg-success bg-opacity-10 py-1 px-3 text-sm font-medium text-success">
+                        Active
+                      </p>
+                    ) : (
+                      <p className="inline-flex rounded-full bg-danger bg-opacity-10 py-1 px-3 text-sm font-medium text-danger">
+                        Inactive
+                      </p>
+                    )}
+                  </td>
                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                      <button className="hover:text-primary">
-                        {/* Action Icons */}
-                      </button>
+                        <button
+                          className="hover:text-primary"
+                          onClick={() => handleEditOrganizationStatus(org.orgId, org.status === 'active' ? 'inactive' : 'active')}
+                        >
+                          {org.status === 'active' ? 'Set Inactive' : 'Set Active'}
+                        </button>
                       <button className="hover:text-primary ml-2" onClick={() => handleDeleteOrganization(org.orgId)}>
                         Delete
                       </button>

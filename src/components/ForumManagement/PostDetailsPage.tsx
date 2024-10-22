@@ -1,4 +1,4 @@
-// PostDetailsPage.tsx
+
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -23,9 +23,20 @@ interface Comment {
     postId: string;
 }
 
+interface Post {
+    id: string;
+    content: string;
+    dateCreated: any; // Use an appropriate type for the date
+    author: string;
+    authorId: string;
+    userReactions: string[]; // Array of user IDs who reacted
+    reacts: number; // Count of total reactions
+}
+
+
 const PostDetailsPage: React.FC = () => {
     const { postId } = useParams<{ postId: string }>();
-    const [post, setPost] = useState<any>(null);
+    const [post, setPost] = useState<Post | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [comments, setComments] = useState<Comment[]>([]);
@@ -35,6 +46,8 @@ const PostDetailsPage: React.FC = () => {
     const [showComments, setShowComments] = useState<boolean>(false);
     const [showCommentForm, setShowCommentForm] = useState<boolean>(false);
     const [hasReacted, setHasReacted] = useState<boolean>(false);
+    const [anonymous, setAnonymous] = useState<boolean>(false);
+    const [creatingComment, setCreatingComment] = useState<boolean>(false); 
 
     useEffect(() => {
         const fetchPostById = async () => {
@@ -47,7 +60,14 @@ const PostDetailsPage: React.FC = () => {
                 const docRef = doc(db, 'posts', postId);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
-                    setPost({ id: postId, ...docSnap.data() });
+                    const postData = { id: postId, ...docSnap.data() } as Post; // Cast the fetched data to Post
+                    setPost(postData);
+    
+                    // Check if the current user has reacted
+                    const userId = auth.currentUser?.uid;
+                    if (userId) {
+                        setHasReacted(postData.userReactions?.includes(userId) || false);
+                    }
                 } else {
                     setError('Post not found');
                 }
@@ -57,16 +77,16 @@ const PostDetailsPage: React.FC = () => {
                 setLoading(false);
             }
         };
-
+    
         const unsubscribeComments = onSnapshot(collection(db, 'comments'), (snapshot) => {
             const commentsData = snapshot.docs
                 .filter(doc => doc.data().postId === postId)
                 .map(doc => ({ id: doc.id, ...doc.data() })) as Comment[];
             setComments(commentsData);
         });
-
+    
         fetchPostById();
-
+    
         return () => {
             unsubscribeComments();
         };
@@ -75,27 +95,34 @@ const PostDetailsPage: React.FC = () => {
     const toggleHeart = async () => {
         const userId = auth.currentUser?.uid;
         if (!post || !userId) return;
-
+    
         const newReactions = new Set(post.userReactions || []);
+        
+        // Toggle the user's reaction
         if (hasReacted) {
-            newReactions.delete(userId);
+            newReactions.delete(userId); // Remove reaction
         } else {
-            newReactions.add(userId);
+            newReactions.add(userId); // Add reaction
         }
-
+    
+        // Create the updated post object
         const updatedPost = {
             ...post,
             userReactions: Array.from(newReactions),
             reacts: newReactions.size,
         };
-
+    
+        // Update Firestore document
         await updateDoc(doc(db, 'posts', postId), updatedPost);
+        
+        // Update local state
         setPost(updatedPost);
-        setHasReacted(!hasReacted);
+        setHasReacted(!hasReacted); // Toggle the local reaction state
     };
-
+    
     const handleAddComment = async (e: React.FormEvent) => {
         e.preventDefault();
+        setCreatingComment(true);
         if (commentContent.trim() === '' || !auth.currentUser) return;
 
         const currentDate = new Date();
@@ -103,19 +130,68 @@ const PostDetailsPage: React.FC = () => {
 
         try {
             const commentRef = collection(db, 'comments');
+            let authorName = 'Unknown User';
+    
+                // Assuming you have user types stored in separate collections
+                const userRef = doc(db, 'users', user.uid);
+                const orgRef = doc(db, 'organizations', user.uid);
+                const profRef = doc(db, 'professionals', user.uid);
+
+                const userDoc = await getDoc(userRef);
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    authorName = `${userData.firstName} ${userData.lastName}`; // For users
+                } else {
+                    const orgDoc = await getDoc(orgRef);
+                    if (orgDoc.exists()) {
+                        const orgData = orgDoc.data();
+                        authorName = orgData.organizationName; // For organizations
+                    } else {
+                        const profDoc = await getDoc(profRef);
+                        if (profDoc.exists()) {
+                            const profData = profDoc.data();
+                            authorName = `${profData.firstName} ${profData.lastName}`; // For professionals
+                        }
+                    }
+                }
+
             await addDoc(commentRef, {
                 content: commentContent,
                 dateCreated: currentDate,
-                author: user.displayName || 'Anonymous',
+                author: anonymous ? 'Anonymous' : authorName,
                 authorId: user.uid,
                 postId: postId,
             });
+
+            
             setCommentContent('');
             setShowCommentForm(false);
         } catch (error) {
             console.error('Failed to add comment:', error);
+        }finally {
+            setCreatingComment(false);
         }
     };
+
+    const formattedDate = (date) => {
+        const now = dayjs();
+        const createdDate = dayjs(date.toDate());
+        const diffInSeconds = now.diff(createdDate, 'second');
+        const diffInMinutes = now.diff(createdDate, 'minute');
+        const diffInHours = now.diff(createdDate, 'hour');
+        const diffInDays = now.diff(createdDate, 'day');
+    
+        if (diffInSeconds < 60) {
+            return `${diffInSeconds} second${diffInSeconds !== 1 ? 's' : ''} ago`;
+        } else if (diffInMinutes < 60) {
+            return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`;
+        } else if (diffInHours < 24) {
+            return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
+        } else {
+            return createdDate.format('MMM D, YYYY'); // Format for older posts
+        }
+    };
+    
 
     const handleDeleteComment = async (commentId: string) => {
         const commentDocRef = doc(db, 'comments', commentId);
@@ -147,7 +223,7 @@ const PostDetailsPage: React.FC = () => {
         }
     };
 
-    if (loading) return <div className="text-center py-5">Loading...</div>;
+    if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
     if (error) return <div className="text-red-500">{error}</div>;
 
     return (
@@ -161,42 +237,46 @@ const PostDetailsPage: React.FC = () => {
 
             {/* Reaction Section */}
             <div className="flex items-center mb-6">
-                <motion.button
-                    onClick={toggleHeart}
-                    className={`flex items-center px-3 py-2 rounded-md transition-all duration-200 ${hasReacted ? 'bg-red-100 text-red-500' : 'bg-gray-100 text-gray-400'} shadow-md hover:shadow-lg`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2}
+            <motion.button
+                onClick={toggleHeart}
+                className={`flex items-center px-3 py-2 rounded-md transition-all duration-200 ${hasReacted ? 'text-danger' : 'bg-gray-100 text-gray-400'}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="ionicon" viewBox="0 0 512 512" width={20} height={20}>
+                    <path
+                        d="M352.92 80C288 80 256 144 256 144s-32-64-96.92-64c-52.76 0-94.54 44.14-95.08 96.81-1.1 109.33 86.73 187.08 183 252.42a16 16 0 0018 0c96.26-65.34 184.09-143.09 183-252.42-.54-52.67-42.32-96.81-95.08-96.81z"
+                        fill={hasReacted ? 'currentColor' : 'none'}
                         stroke="currentColor"
-                        className="w-6 h-6"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                    </svg>
-                    <span className="ml-2 font-semibold">{post.reacts} {post.reacts === 1 ? 'Heart' : 'Hearts'}</span>
-                </motion.button>
-                <button
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="32"
+                    />
+                </svg>
+                <span className="ml-2 font-semibold">
+                    {post.reacts} {post.reacts === 1 ? 'react' : 'reactions'}
+                </span>
+            </motion.button>
+            
+            <button
                 onClick={() => setShowComments(!showComments)}
-                className="mb-4 px-4 py-2 bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 transition"
+                className=" px-4 py-2 font-semibold rounded-md dark:text-white hover:text-white hover:bg-[#9F4FDD] transition"
             >
                 {showComments ? 'Hide Comments' : `Show Comments (${comments.length})`}
             </button>
-            </div>
+        </div>
 
-            {/* Comments Toggle Button */}
+
+          
           
 
             {/* Comments Section */}
             {showComments && (
                 <div className="mb-6">
-                    <h2 className="text-lg font-semibold mb-2">Comments</h2>
+                    <h2 className="text-lg font-semibold  mb-2">Comments</h2>
                     <button
                         onClick={() => setShowCommentForm(!showCommentForm)}
-                        className="mb-4 px-4 py-2 bg-green-500 text-white rounded-md shadow hover:bg-success transition"
+                        className="mb-4 px-4 py-2 bg-green-500 font-semibold rounded-md dark:text-white hover:text-white hover:bg-[#9F4FDD] transition"
                     >
                         {showCommentForm ? 'Cancel' : 'Write a Comment'}
                     </button>
@@ -206,7 +286,7 @@ const PostDetailsPage: React.FC = () => {
                                 <li key={comment.id} className="p-4 bg-gray-50 border border-gray-200 rounded-md shadow">
                                     <p className="text-gray-800">{comment.content}</p>
                                     <p className="text-sm text-gray-500">
-                                        By <a href={`/profile/${comment.authorId}`} className="text-blue-500 hover:underline">{comment.author}</a> on {dayjs(comment.dateCreated.toDate()).format('MMM D, YYYY')}
+                                        By <a href={`/profile/${comment.authorId}`} className="text-blue-500 hover:underline">{comment.author}</a> on {formattedDate(comment.dateCreated)}
                                     </p>
                                     {comment.authorId === auth.currentUser?.uid && (
                                         <div className="flex space-x-2 mt-2">
@@ -248,9 +328,22 @@ const PostDetailsPage: React.FC = () => {
                         className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                     />
-                    <button type="submit" className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md transition hover:bg-blue-600">
-                        Add Comment
-                    </button>
+                    <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={anonymous}
+                                    onChange={(e) => setAnonymous(e.target.checked)}
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-sm">Post anonymously</span>
+                            </label>
+                            <button
+                                type="submit"
+                                disabled={creatingComment}
+                                className="ml-auto px-6 py-2 bg-green-600 hover:bg-[#9F4FDD] hover:text-white dark:text-white rounded-md hover:bg-green-700 transition"
+                            >
+                                {creatingComment ? 'Posting...' : 'Post'}
+                            </button>   
                 </form>
             )}
 
@@ -279,6 +372,7 @@ const PostDetailsPage: React.FC = () => {
                     </div>
                 </form>
             )}
+            
         </div>
     );
 };

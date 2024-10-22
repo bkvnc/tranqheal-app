@@ -4,7 +4,7 @@
 // import CardTwo from '../../../components/CardTwo.tsx';
 
 
-import MyForumTable from "../../../components/ForumManagement/MyForumTable";
+import MyForumTable from '../../../components/ForumManagement/MyForumTables';
 
 const MyForum = () => {
     return (
