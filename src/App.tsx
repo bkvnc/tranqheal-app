@@ -6,6 +6,8 @@ import SignUp from './pages/Authentication/SignUp';
 import Loader from './common/Loader';
 import routes from './routes';
 import Dasboard from './pages/Dashboard/Home';
+import { auth } from './config/firebase'; 
+import 'tailwindcss/tailwind.css';
 import { auth } from './config/firebase'; // Assuming Firebase has auth setup
 
 const DefaultLayout = lazy(() => import('./layout/DefaultLayout'));
@@ -58,7 +60,7 @@ function App() {
                   path={path}
                   element={
                     <Suspense fallback={<Loader />}>
-                      <Component />
+                      <Component/>
                     </Suspense>
                   }
                 />

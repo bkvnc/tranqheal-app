@@ -2,8 +2,9 @@ const defaultTheme = require('tailwindcss/defaultTheme')
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  content: ["./public/index.html", './src/**/*.{js,ts,jsx,tsx}',  "./node_modules/flowbite/**/*.js"],
   darkMode: 'class',
+  mode: 'jit', // Enable JIT mode
   theme: {
     fontFamily: {
       satoshi: ['Satoshi', 'sans-serif'],
@@ -250,5 +251,7 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    
+  ],
 }

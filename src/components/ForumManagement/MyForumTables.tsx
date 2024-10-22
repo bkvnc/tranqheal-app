@@ -8,6 +8,11 @@ import { NavLink } from 'react-router-dom';
 interface UserData {
     userType: string;
     organizationName?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    profilePicture?: string;
+    profileImage?: string;
 }
 
 interface Forum {
@@ -18,10 +23,12 @@ interface Forum {
     totalComments: number | null;
     tags: string[];
     status: string;
-    reacts: number | null;
     description: string;
     authorName: string;
     authorType: string;
+    authorId: string;
+    totalPosts: number | null;
+    
 }
 
 const MyForumTable: React.FC = () => {
@@ -98,6 +105,12 @@ const MyForumTable: React.FC = () => {
 
         try {
             const forumRef = collection(db, 'forums');
+            const user = auth.currentUser; // Get the current user
+
+            if (!user) {
+                throw new Error('User not authenticated');
+            }
+
             await addDoc(forumRef, {
                 title,
                 description,
@@ -107,13 +120,15 @@ const MyForumTable: React.FC = () => {
                 tags,
                 totalMembers: 0,
                 totalUpvotes: 0,
+                authorId: user.uid, // Store authorId here
                 authorName: userData?.organizationName || 'Anonymous',
                 authorType: userData?.userType || 'user',
             });
             setAlert({ type: 'success', message: 'Forum created successfully!' });
             setTimeout(() => {
-                setAlert(null); // Optionally clear the alert
-            }, 3000)
+                setAlert(null);
+                window.location.reload(); 
+            }, 1000);
 
             handleModalClose(); // Close modal and reset form
         } catch (error) {
@@ -165,8 +180,7 @@ const MyForumTable: React.FC = () => {
                                 <th className="min-w-[150px] py-4 px-4 font-medium text-black dark:text-white">Title</th>
                                 <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">Date Posted</th>
                                 <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">Members</th>
-                                <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">Total Comments</th>
-                                <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">Total Reactions</th>
+                                <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">Total Posts</th>
                                 <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">Status</th>
                                 <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
                             </tr>
@@ -187,10 +201,7 @@ const MyForumTable: React.FC = () => {
                                         <p className="text-black dark:text-white">{forum.totalMembers || 0}</p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <p className="text-black dark:text-white">{forum.totalComments || 0}</p>
-                                    </td>
-                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <p className="text-black dark:text-white">{forum.reacts || 0}</p>
+                                        <p className="text-black dark:text-white">{forum.totalPosts|| 0}</p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <p className={`inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium 

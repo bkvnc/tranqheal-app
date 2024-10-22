@@ -1,4 +1,5 @@
 
+import { Ticket } from 'lucide-react';
 import { lazy } from 'react';
 
 const Calendar = lazy(() => import('../pages/Calendar'));
@@ -48,8 +49,10 @@ const RemoveProfessional = lazy(() => import('../pages/CustomPages/ProfessionalM
 //FORUM MANAGEMENT
  const BlacklistedWords = lazy(() => import('../pages/CustomPages/ForumManagement/BlackListedWords'));
  const ManageForum = lazy(() => import('../pages/CustomPages/ForumManagement/ManageForum'));
+ const MyForum = lazy(() => import('../pages/CustomPages/ForumManagement/MyForum'));
+const ForumDetails = lazy(() => import('../pages/CustomPages/ForumManagement/ForumDetails'));
+const PostDetailsPage = lazy(() => import('../pages/CustomPages/ForumManagement/PostDetailsPage'));
 
-//login
 
 
 
@@ -58,6 +61,22 @@ const coreRoutes = [
     path: '/calls',
     title: 'calls',
     component: LatestCalls,
+  },
+  {
+    path: '/posts/:postId',
+    title: 'Post Details',
+    component: PostDetailsPage,
+  },
+  {
+    path: '/forums/:forumId',
+    title: 'Forum Details',
+    component: ForumDetails,
+  },
+  {
+    path: '/myforum',
+    title: 'myforum',
+    component: MyForum,
+
   },
   {
     path: '/manage-forum',
@@ -150,7 +169,7 @@ const coreRoutes = [
     component: Calendar,
   },
   {
-    path: '/profile',
+    path: '/profile/:authorId',
     title: 'Profile',
     component: Profile,
   },
