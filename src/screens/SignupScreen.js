@@ -4,9 +4,9 @@ import { Formik } from 'formik';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { View, TextInput, Logo, Button, FormErrorMessage } from '../components';
-import { Images, Colors, auth, firestore } from '../src/config';
-import { useTogglePasswordVisibility } from '../src/hooks';
-import { signupValidationSchema, createUserInFirestore } from '../src/utils';
+import { Images, Colors, auth, firestore } from '../config';
+import { useTogglePasswordVisibility } from '../hooks';
+import { signupValidationSchema, createUserInFirestore } from '../utils';
 
 export const SignupScreen = ({ navigation, route }) => {
   const [errorState, setErrorState] = useState('');

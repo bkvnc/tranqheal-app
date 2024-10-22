@@ -254,7 +254,11 @@ export const MoodMeterScreen = ({ navigation }) => {
         )}
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Mood2')}>
+      <TouchableOpacity style={styles.button} 
+        onPress={() => {
+          console.log('Selected mood: ', selectedMood);
+          navigation.navigate('Mood2', { selectedMood });
+        }}>
         <Text style={styles.buttonText}>Next</Text>
       </TouchableOpacity>
     </View>

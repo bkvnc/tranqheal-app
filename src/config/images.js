@@ -1,3 +1,3 @@
 export const Images = {
-    logo: require("../src/assets/tranqheal-logo.png"),
+    logo: require("../assets/tranqheal-logo.png"),
   };  

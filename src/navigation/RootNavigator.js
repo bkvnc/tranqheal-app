@@ -6,9 +6,9 @@ import { doc, getDoc } from "firebase/firestore";
 import { AuthStack } from "./AuthStack";
 import { AppStack } from "./AppStack";
 import { ProfessionalStack } from "./ProfessionalStack";
-import { AuthenticatedUserContext } from "../../shared/providers";
+import { AuthenticatedUserContext } from "../providers";
 import { LoadingIndicator } from "../components";
-import { auth, firestore } from "../../shared/config";
+import { auth, firestore } from "../config";
 
 const navigationRef = React.createRef();
 

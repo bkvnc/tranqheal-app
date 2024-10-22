@@ -29,7 +29,7 @@ export const MoodScreen = ({ navigation }) => {
           <Text style={styles.buttonText}>LET'S DO IT</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.buttonSecondary}>
+        <TouchableOpacity style={styles.button}>
           <Text style={styles.buttonText}>Show Mood Logs</Text>
         </TouchableOpacity>
       </View>
@@ -81,12 +81,6 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
     marginBottom: 20,
-  },
-  buttonSecondary: {
-    backgroundColor: '#9C27B0', // Slightly lighter purple
-    paddingVertical: 15,
-    borderRadius: 30,
-    alignItems: 'center',
   },
   buttonText: {
     color: '#fff',
