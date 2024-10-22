@@ -8,6 +8,7 @@ import routes from './routes';
 import Dasboard from './pages/Dashboard/Home';
 import { auth } from './config/firebase'; 
 import 'tailwindcss/tailwind.css';
+import { auth } from './config/firebase'; // Assuming Firebase has auth setup
 
 const DefaultLayout = lazy(() => import('./layout/DefaultLayout'));
 
@@ -67,7 +68,7 @@ function App() {
             })}
           </Route>
         ) : (
-          <Route path="*" element={<SignIn />} /> // Redirect to SignIn if not authenticated
+          <Route path="*" element={<SignIn />} /> // Redirect to Signin if not authenticated
         )}
       </Routes>
     </>
