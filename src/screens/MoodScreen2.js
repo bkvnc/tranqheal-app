@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import {RootLayout} from '../navigation/RootLayout'
 
-export const MoodScreen2 = ({ navigation }) => {
+export const MoodScreen2 = ({ route, navigation }) => {
+  
   const [description, setDescription] = useState('');
 
   return (

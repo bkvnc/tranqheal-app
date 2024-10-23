@@ -51,6 +51,7 @@ const moodData = {
   ]
 };
 
+
 const MoodDot = React.memo(({ x, y, colorInfo, panX, panY, moodIndex, isInteracting }) => {
   const animatedScale = useSharedValue(1);
   const animatedTranslateX = useSharedValue(0);
@@ -182,6 +183,7 @@ MoodGrid.propTypes = {
 
 export const MoodMeterScreen = ({ navigation }) => {
   const [selectedMood, setSelectedMood] = useState('');
+  const [selectedEmoji, setSelectedEmoji] = useState('');
   const [selectedColor, setSelectedColor] = useState(null);
   const panX = useSharedValue(0);
   const panY = useSharedValue(0);

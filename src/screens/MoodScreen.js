@@ -26,7 +26,7 @@ export const MoodScreen = ({ navigation }) => {
           <Text style={styles.buttonText}>LET'S DO IT</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.buttonSecondary}>
+        <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('MoodLogs')}>
           <Text style={styles.buttonText}>Show Mood Logs</Text>
         </TouchableOpacity>
       </View>
