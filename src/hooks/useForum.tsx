@@ -14,6 +14,8 @@ import {
     arrayRemove,
     arrayUnion,
 } from 'firebase/firestore';
+
+import {containsBlacklistedWords} from '../components/utils/validationUtils';
 import { Forum, Post } from './types'; // Adjust the import path for your types
 
 const useForum = (forumId: string) => {
@@ -26,6 +28,9 @@ const useForum = (forumId: string) => {
     const [isAuthor, setIsAuthor] = useState<boolean>(false);
     const [creatingPost, setCreatingPost] = useState<boolean>(false); // State to track post creation
     const [anonymous, setAnonymous] = useState<boolean>(false); // State for anonymous posts
+    const [highlightedContent, setHighlightedContent] = useState<string>(''); 
+    const [blacklistedWords, setBlacklistedWords] = useState<string[]>([]);
+    const [postContent, setPostContent] = useState<string>(''); 
 
     const fetchForumById = async (forumId: string) => {
         const docRef = doc(db, 'forums', forumId);
@@ -89,8 +94,30 @@ const useForum = (forumId: string) => {
             setError(`Failed to update membership: ${error?.message || 'An unknown error occurred'}`);
         }
     };
+    const handlePostContentChange = (e) => {
+        const content = e.target.value;
+        setPostContent(content); // Update the state
+        
+        // Update highlighted content in real-time
+        const highlighted = highlightBlacklistedWords(content, blacklistedWords);
+        setHighlightedContent(highlighted);
+    };
 
-    const handleCreatePost = async (content: string, anonymous: boolean) => {
+    const highlightBlacklistedWords = (content, blacklistedWords) => {
+        // Implement your logic to highlight blacklisted words
+        const regex = new RegExp(`\\b(${blacklistedWords.join('|')})\\b`, 'gi');
+        return content.replace(regex, (match) => `<span style="color:red;">${match}</span>`);
+    };
+
+    const handleSubmitPost = async (e) => {
+        e.preventDefault(); // Prevent the default form submission
+
+        // Validate blacklisted words
+        if (containsBlacklistedWords(postContent, blacklistedWords)) {
+            setAlert({ type: 'error', message: 'Your post contains inappropriate language and cannot be submitted.' });
+            return;
+        }
+
         const user = auth.currentUser;
         if (user && forum) {
             try {
@@ -101,19 +128,21 @@ const useForum = (forumId: string) => {
                     const userData = userDoc.data();
                     authorName = `${userData.firstName} ${userData.lastName}`;
                 }
-    
+
                 setCreatingPost(true); // Start post creation
                 await addDoc(collection(db, 'posts'), {
-                    content,
+                    content: postContent,
                     dateCreated: new Date(),
                     author: anonymous ? 'Anonymous' : authorName,
                     authorId: user.uid,
                     forumId: forum.id,
                 });
-                
+
+                // Fetch updated posts after creation
                 const updatedPosts = await fetchPostsByForumId(forum.id);
                 setPosts(updatedPosts);
                 setAlert({ type: 'success', message: 'Post created successfully!' });
+                setPostContent(''); // Reset content after posting
             } catch (error) {
                 setError(`Failed to create post: ${error?.message || 'An unknown error occurred'}`);
             } finally {
@@ -121,6 +150,7 @@ const useForum = (forumId: string) => {
             }
         }
     };
+    
 
     const handleDeletePost = async (postId: string) => {
         try {
@@ -140,12 +170,18 @@ const useForum = (forumId: string) => {
         alert,
         isMember,
         isAuthor,
-        creatingPost, // Return creatingPost state
-        anonymous, // Return anonymous state
-        setAnonymous, // Allow setting anonymous state
+        creatingPost, 
+        anonymous,
+        highlightedContent,
+        postContent,
+        setAnonymous,
         handleJoinLeaveForum,
-        handleCreatePost,
+        setPostContent,
         handleDeletePost,
+        handleSubmitPost,
+        handlePostContentChange,
+        setBlacklistedWords,
+        
     };
 };
 

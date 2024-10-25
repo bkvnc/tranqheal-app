@@ -51,7 +51,8 @@ const RemoveProfessional = lazy(() => import('../pages/CustomPages/ProfessionalM
  const MyForum = lazy(() => import('../pages/CustomPages/ForumManagement/MyForum'));
 const ForumDetails = lazy(() => import('../pages/CustomPages/ForumManagement/ForumDetails'));
 const PostDetailsPage = lazy(() => import('../pages/CustomPages/ForumManagement/PostDetailsPage'));
-
+const ViewUserProfile = lazy(() => import('../pages/CustomPages/UserManagement/UserProfilePage'));
+const ViewPendingPosts = lazy(() => import('../pages/CustomPages/ForumManagement/ViewPendingPosts'));
 
 
 
@@ -65,6 +66,16 @@ const coreRoutes = [
     path: '/posts/:postId',
     title: 'Post Details',
     component: PostDetailsPage,
+  },
+  {
+    path: '/users/:userId',
+    title: 'View User Profile',
+    component: ViewUserProfile,
+  },
+  {
+    path: '/pending-posts',
+    title: 'Pending Posts',
+    component: ViewPendingPosts,
   },
   {
     path: '/forums/:forumId',
@@ -172,6 +183,7 @@ const coreRoutes = [
     title: 'Profile',
     component: Profile,
   },
+ 
   {
     path: '/forms/form-elements',
     title: 'Forms Elements',

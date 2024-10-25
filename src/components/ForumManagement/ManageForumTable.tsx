@@ -1,10 +1,9 @@
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
 import Alert from '../../pages/UiElements/Alerts';
 import dayjs from 'dayjs'; 
-import { NavLink } from "react-router-dom";
 
 interface UserData {
     userType: string;
@@ -28,12 +27,18 @@ interface Forum {
     description: string;
     authorName: string;
     authorType: string;
+    reports: number | null;
+    authorId: string;
+    email: string;
 }
 
 const ManageForumTable = () => {
     const [userData, setUserData] = useState<UserData | null>(null);
     const [forums, setForums] = useState<Forum[]>([]);
     const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const forumsPerPage = 5; // Items per page
+    const [searchTerm, setSearchTerm] = useState<string>("");
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -59,7 +64,7 @@ const ManageForumTable = () => {
 
                 if (userDoc.exists()) {
                     setUserData(userDoc.data() as UserData);
-                    fetchForums(); // Call fetchForums after setting userData
+                    fetchForums(); // Fetch forums after setting user data
                 } else {
                     console.log('No such document!');
                 }
@@ -75,11 +80,10 @@ const ManageForumTable = () => {
         const forumsData = forumsSnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-            dateCreated: doc.data().dateCreated?.toDate(), // Ensure dateCreated is a Firestore timestamp
+            dateCreated: doc.data().dateCreated?.toDate(), // Convert Firestore timestamp
         } as Forum));
         setForums(forumsData);
     };
-    
 
     const handleDelete = async (forumId: string) => {
         const forumDocRef = doc(db, 'forums', forumId);
@@ -93,13 +97,28 @@ const ManageForumTable = () => {
         }
     };
 
+    // Filter forums by search term
+    const filteredForums = forums.filter(forum =>
+        forum.authorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        forum.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Pagination logic
+    const indexOfLastForum = currentPage * forumsPerPage;
+    const indexOfFirstForum = indexOfLastForum - forumsPerPage;
+    const currentForums = filteredForums.slice(indexOfFirstForum, indexOfLastForum);
+    const totalPages = Math.ceil(filteredForums.length / forumsPerPage);
+
     return (
         <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
+            {alert && <Alert type={alert.type} message={alert.message} />}
             <div className="max-w-full overflow-x-auto">
                 <div className="flex items-center">
                     <input
                         type="text"
-                        placeholder="Search responder by name or email"
+                        placeholder="Search forum by title or author"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         className="mb-3 w-100 rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
                     />
                     <Link
@@ -128,6 +147,9 @@ const ManageForumTable = () => {
                                 Posts
                             </th>
                             <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
+                                Reports
+                            </th>
+                            <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
                                 Status
                             </th>
                             <th className="py-4 px-4 font-medium text-black dark:text-white">
@@ -136,35 +158,42 @@ const ManageForumTable = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {forums.map((forum) => (
-                            <tr key={forum.id}>
-                                <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
-                                    <h5 className="font-medium text-black dark:text-white">
-                                        {forum.authorName} ({forum.authorType})
-                                    </h5>
-                                </td>
-                                <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                    <p className="text-black dark:text-white">{forum.title}</p>
-                                </td>
-                                <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                    <p className="text-black dark:text-white">{dayjs(forum.dateCreated).format('MMM D, YYYY')}</p>
-                                </td>
-                                <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                    <p className="text-black dark:text-white">{forum.totalMembers}</p>
-                                </td>
-                                <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                    <p className="text-black dark:text-white">{forum.totalPosts}</p>
-                                </td>
-
-                                <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                <p className={`inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium 
+                        {currentForums.length === 0 ? (
+                            <tr>
+                                <td colSpan={8} className="text-center">No forums found</td>
+                            </tr>
+                        ) : (
+                            currentForums.map((forum) => (
+                                <tr key={forum.id}>
+                                    <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
+                                        <h5 className="font-medium text-black dark:text-white">
+                                            {forum.authorName} ({forum.authorType})
+                                        </h5>
+                                    </td>
+                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                                        <p className="text-black dark:text-white">{forum.title}</p>
+                                    </td>
+                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                                        <p className="text-black dark:text-white">{dayjs(forum.dateCreated).format('MMM D, YYYY')}</p>
+                                    </td>
+                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                                        <p className="text-black dark:text-white">{forum.totalMembers}</p>
+                                    </td>
+                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                                        <p className="text-black dark:text-white">{forum.totalPosts}</p>
+                                    </td>
+                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                                        <p className="text-black dark:text-white">{forum.reports}</p>
+                                    </td>
+                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                                        <p className={`inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium 
                                             ${forum.status === 'inactive' ? 'bg-danger text-danger' : 
                                             forum.status === 'pending' ? 'bg-warning text-warning' : 
                                             forum.status === 'active' ? 'bg-success text-success' : ''}`}>
                                             {forum.status}
                                         </p>
-                                </td>
-                                <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                                    </td>
+                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <button className="mr-2 text-sm dark:text-white">
                                             <NavLink to={`/forums/${forum.id}`} className="flex items-center justify-center">
                                                 View
@@ -172,19 +201,36 @@ const ManageForumTable = () => {
                                         </button>
                                         <button
                                             onClick={() => handleDelete(forum.id)}
-                                            className="text-sm text-danger"
+                                            className="
+                                            text-sm text-danger hover:underline dark:text-danger"
                                         >
                                             Delete
                                         </button>
                                     </td>
-                            </tr>
-                        ))}
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
-                {/* PAGINATION */}
-                <div className="flex justify-center mt-4">
-                    <button className="bg-blue-500 text-black py-2 px-4 rounded mr-2 dark:text-white">Previous</button>
-                    <button className="bg-blue-500 text-black py-2 px-4 rounded dark:text-white">Next</button>
+                {/* Pagination */}
+                <div className="flex justify-between mt-4">
+                    <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+                    >
+                    Previous
+                    </button>
+                    <div className="flex items-center">
+                    <span>Page {currentPage} of {totalPages}</span>
+                    </div>
+                    <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+                    >
+                    Next
+                    </button>
                 </div>
             </div>
         </div>

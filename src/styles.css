@@ -45,3 +45,7 @@
   border-color: #3b82f6; /* Change border color on focus (blue) */
   outline: none; /* Remove outline */
 }
+.highlight {
+  color: red;
+  font-weight: bold;
+}

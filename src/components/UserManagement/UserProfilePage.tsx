@@ -1,50 +1,87 @@
 import React, { useEffect, useState } from 'react';
 import { getDoc, doc, updateDoc } from 'firebase/firestore';
-import { db, auth } from '../config/firebase';
+import { useParams } from 'react-router-dom';
+import { db, auth } from '../../config/firebase';
 import { Camera, Upload } from 'lucide-react';
-import Alert from '../pages/UiElements/Alerts';
+import Alert from '../../pages/UiElements/Alerts';
 
 interface UserData {
   organizationName?: string;
   adminName?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
+  mobileNumber?: string;
+  facebookLink?: string;
   profilePicture?: string;
   backgroundPicture?: string;
-  userType: 'organization' | 'admin';
+  userType: 'organization' | 'admin' | 'professional'|'seeker';
+  // New fields for organization and professional profiles
+  days?: string[];
+  timeEnd?: string;
+  timeStart?: string;
+  servicesOffered?: string[];
+  ratings?: number;
+  specialty?: string;
+  timeAvailability?: string;
 }
 
 
-const Profile: React.FC = () => {
+const UserProfilePage: React.FC = () => {
+    const { viewId } = useParams<{ viewId: string }>();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [backgroundPicture, setBackgroundPicture] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null); // Updated alert state
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        // First, try to fetch from 'organizations' collection
-        let userDocRef = doc(db, 'organizations', user.uid);
+      try {
+        let userDocRef = doc(db, 'organizations', viewId);
         let userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {
-          // If not found in 'organizations', try 'admins' collection
-          userDocRef = doc(db, 'admins', user.uid);
+          userDocRef = doc(db, 'admins', viewId);
+          userDoc = await getDoc(userDocRef);
+        }
+
+        if (!userDoc.exists()) {
+          userDocRef = doc(db, 'professionals', viewId);
           userDoc = await getDoc(userDocRef);
         }
 
         if (userDoc.exists()) {
-          setUserData(userDoc.data() as UserData);
-        } else {
-          console.log('No such document!');
+          const data = userDoc.data() as UserData;
 
+          // Concatenate time availability fields if they exist
+          const timeAvailability = concatenateTimeAvailability(data.days, data.timeStart, data.timeEnd);
+
+          // Set user data including timeAvailability
+          setUserData({
+            ...data,
+            timeAvailability,
+          });
+        } else {
+          setAlert({ type: 'error', message: 'User not found.' });
         }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        setAlert({ type: 'error', message: 'Failed to fetch user data.' });
       }
     };
 
     fetchUserData();
-  }, []);
+  }, [viewId]);
+
+  const concatenateTimeAvailability = (days?: string[], timeStart?: string, timeEnd?: string): string => {
+    const daysString = days ? days.join(', ') : 'Not available';
+    const timeRange = timeStart && timeEnd ? `${timeStart} - ${timeEnd}` : 'No time set';
+    
+    return `${daysString} | ${timeRange}`;
+  };
+  
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'background') => {
     if (event.target.files && event.target.files[0]) {
@@ -112,9 +149,9 @@ const Profile: React.FC = () => {
 
   return (
     
-    <div className="max-w-4xl mx-auto p-4">
+    <div className="max-w-4xl mx-auto p-4 ">
       
-      <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden  dark:border-strokedark dark:bg-boxdark">
         
         <div className="relative h-64">
           <img
@@ -124,7 +161,7 @@ const Profile: React.FC = () => {
           />
           <label
             htmlFor="background"
-            className="absolute bottom-4 right-4  dark:bg-gray-700 text-gray-700 dark:text-white py-2 px-4 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 transition duration-300 cursor-pointer"
+            className="absolute bottom-4 right-4 bg-[#9F4FDD] text-white dark:bg-gray-700 text-gray-700 dark:text-white py-2 px-4 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 transition duration-300 cursor-pointer"
           >
             <Camera className="inline-block mr-2" size={18} />
             <span>Change Cover</span>
@@ -149,7 +186,7 @@ const Profile: React.FC = () => {
               />
               <label
                 htmlFor="profile"
-                className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full shadow-lg hover:bg-opacity-90 transition duration-300 cursor-pointer"
+                className="absolute bottom-0 right-0 bg-[#9F4FDD] text-white p-2 rounded-full shadow-lg hover:bg-opacity-90 transition duration-300 cursor-pointer"
               >
                 <Camera size={20} />
                 <input
@@ -164,14 +201,54 @@ const Profile: React.FC = () => {
             </div>
           </div>
          
-          <div className="text-center mt-16">
+           <div className="text-center mt-16">
             <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">
               {userData ? (userData.userType === 'organization' ? userData.organizationName : userData.adminName) : 'Loading...'}
             </h3>
             <p className="text-gray-600 dark:text-gray-300 mt-2">
-              {userData ? (userData.userType === 'organization' ? 'Organization' : 'Admin') : ''}
+              {userData?.userType === 'organization' && 'Organization'}
+              {userData?.userType === 'admin' && 'Admin'}
+              {userData?.userType === 'professional' && 'Professional'}
             </p>
           </div>
+
+          {/* Organization-specific information */}
+          {userData?.userType === 'organization' && (
+            <div className="mt-4 text-center">
+              <h4 className="text-lg font-semibold">Services Offered</h4>
+              <ul>
+                {userData.servicesOffered?.map((service, index) => (
+                  <li key={index}>{service}</li>
+                ))}
+              </ul>
+              <h4 className="text-lg font-semibold mt-4">Time Availability</h4>
+                        {userData?.timeAvailability && (
+            <div className="mt-4 text-center">
+              <p className="text-gray-600 dark:text-gray-300">
+                Time Availability: {userData.timeAvailability}
+              </p>
+            </div>
+          )}
+            </div>
+          )}
+
+          {/* Professional-specific information */}
+          {userData?.userType === 'professional' && (
+            <div className="mt-4 text-center">
+              <h4 className="text-lg font-semibold">Specialty</h4>
+              <p>{userData.specialty}</p>
+              <h4 className="text-lg font-semibold mt-4">Ratings</h4>
+              <p>{userData.ratings ?? 'No ratings available'}</p>
+              <h4 className="text-lg font-semibold mt-4">Time Availability</h4>
+              {userData?.timeAvailability && (
+              <div className="mt-4 text-center">
+                <p className="text-gray-600 dark:text-gray-300">
+                  Time Availability: {userData.timeAvailability}
+                </p>
+              </div>
+              )}
+            </div>
+          )}
 
           {(profilePicture || backgroundPicture) && (
             <div className="mt-6 text-center">
@@ -215,4 +292,4 @@ const Profile: React.FC = () => {
   );
 };
 
-export default Profile;
+export default UserProfilePage;
