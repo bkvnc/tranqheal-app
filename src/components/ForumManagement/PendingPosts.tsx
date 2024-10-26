@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where,setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import dayjs from 'dayjs';
 import Alert from '../../pages/UiElements/Alerts';
 import { Link } from 'react-router-dom';
 import {Post} from '../../hooks/types'
+import { sendNotification } from '../../hooks/useNotification';
+import {NotificationTypes} from '../../hooks/notificationTypes';
 
 
 
 const PendingPosts = () => {
     const [posts, setPosts] = useState<Post[]>([]);
     const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [anonymous, setAnonymous] = useState<boolean>(false); // State for anonymous posts
     const [currentPage, setCurrentPage] = useState(1);
     const pendingsPerPage = 5;
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -40,13 +43,75 @@ const PendingPosts = () => {
 
     const handleApprove = async (postId: string) => {
         const postDocRef = doc(db, 'posts', postId);
+        
         try {
+            // Fetch the post to get the authorId
+            const postDoc = await getDoc(postDocRef);
+            if (!postDoc.exists()) {
+                throw new Error('Post does not exist');
+            }
+            
+            const postData = postDoc.data();
+            const authorId = postData.authorId; // Assuming you have an authorId field
+            
+            // Update the post status to 'approved'
             await updateDoc(postDocRef, { status: 'approved' });
+    
+            // Create a notification for the author
+            const notificationData = {
+                message: `Your post "${postData.title}" has been approved!`, // Adjust title based on your data
+                userId: authorId,
+                timestamp: new Date(),
+                isRead: false,
+            };
+            
+            // Add the notification to the notifications collection
+            await setDoc(doc(collection(db, 'notifications'), `${postId}_approved`), notificationData);
+    
+            // Update local posts state
             setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
             setAlert({ type: 'success', message: 'Post approved successfully!' });
+    
         } catch (error) {
             setAlert({ type: 'error', message: 'Error approving post.' });
             console.error('Error approving post:', error);
+        }
+    };
+
+    const handleReject = async (postId: string) => {
+        const postDocRef = doc(db, 'posts', postId);
+        
+        try {
+            // Fetch the post to get the authorId
+            const postDoc = await getDoc(postDocRef);
+            if (!postDoc.exists()) {
+                throw new Error('Post does not exist');
+            }
+            
+            const postData = postDoc.data();
+            const authorId = postData.authorId; // Assuming you have an authorId field
+            
+            // Update the post status to 'rejected'
+            await updateDoc(postDocRef, { status: 'rejected' });
+    
+            // Create a notification for the author
+            const notificationData = {
+                message: `Your post "${postData.title}" has been rejected.`, // Adjust title based on your data
+                userId: authorId,
+                timestamp: new Date(),
+                isRead: false,
+            };
+            
+            // Add the notification to the notifications collection
+            await setDoc(doc(collection(db, 'notifications'), `${postId}_rejected`), notificationData);
+    
+            // Update local posts state
+            setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+            setAlert({ type: 'success', message: 'Post rejected successfully!' });
+    
+        } catch (error) {
+            setAlert({ type: 'error', message: 'Error rejecting post.' });
+            console.error('Error rejecting post:', error);
         }
     };
 
@@ -113,6 +178,12 @@ const PendingPosts = () => {
                                             className="py-1 px-3 bg-green-500 dark:text-white rounded-md hover:bg-success"
                                         >
                                             Approve
+                                        </button>
+                                        <button
+                                            onClick={() => handleReject(post.id)}
+                                            className="py-1 px-3 bg-green-500 dark:text-white rounded-md hover:bg-danger"
+                                        >
+                                            Reject
                                         </button>
                                     </td>
                                 </tr>

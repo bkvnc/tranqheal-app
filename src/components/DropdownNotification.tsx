@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { db } from '../config/firebase';
-import { collection,  orderBy, query,  onSnapshot,Timestamp } from 'firebase/firestore';
+import { db, auth } from '../config/firebase';
+import { collection, where, orderBy, query,  onSnapshot,Timestamp, deleteDoc, getDocs } from 'firebase/firestore';
 import {  markNotificationAsRead } from '../service/notificationService';
-import dayjs from 'dayjs';
+
 
 interface Notification {
   id: string;
@@ -16,9 +16,45 @@ const DropdownNotification = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false); 
 
   const trigger = useRef<HTMLAnchorElement>(  null);
   const dropdown = useRef<HTMLDivElement>(null);
+
+
+  const currentUser = auth.currentUser;
+  
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!currentUser) return;
+
+      setLoading(true);
+      try {
+        const notificationsRef = collection(db, 'notifications');
+        const q = query(notificationsRef, where('userId', '==', currentUser.uid));
+        const snapshot = await getDocs(q);
+
+        const userNotifications: Notification[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          message: doc.data().message,      
+          timestamp: doc.data().timestamp, 
+          isRead: doc.data().isRead || false, 
+          // Add other fields if necessary
+        }));
+
+        setNotifications(userNotifications);
+      } catch (error) {
+        console.error("Error fetching notifications: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, [currentUser]);
+
 
   const formattedDate = (timestamp: Timestamp | null): string => {
     // Check if timestamp is null
@@ -38,12 +74,33 @@ const DropdownNotification = () => {
   };
 
 
-  const clearNotifications = () => {
-   
-    setNotifications([]);
   
-    // await firestore.collection('notifications').doc(userId).delete(); // example
+
+  const clearNotifications = async () => {
+    if (!currentUser) return; // Exit if no user is logged in
+
+    setLoading(true); // Set loading to true
+
+    try {
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(notificationsRef, where('userId', '==', currentUser.uid));
+
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+
+      // Clear local state
+      setNotifications([]);
+      setHasUnreadNotifications(false);
+    } catch (error) {
+      console.error("Error clearing notifications: ", error);
+      // Handle error state if needed
+    } finally {
+      setLoading(false); // Set loading to false after completion
+    }
   };
+
+
   
 
   useEffect(() => {
@@ -143,9 +200,9 @@ const DropdownNotification = () => {
       >
         <div className=" flex items-center justify-between px-4.5 py-3">
           <h5 className="text-sm font-medium text-bodydark2">Notification</h5>
-          <button onClick={clearNotifications} className="clear-button text-xs  flex-row text-bodydark2">
-          Clear Notifications
-        </button>
+          <button onClick={clearNotifications} disabled={loading} className="clear-button text-xs flex-row text-bodydark2">
+            {loading ? "Clearing..." : "Clear Notifications"}
+          </button>
         </div>
        
 
