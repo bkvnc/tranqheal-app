@@ -20,13 +20,12 @@ const ForumDetailsPage: React.FC = () => {
    
     const [creatingPost, setCreatingPost] = useState<boolean>(false); 
 
-    // User status to simplify conditions
     const userStatus = {
         canJoinOrLeave: !isAuthor && !isMember,
+        canAddPosts: isAuthor || isMember,
         canDeletePosts: isAuthor || isMember,
     };
 
-    // Function to format the date, handling possible null or undefined values
     const formattedDate = (date: Date | Timestamp | null): string => {
         if (!date) return 'Unknown date';
         
@@ -117,7 +116,8 @@ const ForumDetailsPage: React.FC = () => {
                 )}
             </div>
 
-            {(isAuthor && !isMember) && (
+            
+            {userStatus.canAddPosts && (
                 <div className="mt-8">
                     <button
                         onClick={() => setShowPostForm(prev => !prev)}

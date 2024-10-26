@@ -86,6 +86,7 @@ const PendingPosts = () => {
                         <tr className="bg-gray-2 text-left dark:bg-meta-4">
                             <th className="py-4 px-4 font-medium text-black dark:text-white">Post ID</th>
                             <th className="py-4 px-4 font-medium text-black dark:text-white">Author</th>
+                            <th className="py-4 px-4 font-medium text-black dark:text-white">Post Content</th>
                             <th className="py-4 px-4 font-medium text-black dark:text-white">Date Created</th>
                             <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
                         </tr>
@@ -102,13 +103,14 @@ const PendingPosts = () => {
                                 <tr key={post.id}>
                                     <td className="border-b py-5 px-4">{post.id}</td>
                                     <td className="border-b py-5 px-4">{post.author}</td>
+                                    <td className="border-b py-5 px-4">{post.content}</td>
                                     <td className="border-b py-5 px-4">
                                         {dayjs(post.dateCreated).format('MMM D, YYYY')}
                                     </td>
                                     <td className="border-b py-5 px-4">
                                         <button
                                             onClick={() => handleApprove(post.id)}
-                                            className="py-1 px-3 bg-green-500 text-white rounded-md hover:bg-success"
+                                            className="py-1 px-3 bg-green-500 dark:text-white rounded-md hover:bg-success"
                                         >
                                             Approve
                                         </button>

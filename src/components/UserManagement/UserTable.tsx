@@ -114,7 +114,7 @@ const UserTable = () => {
               <tr key={user.id}>
                 <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
                   <h5 className="font-medium text-black dark:text-white">
-                    {user.firstName ? `${user.firstName} ${user.lastName}` : user.organizationName}
+                    {user.firstName ? `${user.firstName} ${user.lastName}'s` : 'N/A'}
                   </h5>
                   <p className="text-sm">{user.email}</p>
                 </td>

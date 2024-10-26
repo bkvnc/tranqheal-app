@@ -1,19 +1,58 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { db } from '../config/firebase';
+import { collection,  orderBy, query,  onSnapshot,Timestamp } from 'firebase/firestore';
+import {  markNotificationAsRead } from '../service/notificationService';
+import dayjs from 'dayjs';
+
+interface Notification {
+  id: string;
+  message: string;
+  timestamp: Timestamp; 
+  isRead: boolean;
+}
 
 const DropdownNotification = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
-  const trigger = useRef<any>(null);
-  const dropdown = useRef<any>(null);
+  const trigger = useRef<HTMLAnchorElement>(  null);
+  const dropdown = useRef<HTMLDivElement>(null);
+
+  const formattedDate = (timestamp: Timestamp | null): string => {
+    // Check if timestamp is null
+    if (!timestamp) {
+      return "Unknown date"; // or any default string you want to show
+    }
+  
+    const date = timestamp.toDate(); // Now we can safely call toDate()
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+    // Rest of your logic
+    if (seconds < 60) return `${seconds} seconds ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    return date.toLocaleDateString(); // or use any date formatting you prefer
+  };
+
+
+  const clearNotifications = () => {
+   
+    setNotifications([]);
+  
+    // await firestore.collection('notifications').doc(userId).delete(); // example
+  };
+  
 
   useEffect(() => {
     const clickHandler = ({ target }: MouseEvent) => {
       if (!dropdown.current) return;
       if (
         !dropdownOpen ||
-        dropdown.current.contains(target) ||
-        trigger.current.contains(target)
+        dropdown.current.contains(target as Node) ||
+        trigger.current?.contains(target as Node)
       )
         return;
       setDropdownOpen(false);
@@ -22,7 +61,6 @@ const DropdownNotification = () => {
     return () => document.removeEventListener('click', clickHandler);
   });
 
-  // close if the esc key is pressed
   useEffect(() => {
     const keyHandler = ({ keyCode }: KeyboardEvent) => {
       if (!dropdownOpen || keyCode !== 27) return;
@@ -32,6 +70,40 @@ const DropdownNotification = () => {
     return () => document.removeEventListener('keydown', keyHandler);
   });
 
+  const handleMarkAsRead = async (id: string) => {
+    await markNotificationAsRead(id);
+    setNotifications((prevNotifications) =>
+      prevNotifications.map((notification) =>
+        notification.id === id ? { ...notification, read: true } : notification
+      )
+    );
+  };
+
+
+  
+    
+  
+  useEffect(() => {
+    const notificationsRef = collection(db, 'notifications');
+    const q = query(notificationsRef, orderBy('timestamp', 'desc'));
+  
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const notificationsList: Notification[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Notification[];
+      
+      setNotifications(notificationsList);
+      
+      // Check if there are any unread notifications
+      setHasUnreadNotifications(notificationsList.some(notification => !notification.isRead));
+    });
+  
+    return () => unsubscribe();
+  }, []);
+
+  
+  
   return (
     <li className="relative">
       <Link
@@ -40,9 +112,11 @@ const DropdownNotification = () => {
         to="#"
         className="relative flex h-8.5 w-8.5 items-center justify-center rounded-full border-[0.5px] border-stroke bg-gray hover:text-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
       >
+        {hasUnreadNotifications && (
         <span className="absolute -top-0.5 right-0 z-1 h-2 w-2 rounded-full bg-meta-1">
           <span className="absolute -z-1 inline-flex h-full w-full animate-ping rounded-full bg-meta-1 opacity-75"></span>
         </span>
+      )}
 
         <svg
           className="fill-current duration-300 ease-in-out"
@@ -64,77 +138,40 @@ const DropdownNotification = () => {
         onFocus={() => setDropdownOpen(true)}
         onBlur={() => setDropdownOpen(false)}
         className={`absolute -right-27 mt-2.5 flex h-90 w-75 flex-col rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark sm:right-0 sm:w-80 ${
-          dropdownOpen === true ? 'block' : 'hidden'
+          dropdownOpen ? 'block' : 'hidden'
         }`}
       >
-        <div className="px-4.5 py-3">
+        <div className=" flex items-center justify-between px-4.5 py-3">
           <h5 className="text-sm font-medium text-bodydark2">Notification</h5>
+          <button onClick={clearNotifications} className="clear-button text-xs  flex-row text-bodydark2">
+          Clear Notifications
+        </button>
         </div>
+       
 
         <ul className="flex h-auto flex-col overflow-y-auto">
-          <li>
-            <Link
-              className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
-              to="#"
-            >
-              <p className="text-sm">
-                <span className="text-black dark:text-white">
-                  New hotline responder application.
-                </span>{' '}
-                {/* Sint occaecat cupidatat non proident, sunt in culpa qui officia
-                deserunt mollit anim. */}
-              </p>
-
-              <p className="text-xs">12 May, 2023</p>
-            </Link>
-          </li>
-          <li>
-            <Link
-              className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
-              to="#"
-            >
-              <p className="text-sm">
-                <span className="text-black dark:text-white">
-                New hotline responder application.
-                </span>{' '}
-                {/* that a reader will be distracted by the readable. */}
-              </p>
-
-              <p className="text-xs">24 Feb, 2025</p>
-            </Link>
-          </li>
-          <li>
-            <Link
-              className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
-              to="#"
-            >
-              <p className="text-sm">
-                <span className="text-black dark:text-white">
-                New hotline responder application.
-                </span>{' '}
-                {/* of passages of Lorem Ipsum available, but the majority have
-                suffered */}
-              </p>
-
-              <p className="text-xs">04 Jan, 2023</p>
-            </Link>
-          </li>
-          <li>
-            <Link
-              className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
-              to="#"
-            >
-              <p className="text-sm">
-                <span className="text-black dark:text-white">
-                New hotline responder application.
-                </span>{' '}
-                {/* of passages of Lorem Ipsum available, but the majority have
-                suffered */}
-              </p>
-
-              <p className="text-xs">01 Dec, 2023</p>
-            </Link>
-          </li>
+          {notifications.length > 0 ? (
+            notifications.map((notification) => (
+              <li key={notification.id}>
+                <Link
+                  className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
+                  to="#"
+                >
+                  <p className="text-sm text-black dark:text-white">{notification.message}</p>
+                  <span className="text-xs text-bodydark2">
+                    {formattedDate(notification.timestamp)} 
+                  </span>
+                </Link>
+               {!notification.isRead && (
+                <span className="text-xs flex flex-col text-bodydark2">
+                  <button className="text-xs" onClick={() => handleMarkAsRead(notification.id) }>Mark as Read</button>
+                  </span>
+                )}
+              </li>
+            ))
+          ) : (
+            <li className="px-4.5 py-3 text-sm text-gray-500">No new notifications</li>
+          )}
         </ul>
       </div>
     </li>

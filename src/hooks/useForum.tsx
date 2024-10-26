@@ -15,9 +15,10 @@ import {
     arrayUnion,
     increment,
 } from 'firebase/firestore';
-
-import {containsBlacklistedWords} from '../components/utils/validationUtils';
-import { Forum, Post } from './types'; 
+import { sendNotification } from './useNotification';
+import {NotificationTypes} from './notificationTypes';
+import { containsBlacklistedWords } from '../components/utils/validationUtils';
+import { Forum, Post } from './types';
 
 const useForum = (forumId: string) => {
     const [forum, setForum] = useState<Forum | null>(null);
@@ -47,7 +48,7 @@ const useForum = (forumId: string) => {
         const postsQuery = query(
             collection(db, 'posts'),
             where('forumId', '==', forumId),
-            where('status', '==', 'approved') // Only fetch posts with 'approved' status
+            where('status', '==', 'approved') 
         );
     
         const querySnapshot = await getDocs(postsQuery);
@@ -90,29 +91,34 @@ const useForum = (forumId: string) => {
     const handleJoinLeaveForum = async () => {
         const user = auth.currentUser;
         if (!user || !forum) return;
-
+    
         try {
             const forumRef = doc(db, 'forums', forum.id);
             await updateDoc(forumRef, {
                 members: isMember ? arrayRemove(user.uid) : arrayUnion(user.uid),
                 totalMembers: isMember ? (forum.totalMembers || 0) - 1 : (forum.totalMembers || 0) + 1,
             });
+    
+            const action = isMember ? 'left' : 'joined';
+            const notificationType = isMember ? NotificationTypes.LEAVE : NotificationTypes.JOIN;
+            await sendNotification(user.uid, `You have ${action} the forum ${forum.title}`, notificationType);
+    
+            setAlert({ type: 'success', message: `You have ${action} the forum ${forum.title}` });
             setIsMember(!isMember);
         } catch (error) {
             setError(`Failed to update membership: ${error?.message || 'An unknown error occurred'}`);
         }
     };
+
     const handlePostContentChange = (e, blacklistedWords: string[]) => {
         const content = e.target.value;
-        setPostContent(content); // Update the state
+        setPostContent(content); 
         
-        // Update highlighted content in real-time
         const highlighted = highlightBlacklistedWords(content, blacklistedWords);
         setHighlightedContent(highlighted);
     };
 
     const highlightBlacklistedWords = (content, blacklistedWords) => {
-        // Implement your logic to highlight blacklisted words
         const regex = new RegExp(`\\b(${blacklistedWords.join('|')})\\b`, 'gi');
         return content.replace(regex, (match) => `<span style="color:red;">${match}</span>`);
     };
@@ -120,16 +126,16 @@ const useForum = (forumId: string) => {
     useEffect(() => {
         if (alert) {
             const timer = setTimeout(() => {
-                setAlert(null); // Clears the alert after 3 seconds
-            }, 3000); // Set to 3000 ms (3 seconds)
+                setAlert(null);
+            }, 3000);
 
-            return () => clearTimeout(timer); // Cleanup the timeout if alert changes
+            return () => clearTimeout(timer);
         }
     }, [alert]);
 
     const handleSubmitPost = async (e) => {
         const currentDate = new Date();
-        e.preventDefault(); // Prevent the default form submission
+        e.preventDefault();
     
         if (containsBlacklistedWords(postContent, blacklistedWords)) {
             setAlert({ type: 'error', message: 'Your post contains inappropriate language and cannot be submitted.' });
@@ -144,32 +150,26 @@ const useForum = (forumId: string) => {
                 const orgRef = doc(db, 'organizations', user.uid);
                 const profRef = doc(db, 'professionals', user.uid);
     
-                console.log('Checking user document...');
                 const userDoc = await getDoc(userRef);
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    authorName = `${userData.firstName} ${userData.lastName}`; // For users
+                    authorName = `${userData.firstName} ${userData.lastName}`;
                 } else {
-                    console.log('User document does not exist. Checking organization...');
                     const orgDoc = await getDoc(orgRef);
                     if (orgDoc.exists()) {
                         const orgData = orgDoc.data();
-                        authorName = orgData.organizationName; // For organizations
+                        authorName = orgData.organizationName;
                     } else {
-                        console.log('Organization document does not exist. Checking professional...');
                         const profDoc = await getDoc(profRef);
                         if (profDoc.exists()) {
                             const profData = profDoc.data();
-                            authorName = `${profData.firstName} ${profData.lastName}`; // For professionals
+                            authorName = `${profData.firstName} ${profData.lastName}`;
                         }
                     }
                 }
     
-                console.log('Author Name:', authorName); // Debugging output
-    
-                setCreatingPost(true); // Start post creation
+                setCreatingPost(true);
                 const postRef = collection(db, 'posts');
-                // Add the new post to the posts collection
                 await addDoc(postRef, {
                     content: postContent, 
                     dateCreated: currentDate,
@@ -179,30 +179,31 @@ const useForum = (forumId: string) => {
                     status: 'pending', 
                 });
 
-                // Increment the totalPosts in the forum document
+                await sendNotification(
+                    forum.authorId, 
+                    `${anonymous ? 'Anonymous' : authorName} submitted a post in ${forum.title}`, 
+                    NotificationTypes.POST_SUBMISSION
+                );
                 const forumDocRef = doc(db, 'forums', forum.id);
                 await updateDoc(forumDocRef, {
                     totalPosts: increment(1),
                 });
     
-                setPostContent(''); // Clear the post content
+                setPostContent('');
                 setAlert({ type: 'success', message: 'Your post has been submitted for review and will be visible once approved.' });
             } catch (error) {
-                console.error('Error creating post:', error);
                 setError(`Failed to create post: ${error?.message || 'An unknown error occurred'}`);
             } finally {
-                setCreatingPost(false); 
+                setCreatingPost(false);
             }
         }
     };
-    
-    
-    
 
     const handleDeletePost = async (postId: string) => {
         try {
             await deleteDoc(doc(db, 'posts', postId));
             setPosts(posts.filter(post => post.id !== postId));
+            await sendNotification(auth.currentUser.uid, 'Post deleted successfully.', NotificationTypes.POST_DELETION);
             setAlert({ type: 'success', message: 'Post deleted successfully!' });
         } catch (error) {
             setError(`Failed to delete post: ${error?.message || 'An unknown error occurred'}`);
@@ -229,7 +230,6 @@ const useForum = (forumId: string) => {
         handleSubmitPost,
         handlePostContentChange,
         setBlacklistedWords,
-        
     };
 };
 

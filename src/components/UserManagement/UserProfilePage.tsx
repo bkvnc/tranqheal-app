@@ -17,7 +17,6 @@ interface UserData {
   profilePicture?: string;
   backgroundPicture?: string;
   userType: 'organization' | 'admin' | 'professional'|'seeker';
-  // New fields for organization and professional profiles
   days?: string[];
   timeEnd?: string;
   timeStart?: string;
