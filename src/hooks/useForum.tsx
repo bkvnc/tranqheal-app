@@ -13,10 +13,11 @@ import {
     updateDoc,
     arrayRemove,
     arrayUnion,
+    increment,
 } from 'firebase/firestore';
 
 import {containsBlacklistedWords} from '../components/utils/validationUtils';
-import { Forum, Post } from './types'; // Adjust the import path for your types
+import { Forum, Post } from './types'; 
 
 const useForum = (forumId: string) => {
     const [forum, setForum] = useState<Forum | null>(null);
@@ -43,14 +44,21 @@ const useForum = (forumId: string) => {
     };
 
     const fetchPostsByForumId = async (forumId: string) => {
-        const postsQuery = query(collection(db, 'posts'), where('forumId', '==', forumId));
+        const postsQuery = query(
+            collection(db, 'posts'),
+            where('forumId', '==', forumId),
+            where('status', '==', 'approved') // Only fetch posts with 'approved' status
+        );
+    
         const querySnapshot = await getDocs(postsQuery);
+    
         return querySnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
             dateCreated: doc.data().dateCreated instanceof Date ? doc.data().dateCreated : doc.data().dateCreated?.toDate(),
         })) as Post[];
     };
+    
 
     useEffect(() => {
         const fetchData = async () => {
@@ -94,7 +102,7 @@ const useForum = (forumId: string) => {
             setError(`Failed to update membership: ${error?.message || 'An unknown error occurred'}`);
         }
     };
-    const handlePostContentChange = (e) => {
+    const handlePostContentChange = (e, blacklistedWords: string[]) => {
         const content = e.target.value;
         setPostContent(content); // Update the state
         
@@ -109,47 +117,86 @@ const useForum = (forumId: string) => {
         return content.replace(regex, (match) => `<span style="color:red;">${match}</span>`);
     };
 
-    const handleSubmitPost = async (e) => {
-        e.preventDefault(); // Prevent the default form submission
+    useEffect(() => {
+        if (alert) {
+            const timer = setTimeout(() => {
+                setAlert(null); // Clears the alert after 3 seconds
+            }, 3000); // Set to 3000 ms (3 seconds)
 
-        // Validate blacklisted words
+            return () => clearTimeout(timer); // Cleanup the timeout if alert changes
+        }
+    }, [alert]);
+
+    const handleSubmitPost = async (e) => {
+        const currentDate = new Date();
+        e.preventDefault(); // Prevent the default form submission
+    
         if (containsBlacklistedWords(postContent, blacklistedWords)) {
             setAlert({ type: 'error', message: 'Your post contains inappropriate language and cannot be submitted.' });
             return;
         }
-
+    
         const user = auth.currentUser;
         if (user && forum) {
             try {
                 let authorName = 'Unknown User';
                 const userRef = doc(db, 'users', user.uid);
+                const orgRef = doc(db, 'organizations', user.uid);
+                const profRef = doc(db, 'professionals', user.uid);
+    
+                console.log('Checking user document...');
                 const userDoc = await getDoc(userRef);
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    authorName = `${userData.firstName} ${userData.lastName}`;
+                    authorName = `${userData.firstName} ${userData.lastName}`; // For users
+                } else {
+                    console.log('User document does not exist. Checking organization...');
+                    const orgDoc = await getDoc(orgRef);
+                    if (orgDoc.exists()) {
+                        const orgData = orgDoc.data();
+                        authorName = orgData.organizationName; // For organizations
+                    } else {
+                        console.log('Organization document does not exist. Checking professional...');
+                        const profDoc = await getDoc(profRef);
+                        if (profDoc.exists()) {
+                            const profData = profDoc.data();
+                            authorName = `${profData.firstName} ${profData.lastName}`; // For professionals
+                        }
+                    }
                 }
-
+    
+                console.log('Author Name:', authorName); // Debugging output
+    
                 setCreatingPost(true); // Start post creation
-                await addDoc(collection(db, 'posts'), {
-                    content: postContent,
-                    dateCreated: new Date(),
+                const postRef = collection(db, 'posts');
+                // Add the new post to the posts collection
+                await addDoc(postRef, {
+                    content: postContent, 
+                    dateCreated: currentDate,
                     author: anonymous ? 'Anonymous' : authorName,
                     authorId: user.uid,
                     forumId: forum.id,
+                    status: 'pending', 
                 });
 
-                // Fetch updated posts after creation
-                const updatedPosts = await fetchPostsByForumId(forum.id);
-                setPosts(updatedPosts);
-                setAlert({ type: 'success', message: 'Post created successfully!' });
-                setPostContent(''); // Reset content after posting
+                // Increment the totalPosts in the forum document
+                const forumDocRef = doc(db, 'forums', forum.id);
+                await updateDoc(forumDocRef, {
+                    totalPosts: increment(1),
+                });
+    
+                setPostContent(''); // Clear the post content
+                setAlert({ type: 'success', message: 'Your post has been submitted for review and will be visible once approved.' });
             } catch (error) {
+                console.error('Error creating post:', error);
                 setError(`Failed to create post: ${error?.message || 'An unknown error occurred'}`);
             } finally {
-                setCreatingPost(false); // Reset after posting
+                setCreatingPost(false); 
             }
         }
     };
+    
+    
     
 
     const handleDeletePost = async (postId: string) => {
@@ -174,6 +221,7 @@ const useForum = (forumId: string) => {
         anonymous,
         highlightedContent,
         postContent,
+        blacklistedWords,
         setAnonymous,
         handleJoinLeaveForum,
         setPostContent,

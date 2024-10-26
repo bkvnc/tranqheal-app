@@ -1,22 +1,24 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Alert from '../../pages/UiElements/Alerts';
 import useForum from '../../hooks/useForum';
 import dayjs from 'dayjs';
 import SkeletonLoader from '../loader/skeletonLoader';
 import { Timestamp } from 'firebase/firestore';
-import {highlightText} from '../../hooks/hightlightText';
-import {getBlacklistedWords} from '../../hooks/getBlacklistedWords';
+import { highlightText } from '../../hooks/hightlightText';
+import { getBlacklistedWords } from '../../hooks/getBlacklistedWords';
 import '../../styles.css';
 
 const ForumDetailsPage: React.FC = () => {
     const { forumId } = useParams<{ forumId: string }>();
-
     const [showPostForm, setShowPostForm] = useState<boolean>(false); 
-    const { forum, posts, loading, error, alert, isMember, isAuthor,postContent, setBlacklistedWords, handleJoinLeaveForum, highlightedContent,  handleSubmitPost,handleDeletePost ,handlePostContentChange,} = useForum(forumId);
-    const [anonymous, setAnonymous] = useState<boolean>(false); // Define state locally
-    const [creatingPost, setCreatingPost] = useState<boolean>(false); // Define state locally
-    
+    const { 
+        forum, posts, loading, error, alert,anonymous, isMember, isAuthor, postContent, 
+        setBlacklistedWords, handleJoinLeaveForum, blacklistedWords,  
+        handleSubmitPost, handleDeletePost, handlePostContentChange, setAnonymous, 
+    } = useForum(forumId);
+   
+    const [creatingPost, setCreatingPost] = useState<boolean>(false); 
 
     // User status to simplify conditions
     const userStatus = {
@@ -48,10 +50,8 @@ const ForumDetailsPage: React.FC = () => {
         fetchBlacklistedWords();
     }, []);
 
-   
-
     // Conditional rendering for loading state
-    if (loading) return <SkeletonLoader />; // Use skeleton loader for better UX
+    if (loading) return <SkeletonLoader />;
     if (error) return <div className="text-red-500">{error}</div>;
 
     return (
@@ -100,7 +100,7 @@ const ForumDetailsPage: React.FC = () => {
                                             {post.content}
                                         </Link>
                                         <p className="text-sm text-gray-500 mt-2">
-                                            By {post.author || 'Unknown Author'} on {formattedDate(post.dateCreated)}
+                                            By  <a href={`/profile/${post.authorId}`} className="text-blue-500 hover:underline">{post.author}</a>on {formattedDate(post.dateCreated)}
                                         </p>
                                         {userStatus.canDeletePosts && (
                                             <button onClick={() => handleDeletePost(post.id)} className="text-red-500 mt-2 hover:text-red-700 transition">
@@ -128,41 +128,41 @@ const ForumDetailsPage: React.FC = () => {
                 </div>
             )}
 
-{showPostForm && (
+            {showPostForm && (
                 <div className="mt-6">
-                <form onSubmit={handleSubmitPost}>
-                    <textarea
-                        value={postContent}
-                        onChange={handlePostContentChange}
-                        placeholder="Write your post..."
-                        rows={4}
-                        className="w-full p-3 border rounded-md"
-                        required
-                    />
-                    <div
-                        className="mt-2 bg-gray-100 p-2 rounded"
-                        dangerouslySetInnerHTML={{ __html: highlightedContent }}
-                    />
-                    <div className="flex items-center mt-3">
-                        <label className="flex items-center space-x-2">
-                            <input
-                                type="checkbox"
-                                checked={anonymous}
-                                onChange={(e) => setAnonymous(e.target.checked)}
-                                className="w-4 h-4"
-                            />
-                            <span className="text-sm">Post anonymously</span>
-                        </label>
-                        <button
-                            type="submit"
-                            disabled={creatingPost}
-                            className="ml-auto px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md"
-                        >
-                            {creatingPost ? 'Posting...' : 'Post'}
-                        </button>
-                    </div>
-                </form>
-            </div>
+                    <form onSubmit={handleSubmitPost}>
+                        <textarea
+                            value={postContent}
+                            onChange={(e) => handlePostContentChange(e, blacklistedWords)}
+                            placeholder="Write your post..."
+                            rows={4}
+                            className="w-full p-3 border rounded-md"
+                            required
+                        />
+                        <div
+                            className="mt-2 bg-gray-100 p-2 rounded"
+                            dangerouslySetInnerHTML={{ __html: highlightText(postContent, blacklistedWords) }}
+                        />
+                        <div className="flex items-center mt-3">
+                            <label className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={anonymous}
+                                    onChange={(e) => setAnonymous(e.target.checked)}
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-sm">Post anonymously</span>
+                            </label>
+                            <button
+                                type="submit"
+                                disabled={creatingPost}
+                                className="ml-auto px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md"
+                            >
+                                {creatingPost ? 'Posting...' : 'Post'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             )}
         </div>
     );

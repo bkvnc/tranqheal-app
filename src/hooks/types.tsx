@@ -20,13 +20,17 @@ export interface Forum {
 
 export interface Post {
     id: string;
-    content: string;
+    title: string;
     dateCreated: any;
+    description: string;
+    status: string;
+    content: string;
     author: string; 
     authorId: string; 
     reacts: number;
     forumId: string;
     userReactions: string[]; 
+    authorName: string;
 }
 
 
