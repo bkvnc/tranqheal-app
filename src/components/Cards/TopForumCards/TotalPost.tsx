@@ -1,4 +1,19 @@
+import { db } from "../../../config/firebase";
+import { collection, getDocs } from "firebase/firestore";
+import { useEffect, useState } from "react";
+
 const TotalPostsCard = () => {
+  const [postCount, setPostCount] = useState<number>(0);
+
+  const fetchPostsCount = async () => {
+    const postsCollectionRef = collection(db, "posts");
+    const postsSnapshot = await getDocs(postsCollectionRef);
+    setPostCount(postsSnapshot.size);
+  };
+
+  useEffect(() => {
+    fetchPostsCount();
+  }, []);
     return (
       <div className="rounded-sm border border-stroke bg-white py-6 px-7.5 shadow-default dark:border-strokedark dark:bg-boxdark">
         <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
@@ -10,7 +25,7 @@ const TotalPostsCard = () => {
         <div className="mt-4 flex items-end justify-between">
           <div>
             <h4 className="text-title-md font-bold text-black dark:text-white">
-              3456
+             {postCount}
             </h4>
             <span className="text-sm font-medium">Total Posts Across All Forums</span>
           </div>

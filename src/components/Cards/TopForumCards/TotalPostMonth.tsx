@@ -1,4 +1,27 @@
+
+import { db } from "../../../config/firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import dayjs from "dayjs";
+
 const TotalPostMonthCard = () => {
+  const [postCount, setPostCount] = useState<number>(0);
+
+
+  const fetchMonthlyPostsCount = async () => {
+    const startOfMonth = dayjs().startOf("month").toDate();
+    const postsCollectionRef = collection(db, "posts");
+
+ 
+    const monthlyQuery = query(postsCollectionRef, where("dateCreated", ">=", startOfMonth));
+    const postsSnapshot = await getDocs(monthlyQuery);
+
+    setPostCount(postsSnapshot.size);
+  };
+
+  useEffect(() => {
+    fetchMonthlyPostsCount();
+  }, []);
     return (
       <div className="rounded-sm border border-stroke bg-white py-6 px-7.5 shadow-default dark:border-strokedark dark:bg-boxdark">
         <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
@@ -10,13 +33,13 @@ const TotalPostMonthCard = () => {
         <div className="mt-4 flex items-end justify-between">
           <div>
             <h4 className="text-title-md font-bold text-black dark:text-white">
-              345
+              {postCount}
             </h4>
             <span className="text-sm font-medium">Total Post This Month</span>
           </div>
   
           {/* UP PERCENT */}
-          <span className="flex items-center gap-1 text-sm font-medium text-meta-3">
+          {/* <span className="flex items-center gap-1 text-sm font-medium text-meta-3">
             5.43%
             <svg
               className="fill-meta-3"
@@ -31,7 +54,7 @@ const TotalPostMonthCard = () => {
                 fill=""
               />
             </svg>
-          </span>
+          </span> */}
           {/* DOWN PERCENT */}
           {/* <span className="flex items-center gap-1 text-sm font-medium text-meta-5">
             0.95%

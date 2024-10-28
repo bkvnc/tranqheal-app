@@ -28,70 +28,37 @@ interface Organization {
   status: string;
 }
 
-const RemoveOrganizationTable: React.FC = () => {
+const RemoveOrganizationTable = () => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null);
-  const [firstVisible, setFirstVisible] = useState<QueryDocumentSnapshot | null>(null);
-  const [pageStack, setPageStack] = useState<QueryDocumentSnapshot[]>([]);
-  const [isNextDisabled, setIsNextDisabled] = useState<boolean>(false);
-  const [isPrevDisabled, setIsPrevDisabled] = useState<boolean>(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [orgsPerPage] = useState(5);
+
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>(""); // For storing search term
 
-  const ITEMS_PER_PAGE = 10;
-
-  const fetchOrganizations = async (isNextPage: boolean) => {
+  const fetchOrganizations = async () => {
     try {
       setLoading(true);
-      let orgQuery;
-
-      if (isNextPage) {
-        orgQuery = lastVisible
-          ? query(collection(db, "organizations"), orderBy("organizationName"), startAfter(lastVisible), limit(ITEMS_PER_PAGE))
-          : query(collection(db, "organizations"), orderBy("organizationName"), limit(ITEMS_PER_PAGE));
-      } else {
-        if (firstVisible) {
-          orgQuery = query(collection(db, "organizations"), orderBy("organizationName"), endBefore(firstVisible), limit(ITEMS_PER_PAGE));
-        } else {
-          setLoading(false);
-          return;
-        }
-      }
-
-      const orgSnapshot = await getDocs(orgQuery);
-
+      const orgSnapshot = await getDocs(collection(db, "organizations"));
+  
       if (!orgSnapshot.empty) {
-        const firstDoc = orgSnapshot.docs[0];
-        const lastDoc = orgSnapshot.docs[orgSnapshot.docs.length - 1];
-
-        const orgList = orgSnapshot.docs.map((doc) => {
-          const data = doc.data() as Organization;
-
+        const orgList: Organization[] = orgSnapshot.docs.map((doc) => {
+          const data = doc.data();
           return {
-            ...data,
             orgId: doc.id,
-            createdAt: (data.createdAt instanceof Timestamp) ? data.createdAt.toDate() : null,
-            lastLogin: (data.lastLogin instanceof Timestamp) ? data.lastLogin.toDate() : null,
+            email: data.email || "", // Default to empty string or handle undefined
+            organizationName: data.organizationName || "", // Default value
+            status: data.status || "inactive", // Default value if status is missing
+            createdAt: data.createdAt?.toDate() || null, // Convert Firestore timestamp to Date
+            lastLogin: data.lastLogin?.toDate() || null, // Convert Firestore timestamp to Date
           };
         });
-
+  
         setOrganizations(orgList);
-        setLastVisible(lastDoc);
-        
-        if (isNextPage) {
-          setPageStack((prev) => [...prev, firstVisible!]);
-        } else {
-          setPageStack((prev) => prev.slice(0, -1));
-        }
-
-        setFirstVisible(firstDoc);
-        setIsPrevDisabled(pageStack.length === 0);
-        setIsNextDisabled(orgSnapshot.docs.length < ITEMS_PER_PAGE);
       } else {
-        setIsNextDisabled(true);
+        setOrganizations([]); // Clear the list if there are no documents
       }
-
       setLoading(false);
     } catch (error) {
       console.error("Error fetching organizations: ", error);
@@ -99,20 +66,14 @@ const RemoveOrganizationTable: React.FC = () => {
       setLoading(false);
     }
   };
-
+  
+ 
+  
   useEffect(() => {
-    fetchOrganizations(true);
+    fetchOrganizations();
   }, []);
-
-  const handleNextPage = () => {
-    fetchOrganizations(true);
-  };
-
-  const handlePreviousPage = () => {
-    if (!isPrevDisabled) {
-      fetchOrganizations(false);
-    }
-  };
+  
+ 
 
   const handleEditOrganizationStatus = async (orgId: string, newStatus: string) => {
     try {
@@ -152,11 +113,16 @@ const RemoveOrganizationTable: React.FC = () => {
     }, 1000);
   };
 
-  // Filter organizations based on search term
+ 
   const filteredOrganizations = organizations.filter(org =>
     org.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     org.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const indexOfLastOrg = currentPage * orgsPerPage;
+  const indexOfFirstOrg = indexOfLastOrg - orgsPerPage;
+  const currentUsers = organizations.slice(indexOfFirstOrg, indexOfLastOrg);
+  const totalPages = Math.ceil(organizations.length / orgsPerPage);
 
   if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
 
@@ -251,22 +217,25 @@ const RemoveOrganizationTable: React.FC = () => {
             </tbody>
           </table>
 
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-between mt-4">
             <button
-              onClick={handlePreviousPage}
-              disabled={isPrevDisabled}
-              className={`bg-blue-500 text-black py-2 px-4 rounded mr-2 dark:text-white ${isPrevDisabled ? 'bg-gray-200' : 'bg-gray-400 hover:bg-gray-500 text-white'}`}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
             >
               Previous
             </button>
+            <div className="flex items-center">
+              <span>Page {currentPage} of {totalPages}</span>
+            </div>
             <button
-              onClick={handleNextPage}
-              disabled={isNextDisabled}
-              className={`bg-blue-500 text-black py-2 px-4 rounded dark:text-white ${isNextDisabled ? 'bg-gray-200' : 'bg-gray-400 hover:bg-gray-500 text-white'}`}
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
             >
               Next
             </button>
-          </div>
+         </div>
         </div>
       </div>
     </>

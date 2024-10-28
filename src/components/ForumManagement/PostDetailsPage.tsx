@@ -31,6 +31,7 @@ interface Post {
     authorId: string;
     userReactions: string[]; // Array of user IDs who reacted
     reacts: number; // Count of total reactions
+    status: string;
 }
 
 
@@ -61,8 +62,15 @@ const PostDetailsPage: React.FC = () => {
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const postData = { id: postId, ...docSnap.data() } as Post; // Cast the fetched data to Post
+                    
+                    // Check if post is pending
+                    if (postData.status === 'pending') {
+                        // You can decide what to do with pending posts here
+                        console.log('Post is pending:', postData);
+                    }
+        
                     setPost(postData);
-    
+        
                     // Check if the current user has reacted
                     const userId = auth.currentUser?.uid;
                     if (userId) {
@@ -225,6 +233,8 @@ const PostDetailsPage: React.FC = () => {
 
     if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
     if (error) return <div className="text-red-500">{error}</div>;
+
+   
 
     return (
         <div className="container mx-auto bg-white rounded-lg p-6 shadow-lg dark:bg-boxdark">

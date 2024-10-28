@@ -4,6 +4,7 @@ import { db, auth } from '../../config/firebase';
 import dayjs from 'dayjs'; 
 import Alert from '../../pages/UiElements/Alerts';
 import { NavLink } from 'react-router-dom';
+import {Link } from 'react-router-dom';
 
 interface UserData {
     userType: string;
@@ -39,6 +40,7 @@ const MyForumTable: React.FC = () => {
     const [description, setDescription] = useState('');
     const [tags, setTags] = useState<string[]>([]);
     const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [searchTerm, setSearchTerm] = useState<string>("");
     
     
     const [currentPage, setCurrentPage] = useState(1);
@@ -149,6 +151,11 @@ const MyForumTable: React.FC = () => {
         }
     };
 
+    const filteredForums = forums.filter(forum =>
+        forum.authorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        forum.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     // Pagination logic
     const indexOfLastForum = currentPage * forumsPerPage;
     const indexOfFirstForum = indexOfLastForum - forumsPerPage;
@@ -160,11 +167,21 @@ const MyForumTable: React.FC = () => {
             <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
                 <div className="max-w-full overflow-x-auto">
                     <div className="flex items-center">
-                        <input
-                            type="text"
-                            placeholder="Search responder by name or email"
-                            className="mb-3 w-100 rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-                        />
+                    <div className="flex items-center">
+                    <input
+                        type="text"
+                        placeholder="Search forum by title "
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="mb-3 w-100 rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    />
+                    <Link
+                        to="#"
+                        className="h-12 w-40 mb-3 ml-4 inline-flex items-center justify-center rounded-md bg-[#9F4FDD] py-4 px-10 text-center font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
+                    >
+                        Search
+                    </Link>
+                </div>
                         <button
                             onClick={handleCreateForumClick}
                             className="h-12 w-50 mb-3 ml-4 inline-flex items-center justify-center rounded-md bg-[#9F4FDD] py-4 px-10 text-center font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
@@ -186,7 +203,12 @@ const MyForumTable: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {currentForums.map((forum) => (
+                        {filteredForums.length === 0 && currentForums.length === 0 ? (
+                            <tr>
+                                <td colSpan={8} className="text-center">No forums found</td>
+                            </tr>
+                        ) : (
+                            currentForums.map((forum) => (
                                 <tr key={forum.id}>
                                     <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
                                         <h5 className="font-medium text-black dark:text-white">{forum.id}</h5>
@@ -225,7 +247,8 @@ const MyForumTable: React.FC = () => {
                                         </button>
                                     </td>
                                 </tr>
-                            ))}
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

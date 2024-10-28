@@ -8,7 +8,7 @@ import routes from './routes';
 import Dasboard from './pages/Dashboard/Home';
 import { auth } from './config/firebase'; 
 import 'tailwindcss/tailwind.css';
-import { auth } from './config/firebase'; // Assuming Firebase has auth setup
+
 
 const DefaultLayout = lazy(() => import('./layout/DefaultLayout'));
 
