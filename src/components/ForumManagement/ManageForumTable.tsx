@@ -158,7 +158,7 @@ const ManageForumTable = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {currentForums.length === 0 ? (
+                        {filteredForums.length === 0 && currentForums.length === 0 ? (
                             <tr>
                                 <td colSpan={8} className="text-center">No forums found</td>
                             </tr>

@@ -940,13 +940,13 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen}: SidebarProps) => {
             </ul>
           </div>
 
-          <div>
+          {/* <div>
             <h3 className="mb-4 ml-4 text-sm font-semibold text-bodydark2">
               OTHERS
             </h3>
 
             <ul className="mb-6 flex flex-col gap-1.5">
-              {/* <!-- Menu Item Chart --> */}
+              
               <li>
                 <NavLink
                   to="/chart"
@@ -984,11 +984,11 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen}: SidebarProps) => {
                   </svg>
                   Chart
                 </NavLink>
-              </li> 
+              </li>  */}
               {/* <!-- Menu Item Chart --> */}
 
               {/* <!-- Menu Item Ui Elements --> */}
-              <SidebarLinkGroup
+              {/* <SidebarLinkGroup
                 activeCondition={pathname === '/ui' || pathname.includes('ui')}
               >
                 {(handleClick, open) => {
@@ -1090,10 +1090,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen}: SidebarProps) => {
                     </React.Fragment>
                   );
                 }}
-              </SidebarLinkGroup>
-             
+              </SidebarLinkGroup> */}
+{/*              
             </ul>
-          </div>
+          </div> */}
         </nav>
         {/* <!-- Sidebar Menu --> */} 
       </div>

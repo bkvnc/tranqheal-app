@@ -1,10 +1,10 @@
-import CardFour from '../../components/CardFour.tsx';
-import CardOne from '../../components/CardOne.tsx';
-import CardThree from '../../components/CardThree.tsx';
-import CardTwo from '../../components/CardTwo.tsx';
-import ChartOne from '../../components/ChartOne.tsx';
-import DailyVolume from '../../components/CustomComponents/DailyVolumeCalls.tsx';
-import ChartOnes from '../../components/ChartTwo.tsx';
+import CardFour from '../../components/CardFour';
+import CardOne from '../../components/CardOne';
+import CardThree from '../../components/CardThree';
+import CardTwo from '../../components/CardTwo';
+import ChartOne from '../../components/ChartOne';
+import DailyVolume from '../../components/CustomComponents/DailyVolumeCalls';
+import ChartOnes from '../../components/ChartTwo';
 
 // import ChartThree from '../../components/ChartThree.tsx';
 // import ChartTwo from '../../components/ChartTwo.tsx';
@@ -14,7 +14,7 @@ import ChartOnes from '../../components/ChartTwo.tsx';
 // import FeedbackChart from '../../components/FeedbackChart.tsx';
 // import RatingChart from '../../components/RatingChart.tsx';
 
-import AverageDuration from '../../components/Cards/AverageDuration.tsx';
+import AverageDuration from '../../components/Cards/AverageDuration';
 
 const Dasboard = () => {
   return (

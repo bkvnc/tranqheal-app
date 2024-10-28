@@ -13,7 +13,6 @@ import {NotificationTypes} from '../../hooks/notificationTypes';
 const PendingPosts = () => {
     const [posts, setPosts] = useState<Post[]>([]);
     const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-    const [anonymous, setAnonymous] = useState<boolean>(false); // State for anonymous posts
     const [currentPage, setCurrentPage] = useState(1);
     const pendingsPerPage = 5;
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -52,20 +51,20 @@ const PendingPosts = () => {
             }
             
             const postData = postDoc.data();
-            const authorId = postData.authorId; // Assuming you have an authorId field
+            const authorId = postData.authorId; 
             
-            // Update the post status to 'approved'
+           
             await updateDoc(postDocRef, { status: 'approved' });
     
-            // Create a notification for the author
+            
             const notificationData = {
-                message: `Your post "${postData.title}" has been approved!`, // Adjust title based on your data
+                message: `Your post has been approved!`, // Adjust title based on your data
                 userId: authorId,
                 timestamp: new Date(),
                 isRead: false,
             };
             
-            // Add the notification to the notifications collection
+            
             await setDoc(doc(collection(db, 'notifications'), `${postId}_approved`), notificationData);
     
             // Update local posts state

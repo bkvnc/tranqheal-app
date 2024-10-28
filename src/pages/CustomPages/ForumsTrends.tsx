@@ -1,9 +1,9 @@
 
-import TopForumsTable from '../../components/ForumDataVisual/TopForumsTable.tsx';
-import TotalForumsCard from '../../components/Cards/TopForumCards/TotalForums.tsx';
-import TotalPostsCard from '../../components/Cards/TopForumCards/TotalPost.tsx';
-import TotalPostWeekCard from '../../components/Cards/TopForumCards/TotalPostWeek.tsx';
-import TotalPostMonthCard from '../../components/Cards/TopForumCards/TotalPostMonth.tsx';
+import TopForumsTable from '../../components/ForumDataVisual/TopForumsTable';
+import TotalForumsCard from '../../components/Cards/TopForumCards/TotalForums';
+import TotalPostsCard from '../../components/Cards/TopForumCards/TotalPost';
+import TotalPostWeekCard from '../../components/Cards/TopForumCards/TotalPostWeek';
+import TotalPostMonthCard from '../../components/Cards/TopForumCards/TotalPostMonth';
 
 
 // import FeedbackChart from '../../components/FeedbackChart.tsx';
