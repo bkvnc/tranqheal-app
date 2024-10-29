@@ -2,6 +2,8 @@ import { WelcomeScreen } from './WelcomeScreen';
 import { RegisterAsScreen } from './RegisterAsScreen';
 import { LoginScreen } from './LoginScreen';
 import { SignupScreen } from './SignupScreen';
+import { ProfessionalRegisterScreen } from './ProfessionalRegisterScreen';
+import { UploadCredentialsScreen } from './UploadCredentialsScreen';
 import { HomeScreen } from './HomeScreen';
 import { SAScreen } from './SAScreen';
 import { ForumsScreen } from './ForumsScreen';
@@ -29,7 +31,7 @@ import {MoodResultScreen} from './MoodResultScreen';
 
 
 export { WelcomeScreen, RegisterAsScreen, LoginScreen, 
-    SignupScreen, ViewProfScreen, ViewOrgScreen, ForumsScreen, 
+    SignupScreen, ProfessionalRegisterScreen, UploadCredentialsScreen, ViewProfScreen, ViewOrgScreen, ForumsScreen, 
     HomeScreen, SAScreen, SAScreen2, SAScreen3, MoodScreen, 
     ProfileScreen, NotificationScreen, MenuScreen,
     SAPreferenceScreen, SAResultScreen, PostDetailsScreen,
