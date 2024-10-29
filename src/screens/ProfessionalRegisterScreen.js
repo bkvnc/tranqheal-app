@@ -1,7 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
+import RNPickerSelect from 'react-native-picker-select';
+import { firestore } from '../config';
+import { collection, getDocs } from 'firebase/firestore';
+import { Alert } from 'react-native';
 
-export const ProfessionalRegisterScreen = ({ navigation }) => {
+export const ProfessionalRegisterScreen = ({ navigation, route }) => {
+  const { userType } = route.params;
+  const [organizations, setOrganizations] = useState([]);
+  const [selectedOrg, setSelectedOrg] = useState(null);
+
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      const orgsSnapshot = await getDocs(collection(firestore, 'organizations'));
+      const orgList = orgsSnapshot.docs.map(doc => ({
+        label: doc.data().organizationName,
+        value: doc.id,
+        key: doc.id,
+      }));
+      setOrganizations(orgList);
+    };
+    fetchOrganizations();
+  }, []);
+
   return (
     <View style={styles.container}>
       {/* Logo Image */}
@@ -14,21 +35,26 @@ export const ProfessionalRegisterScreen = ({ navigation }) => {
       {/* Main Text */}
       <Text style={styles.mainText}>Are you part on any of this organizations?</Text>
       
-      {/* List of Organizations */}
-      <ScrollView style={styles.orgList}>
-        <Text style={styles.listItem}>• Kalinaw Mind Center</Text>
-        <Text style={styles.listItem}>• Mental Center</Text>
-        <Text style={styles.listItem}>• Private Org</Text>
-        <Text style={styles.listItem}>• Organizations</Text>
-        {/* 'See More' Link */}
-        <Text style={styles.seeMore}>See more</Text>
-      </ScrollView>
-
+      {/* Organization List */}
+      <RNPickerSelect
+        onValueChange={value => setSelectedOrg(value)}
+        items={organizations}
+        placeholder={{ label: 'Select an organization', value: null }}
+        style={{
+          inputAndroid: styles.dropdown
+        }}
+      />
       {/* Yes Button */}
       <TouchableOpacity 
         style={styles.button}
         //onPress={() => navigation.navigate('SignUp')}
-        onPress={() => navigation.navigate('UploadCredentials')}  
+        onPress={() => {
+          if (!selectedOrg) {
+            Alert.alert('Error', 'Please select an organization.', [{ text: 'OK' }]);
+          } else {
+            navigation.navigate('UploadCredentials', { userType: userType, orgId: selectedOrg, isRegistered: false });
+          }
+        }}  
       >
         <Text style={styles.buttonText}>Yes</Text>
       </TouchableOpacity>
@@ -36,7 +62,7 @@ export const ProfessionalRegisterScreen = ({ navigation }) => {
       {/* No Button */}
       <TouchableOpacity 
         style={styles.button}
-        onPress={() => navigation.navigate('RegisterAs')}
+        onPress={() => navigation.navigate('Signup', { userType: userType })}
       >
         <Text style={styles.buttonText}>No</Text>
       </TouchableOpacity>
@@ -64,19 +90,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#000',
   },
-  orgList: {
-    marginBottom: 20,
-    maxHeight: 150,  // To prevent overflow of the list
-  },
-  listItem: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: '#000',
-  },
-  seeMore: {
-    color: '#2D9CDB',  // Blue color for 'See more'
-    fontSize: 16,
-    marginTop: 5,
+  dropdown: {
+    padding: 10,
+    borderWidth: 1,
+    borderRadius: 5,
+    borderColor: '#ccc',
+    marginBottom: 10,
   },
   button: {
     backgroundColor: '#9B51E0',  // Purple button color

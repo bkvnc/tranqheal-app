@@ -32,7 +32,7 @@ export const HomeScreen = ({ navigation }) => {
     setRefreshing(true);
     await fetchProfileData();
     setRefreshing(false);
-  }
+  };
 
   useEffect(() => {
     fetchProfileData();
@@ -53,13 +53,13 @@ export const HomeScreen = ({ navigation }) => {
               <Text style={styles.greeting}>Hello, {profileData?.username}!</Text>
               <Text style={styles.subText}>Assess, Connect, Thrive: Your Path to Mental Wellness</Text>
             </View>
-          {/* Profile Picture */}
-          <Image
-            source={{ 
-              uri: typeof profileData?.profileImage === 'string' ? profileData.profileImage : undefined, 
-            }} 
-            style={styles.profileImage}
-          />
+            {/* Profile Picture */}
+            <Image
+              source={{ 
+                uri: typeof profileData?.profileImage === 'string' ? profileData.profileImage : undefined, 
+              }} 
+              style={styles.profileImage}
+            />
           </View>
         </View>
 
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 10,
-    marginLeft:   16,
+    marginLeft: 16,
     padding: 8,
     backgroundColor: '#F7F2FA',
     borderRadius: 12,

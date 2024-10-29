@@ -26,7 +26,7 @@ export const RegisterAsScreen = ({ navigation }) => {
         {/* Professional Button */}
         <TouchableOpacity 
           style={styles.button}
-          onPress={() => navigation.navigate('Signup', { userType: 'professional' })} // Adjust navigation
+          onPress={() => navigation.navigate('ProfessionalRegister', { userType: 'professional' })} // Adjust navigation
         >
           <Text style={styles.buttonText}>Professional</Text>
         </TouchableOpacity>

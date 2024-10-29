@@ -5,8 +5,8 @@ import { ProfessionalHomeScreen } from '../screens';
 import { ViewRequestScreen } from '../screens';
 import { ViewRequestHistoryScreen } from '../screens';
 import { MenuScreen } from '../screens';
-import { ProfessionalProfileScreen } from '../screens/ProfessionalProfileScreen';
-import { EditProfessionalProfileScreen } from '../screens/editProfessionalProfileScreen';
+import { ProfessionalProfileScreen } from '../screens';
+import { EditProfessionalProfileScreen } from '../screens';
 
 const Stack = createStackNavigator();
 
