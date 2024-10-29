@@ -50,7 +50,7 @@ export const SAResultScreen = ({ navigation, route }) =>{
           phq9Interpretation,
           gad7Interpretation,
           pssInterpretation,
-          timestamp: new Date(),
+          createdAt: new Date(),
         });
         navigation.navigate('Home');
       } catch (error) {

@@ -50,7 +50,13 @@ export const MoodScreen2 = ({ route, navigation }) => {
                 Authorization: `Bearer ${token}`,
             },
         });
-        return response.data;
+        
+        const sentiment = response.data[0].score;
+
+        const threshold = 0.5;
+        const sentimentScore = sentiment >= threshold ? 1 : 0;
+
+        return sentimentScore;
     } catch (error) {
         console.error('Error getting sentiment:', error);
         throw error;
@@ -68,7 +74,32 @@ export const MoodScreen2 = ({ route, navigation }) => {
                 Authorization: `Bearer ${token}`,
             },
         });
-        return response.data;
+
+        const emotionScore = response.data[0];
+        
+        const emotionMap = {
+          happy: 1,
+          sad: 2,
+          angry: 3,
+          neutral: 4,
+          fear: 5,
+          surprise: 6,
+          disgust: 7,
+        };
+
+        let dominantEmotion = 'neutral';
+        let highestScore = 0;
+        
+        for(const [emotion, score] of Object.entries(emotionScore)) {
+          if (score > highestScore) {
+            highestScore = score;
+            dominantEmotion = emotion;
+          }
+        }
+
+        const emotionValue = emotionMap[dominantEmotion];
+
+        return emotionValue;
     } catch (error) {
         console.error('Error getting emotion:', error);
         throw error;
@@ -97,7 +128,7 @@ export const MoodScreen2 = ({ route, navigation }) => {
           descriptionEmbedding,
           sentiment,
           emotion,
-          timestamp: new Date(),
+          createdAt: new Date(),
         });
         Alert.alert('Success', 'Your mood has been saved.');
         console.log('Mood: ', mood);
