@@ -8,7 +8,6 @@ import { auth, firestore } from '../config';
 
 export const SAResultScreen = ({ navigation, route }) =>{
   const { userType } = useContext(AuthenticatedUserContext);
-    // receive the scores as props
   const { gad7Total, phq9Total, pssTotal } = route.params;
 
   const interpretPHQ9 = (score) => {

@@ -1,48 +1,72 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, Modal, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  StyleSheet,
+  Dimensions,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
+import { getFirestore, collection, getDocs, query, where, addDoc } from 'firebase/firestore';
 
 const { width } = Dimensions.get('window');
 
-export const ForumPostScreen = ({ route, navigation }) => {
-    const { forumId, forumTitle, forumTags } = route.params;
+const ForumPostScreen = ({ route, navigation }) => {
+    const { forumId, forumTitle } = route.params; // Get forumId and forumTitle from route params
 
-    // Sample data for posts
-    const [posts, setPosts] = useState([
-        { id: '1', title: 'How do I manage anxiety?', content: 'I need advice on coping with anxiety...', time: '2h ago', author: 'John Doe' },
-        { id: '2', title: 'What are the best practices for self-care?', content: 'Looking for tips on self-care routines.', time: '4h ago', author: 'Jane Smith' },
-    ]);
-
+    const [posts, setPosts] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [newPostTitle, setNewPostTitle] = useState('');
     const [newPostContent, setNewPostContent] = useState('');
-    const [isJoined, setIsJoined] = useState(false);
-    const [memberCount, setMemberCount] = useState(50); // Sample member count
-    const [selectedTags, setSelectedTags] = useState(['Mental Health', 'Self-care']); // Sample selected tags
 
-    const handleJoinForum = () => {
-        if (!isJoined) {
-            setIsJoined(true);
-            setMemberCount(memberCount + 1);
-        }
-    };
+    // Fetch posts from Firestore when component mounts
+    useEffect(() => {
+        const fetchPosts = async () => {
+            try {
+                const db = getFirestore();
+                const postsRef = collection(db, 'posts');
+                const q = query(postsRef, where('forumId', '==', forumId)); // Query posts by forumId
+                const snapshot = await getDocs(q);
+                const fetchedPosts = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                setPosts(fetchedPosts); // Set fetched posts in state
+            } catch (error) {
+                console.error("Error fetching posts: ", error);
+                Alert.alert('Error', 'Could not fetch posts.');
+            }
+        };
+        fetchPosts();
+    }, [forumId]);
 
-    const handleAddPost = () => {
+    const handleAddPost = async () => {
         if (newPostTitle && newPostContent) {
             const newPost = {
-                id: String(posts.length + 1),
                 title: newPostTitle,
                 content: newPostContent,
-                time: 'Just now',
+                time: new Date().toLocaleString(),
                 author: 'You',
+                forumId: forumId // Associate post with forum
             };
-            setPosts([newPost, ...posts]);
-            setNewPostTitle('');
-            setNewPostContent('');
-            setModalVisible(false);
+            try {
+                await addDoc(collection(getFirestore(), 'posts'), newPost); // Add new post to Firestore
+                setPosts([newPost, ...posts]); // Update local state with new post
+                setNewPostTitle('');
+                setNewPostContent('');
+                setModalVisible(false);
+            } catch (error) {
+                console.error("Error adding post: ", error);
+                Alert.alert('Error', 'Could not add post.');
+            }
         } else {
-            alert('Please fill in both the title and content fields.');
+            Alert.alert('Error', 'Please fill in both the title and content fields.');
         }
     };
 
@@ -70,49 +94,35 @@ export const ForumPostScreen = ({ route, navigation }) => {
         </TouchableOpacity>
     );
 
-    const renderTags = () => {
-      return (
-        <View style={styles.tagContainer}>
-          {forumTags.map((tag, index) => (
-            <View key={index} style={styles.tag}>
-              <Text color="white">{tag}</Text>
-            </View>
-          ))}
-        </View>
-      );
-    };
-
     return (
         <RootLayout navigation={navigation} screenName={forumTitle}>
             <View style={styles.container}>
-                <View style={styles.headerContainer}>
-                    <View style={styles.titleContainer}>
-                        <Text style={styles.header} numberOfLines={1}>{forumTitle}</Text>
-                    </View>
-                    <View style={styles.joinSection}>
-                        <Text style={styles.memberCount}>{memberCount} Members</Text>
-                        {!isJoined ? (
-                            <TouchableOpacity style={styles.joinButton} onPress={handleJoinForum}>
-                                <Text style={styles.joinButtonText}>Join</Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <Text style={styles.joinedText}>Joined</Text>
-                        )}
-                    </View>
-                </View>
-                {renderTags()}
-                <View style={styles.divider} />
+                <Text style={styles.forumTitle}>{forumTitle}</Text>
 
-                <TouchableOpacity
-                    style={styles.addPostButton}
-                    onPress={() => (isJoined ? setModalVisible(true) : alert('Join the forum to post'))}
+                {/* Add New Post Button */}
+                <TouchableOpacity 
+                    style={styles.addButton} 
+                    onPress={() => setModalVisible(true)}
                 >
-                    <Ionicons name="add-circle-outline" size={24} color="white" />
-                    <Text style={styles.addPostButtonText}>Add Post</Text>
+                    <Ionicons name="add-circle-outline" size={24} color="#fff" />
+                    <Text style={styles.addButtonText}>Add New Post</Text>
                 </TouchableOpacity>
 
-                <FlatList data={posts} renderItem={renderPostItem} keyExtractor={(item) => item.id} style={styles.postList} />
+                {/* Posts List */}
+                {posts.length === 0 ? (
+                    <View style={styles.noPostsContainer}>
+                        <Text style={styles.noPostsText}>No posts available for this forum.</Text>
+                    </View>
+                ) : (
+                    <FlatList 
+                        data={posts} 
+                        renderItem={renderPostItem} 
+                        keyExtractor={(item) => item.id} 
+                        style={styles.postList} 
+                    />
+                )}
 
+                {/* Modal for adding a new post */}
                 <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
                     <View style={styles.modalContainer}>
                         <View style={styles.modalContent}>
@@ -152,60 +162,12 @@ const styles = StyleSheet.create({
         padding: 20,
         backgroundColor: '#ffffff',
     },
-    headerContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    titleContainer: {
-        flex: 1, // Adjust to occupy available space
-        marginRight: 10, // Margin to avoid overlap with joinSection
-    },
-    header: {
-        fontSize: 28,
+    forumTitle: {
+        fontSize: 24,
         fontWeight: 'bold',
-        flexWrap: 'wrap',
+        marginBottom: 20,
     },
-    joinSection: {
-        alignItems: 'center',
-    },
-    memberCount: {
-        fontSize: 12,
-        marginBottom: 5,
-        color: '#6c757d',
-    },
-    joinButton: {
-        backgroundColor: '#7129F2',
-        padding: 10,
-        borderRadius: 8,
-    },
-    joinButtonText: {
-        color: 'white',
-    },
-    joinedText: {
-        color: '#6c757d',
-        fontSize: 16,
-    },
-    tagContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginVertical: 10, 
-    },
-    tag: {
-      backgroundColor: '#B9A2F1',
-      color: '#fff',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      margin: 2,
-      borderRadius: 12,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#ddd',
-        marginVertical: 20,
-    },
-    addPostButton: {
+    addButton: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#7129F2',
@@ -213,102 +175,105 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         marginBottom: 20,
     },
-    addPostButtonText: {
-        color: 'white',
+    addButtonText: {
+        color: '#fff',
         marginLeft: 5,
         fontSize: 16,
     },
-    postList: {
-        marginTop: 20,
+    noPostsContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    postContainer: {
-        backgroundColor: '#f0f0f0',
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 15,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 2,
-    },
-    postTitle: {
+    noPostsText: {
         fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 5,
-        maxWidth: width - 40,
-        flexWrap: 'wrap',
-        color: '#333',
-    },
-    postContent: {
-        fontSize: 14,
-        color: '#333',
-        marginBottom: 10,
-    },
-    metaContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    timeText: {
-        fontSize: 12,
-        color: '#6c757d',
-    },
-    authorText: {
-        fontSize: 12,
-        color: '#6c757d',
+        color: '#888',
     },
     modalContainer: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0,0,0,0.5)',
     },
     modalContent: {
-        width: '90%',
         backgroundColor: '#fff',
-        borderRadius: 10,
         padding: 20,
+        borderRadius: 10,
+        marginHorizontal: 20,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
-        marginBottom: 10,
+        marginBottom: 20,
     },
     newPostTitleInput: {
-        fontSize: 16,
-        backgroundColor: '#f0f0f0',
-        padding: 10,
-        borderRadius: 8,
+        borderColor: '#ddd',
+        borderWidth: 1,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 5,
         marginBottom: 10,
     },
-    newPostContentInput: {
-        fontSize: 16,
-        backgroundColor: '#f0f0f0',
-        padding: 10,
-        borderRadius: 8,
-        minHeight: 80,
-        marginBottom: 10,
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    cancelButton: {
-        backgroundColor: '#f44336',
-        padding: 10,
-        borderRadius: 8,
-    },
-    cancelButtonText: {
-        color: 'white',
-        fontSize: 16,
-    },
-    submitButton: {
-        backgroundColor: '#7129F2',
-        padding: 10,
-        borderRadius: 8,
-    },
-    submitButtonText: {
-        color: 'white',
-        fontSize: 16,
-    },
+    newPostContentInput:{
+      borderColor:'#ddd' ,
+      borderWidth :1 ,
+      paddingHorizontal :10 ,
+      paddingVertical :5 ,
+      borderRadius :5 ,
+      marginBottom :10 ,
+      height :100 ,
+   },
+   modalButtons:{
+       flexDirection:'row' ,
+       justifyContent:'space-between' ,
+   },
+   cancelButton:{
+       backgroundColor:'#ff4d4d' ,
+       padding :10 ,
+       borderRadius :5 ,
+       flex :1 ,
+       marginRight :5 ,
+   },
+   cancelButtonText:{
+       color:'#fff' ,
+       textAlign:'center' ,
+   },
+   submitButton:{
+       backgroundColor:'#4CAF50' ,
+       padding :10 ,
+       borderRadius :5 ,
+       flex :1 ,
+   },
+   submitButtonText:{
+       color:'#fff' ,
+       textAlign:'center' ,
+   },
+    postContainer:{
+       padding :15 ,
+       marginBottom :15 ,
+       backgroundColor:'#f0f0f0' ,
+       borderRadius :10 ,
+   },
+   postTitle:{
+       fontSize :18 ,
+       fontWeight:'bold' ,
+   },
+   postContent:{
+       fontSize :16 ,
+       color:'#333' ,
+   },
+   metaContainer:{
+       flexDirection:'row' ,
+       justifyContent:'space-between' ,
+       marginTop :10 ,
+   },
+   timeText:{
+       fontSize :12 ,
+       color:'#888' ,
+   },
+   authorText:{
+       fontSize :12 ,
+       color:'#888' ,
+   }
 });
+
+export default ForumPostScreen;

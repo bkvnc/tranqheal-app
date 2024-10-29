@@ -1,26 +1,55 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, FlatList, StyleSheet, Modal, Button, Dimensions, Alert, ScrollView, KeyboardAvoidingView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  StyleSheet,
+  Dimensions,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
+import { firestore } from '../config/firebase'; 
+import { getDocs, getFirestore, collection, addDoc, query, where } from 'firebase/firestore';
 
-// Get screen width
 const { width } = Dimensions.get('window');
 
 export const ForumsScreen = ({ navigation }) => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [forums, setForums] = useState([
-    { id: '1', title: 'Mental Health Awareness', timeFrame: '2h ago', tags: ['Support', 'Awareness', 'Wellness', 'Motivation'] },
-    { id: '2', title: 'Stress Management', timeFrame: '5h ago', tags: ['Stress', 'Self-care', 'Mental Health', 'Wellness'] },
-  ]);
-
-  const [isModalVisible, setIsModalVisible] = useState(false); 
-  const [forumTitle, setForumTitle] = useState(''); 
-  const [forumContent, setForumContent] = useState(''); 
+  const [forums, setForums] = useState([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [forumTitle, setForumTitle] = useState('');
+  const [forumContent, setForumContent] = useState('');
   const [tags, setTags] = useState([]);
 
   // Predefined tags
   const predefinedTags = ['Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'];
+
+  // Fetch forums from Firestore on component mount
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const db = getFirestore();
+        const postsRef = collection(db, 'forums'); 
+        const snapshot = await getDocs(postsRef);
+        const fetchedForums = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setForums(fetchedForums);
+      } catch (error) {
+        console.error("Error fetching forums: ", error);
+        Alert.alert('Error', 'Could not fetch forums.');
+      }
+    };
+
+    fetchPosts();
+  }, []);
 
   // Handle tag selection
   const toggleTag = (tag) => {
@@ -31,29 +60,37 @@ export const ForumsScreen = ({ navigation }) => {
     }
   };
 
-  // Validation
-  const createForum = () => {
+  // Validation and create forum
+  const createForum = async () => {
     if (!forumTitle || !forumContent) {
       Alert.alert('Error', 'Please enter both a title and content for the forum.');
       return;
     }
 
     const newForum = {
-      id: (forums.length + 1).toString(),
       title: forumTitle,
-      timeFrame: 'Just now',
+      content: forumContent,
+      timeFrame: new Date().toLocaleString(),
       tags: tags,
     };
-    setForums([...forums, newForum]);
-    setForumTitle('');
-    setForumContent('');
-    setTags([]);
-    setIsModalVisible(false); 
+
+    try {
+      const db = getFirestore();
+      const docRef = await addDoc(collection(db, 'forums'), newForum);
+      setForums([...forums, { id: docRef.id, ...newForum }]);
+      setForumTitle('');
+      setForumContent('');
+      setTags([]);
+      setIsModalVisible(false);
+    } catch (error) {
+      console.error("Error creating forum: ", error);
+      Alert.alert('Error', 'Could not create forum.');
+    }
   };
 
   const renderForumItem = ({ item }) => {
     const displayedTags = item.tags.slice(0, 2);
-    const remainingTagsCount = item.tags.length - 2;
+    const remainingTagsCount = item.tags.length - displayedTags.length;
 
     return (
       <View style={styles.forumContainer}>
@@ -71,9 +108,14 @@ export const ForumsScreen = ({ navigation }) => {
         </View>
         <TouchableOpacity
           style={styles.visitButton}
-          onPress={() => navigation.navigate('ForumDetails', { forumId: item.id, forumTitle: item.title, forumTags: item.tags })}
+          onPress={() => navigation.navigate('ForumDetails', 
+            {
+              forumId: item.id,
+              forumTitle: item.title,
+              forumTags: item.tags,
+            })}
         >
-          <Ionicons name="arrow-forward" size={18} color="white" style={styles.visitIcon} />
+          <Ionicons name="arrow-forward" size={18} color="white" />
           <Text style={styles.visitButtonText}>Visit Forum</Text>
         </TouchableOpacity>
       </View>
@@ -122,8 +164,8 @@ export const ForumsScreen = ({ navigation }) => {
           <KeyboardAvoidingView behavior="padding" style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Create New Forum</Text>
-                <TouchableOpacity style={styles.createForumButton} onPress={createForum}>
-                      <Text style={styles.ForumButtonText}>Create Forum</Text>
+              <TouchableOpacity style={styles.createForumButton} onPress={createForum}>
+                <Text style={styles.ForumButtonText}>Create Forum</Text>
               </TouchableOpacity>
             </View>
             <TextInput
@@ -156,9 +198,12 @@ export const ForumsScreen = ({ navigation }) => {
                 </TouchableOpacity>
               ))}
             </View>
-              <TouchableOpacity style={styles.createForumCancelButton} onPress={() => setIsModalVisible(false)}>
-                <Text style={styles.ForumButtonText}>Cancel</Text>
-              </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.createForumCancelButton} 
+              onPress={() => setIsModalVisible(false)}
+            >
+              <Text style={styles.ForumButtonText}>Cancel</Text>
+            </TouchableOpacity>
           </KeyboardAvoidingView>
         </Modal>
       </View>
@@ -217,111 +262,86 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
   },
-  forumsList: {
-    marginTop: 20,
-  },
-  forumContainer: {
-    padding: 15,
-    marginBottom: 15,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-  },
-  forumTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  metaContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  tagContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  tag: {
-    backgroundColor: '#B9A2F1',
-    color: '#fff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    margin: 2,
-    borderRadius: 12,
-  },
-  modalContainer: {
-    flex: 1,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  modalInput: {
-    marginBottom: 15,
-    borderColor: '#ddd',
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 10,
-  },
-  predefinedTagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 15,
-  },
-  predefinedTag: {
-    padding: 10,
-    borderRadius: 20,
-    marginRight: 10,
-    marginBottom: 10,
-  },
-  selectedTag: {
-    backgroundColor: '#B9A2F1',
-  },
-  unselectedTag: {
-    backgroundColor: '#ECE6F0',
-  },
-  visitButton: {
-    marginTop: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#7f4dff',
-    padding: 10,
-    borderRadius: 8,
-  },
-  visitIcon: {
-    marginRight: 5,
-  },
-  visitButtonText: {
-    color: '#fff',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  ForumButtonText: {
-    color: '#fff',
-    alignItems: 'center',
-    marginLeft: 5,
-  },
-  createForumButton: {  
-    backgroundColor: '#7129F2',
-    padding: 10,
-    borderRadius: 8,
-    display: 'flex',
-    marginTop: 20,
-    alignItems: 'center',
-    height: 40,
-  },
-  createForumCancelButton: {  
-    backgroundColor: '#7129F2',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 20,
-    alignItems: 'center',
-    height: 40,
-    display: 'flex',
-  },
+  
+   forumsList: {
+     marginTop:20 ,
+   },
+   forumContainer:{
+     padding :15 ,
+     marginBottom :15 ,
+     backgroundColor:'#f0f0f0' ,
+     borderRadius :10 ,
+   },
+   forumTitle:{
+     fontSize :18 ,
+     fontWeight:'bold' ,
+   },
+   metaContainer:{
+     flexDirection:'row' ,
+     justifyContent:'space-between' ,
+     alignItems:'center' ,
+   },
+   tagContainer:{
+     flexDirection:'row' ,
+     flexWrap:'wrap' ,
+   },
+   tag:{
+     backgroundColor:'#B9A2F1' ,
+     color:'#fff' ,
+     paddingHorizontal :8 ,
+     paddingVertical :4 ,
+     margin :2 ,
+     borderRadius :12 ,
+   },
+   modalContainer:{
+     flex :1 ,
+     padding :20 ,
+   },
+   modalHeader:{
+     flexDirection:'row' ,
+     justifyContent:'space-between' ,
+     alignItems:'center' ,
+     marginTop :20 ,
+     marginBottom :20 ,
+   },
+   modalTitle:{
+     fontSize :22 ,
+     fontWeight:'bold' ,
+     marginBottom :20 ,
+   },
+   modalInput:{
+     marginBottom :15 ,
+     borderColor:'#ddd' ,
+     borderWidth :1 ,
+     padding :10 ,
+     borderRadius :10 ,
+   },
+   predefinedTagsContainer:{
+     flexDirection:'row' ,
+     flexWrap:'wrap' ,
+     marginBottom :15 ,
+   },
+   predefinedTag:{
+     padding :10 ,
+     borderRadius :20 ,
+     marginRight :10 ,
+     marginBottom :10 ,
+   },
+   selectedTag:{
+     backgroundColor:'#B9A2F1',
+   },
+   unselectedTag:{
+       backgroundColor:'#ECE6F0',
+   },
+   visitButton:{
+       marginTop :10 , 
+       flexDirection :'row', 
+       alignItems :'center', 
+       backgroundColor :'#7f4dff', 
+       padding :10 , 
+       borderRadius :8 , 
+   },
+   visitButtonText:{
+       color :'#fff', 
+   },
 });

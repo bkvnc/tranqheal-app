@@ -26,7 +26,7 @@ export const MoodResultScreen = ({ navigation }) => {
           <Text style={styles.buttonText}>Seek Professional</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Home')}>
           <Text style={styles.buttonText}>Finish</Text>
         </TouchableOpacity>
       </View>
@@ -78,12 +78,6 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
     marginBottom: 20,
-  },
-  buttonSecondary: {
-    backgroundColor: '#9C27B0', // Slightly lighter purple
-    paddingVertical: 15,
-    borderRadius: 30,
-    alignItems: 'center',
   },
   buttonText: {
     color: '#fff',

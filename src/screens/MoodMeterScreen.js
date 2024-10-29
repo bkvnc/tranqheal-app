@@ -3,14 +3,13 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-nati
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, interpolateColor } from 'react-native-reanimated';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
-import PropTypes from 'prop-types';
-import { RootLayout } from '../navigation/RootLayout';
 
 const { width, height } = Dimensions.get('window');
 const GRID_SIZE = 10;
-const DOT_SIZE = Math.min(width, height) / (GRID_SIZE * 1.5);
+const DOT_SIZE = Math.min(width, height) / (GRID_SIZE * 1.2);
 const GAP_SIZE = 1;
 const MAGNIFICATION_FACTOR = 1.5;
+const REPULSION_FACTOR = 1.2;
 const GRID_WIDTH = GRID_SIZE * (DOT_SIZE + GAP_SIZE) - GAP_SIZE;
 
 const colorPalette = {
@@ -51,8 +50,7 @@ const moodData = {
   ]
 };
 
-
-const MoodDot = React.memo(({ x, y, colorInfo, panX, panY, moodIndex, isInteracting }) => {
+const MoodDot = ({ x, y, colorInfo, panX, panY, moodIndex, isInteracting }) => {
   const animatedScale = useSharedValue(1);
   const animatedTranslateX = useSharedValue(0);
   const animatedTranslateY = useSharedValue(0);
@@ -62,10 +60,6 @@ const MoodDot = React.memo(({ x, y, colorInfo, panX, panY, moodIndex, isInteract
 
   React.useEffect(() => {
     animatedOpacity.value = withTiming(1, { duration: 300 });
-    return () => {
-      // Cleanup function
-      animatedOpacity.value = 0;
-    };
   }, [animatedOpacity]);
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -75,13 +69,16 @@ const MoodDot = React.memo(({ x, y, colorInfo, panX, panY, moodIndex, isInteract
     const dy = dotCenterY - panY.value;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    let scaleFactor = 1;
-    let repulsionDistance = 0;
+    let scaleFactor;
+    let repulsionDistance;
 
     if (isInteracting.value && distance < DOT_SIZE / 2) {
       scaleFactor = MAGNIFICATION_FACTOR;
+      repulsionDistance = 0;
       animatedColorProgress.value = withTiming(1, { duration: 150 });
     } else {
+      scaleFactor = 1;
+      repulsionDistance = 0;
       animatedColorProgress.value = withTiming(0, { duration: 150 });
     }
 
@@ -101,6 +98,7 @@ const MoodDot = React.memo(({ x, y, colorInfo, panX, panY, moodIndex, isInteract
       left: x * (DOT_SIZE + GAP_SIZE),
       top: y * (DOT_SIZE + GAP_SIZE),
       zIndex: animatedZIndex.value,
+      transformOrigin: 'center',
       borderRadius: DOT_SIZE / 2,
       overflow: 'hidden',
       transform: [
@@ -133,53 +131,9 @@ const MoodDot = React.memo(({ x, y, colorInfo, panX, panY, moodIndex, isInteract
       />
     </Animated.View>
   );
-});
-
-MoodDot.propTypes = {
-  x: PropTypes.number.isRequired,
-  y: PropTypes.number.isRequired,
-  colorInfo: PropTypes.shape({
-    base: PropTypes.string,
-    highlight: PropTypes.string,
-  }).isRequired,
-  panX: PropTypes.object.isRequired,
-  panY: PropTypes.object.isRequired,
-  moodIndex: PropTypes.string.isRequired,
-  isInteracting: PropTypes.object.isRequired,
 };
 
-const MoodGrid = React.memo(({ panX, panY, isInteracting }) => {
-  return (
-    <>
-      {Object.entries(moodData).map(([quadrant, moods], quadrantIndex) => {
-        const colorInfo = Object.values(colorPalette)[quadrantIndex];
-        const startX = (quadrantIndex % 2) * (GRID_SIZE / 2);
-        const startY = Math.floor(quadrantIndex / 2) * (GRID_SIZE / 2);
 
-        return Array.from({ length: GRID_SIZE / 2 }, (_, i) =>
-          Array.from({ length: GRID_SIZE / 2 }, (_, j) => (
-            <MoodDot
-              key={`${startX + i}-${startY + j}`}
-              x={startX + i}
-              y={startY + j}
-              colorInfo={colorInfo}
-              panX={panX}
-              panY={panY}
-              moodIndex={quadrant}
-              isInteracting={isInteracting}
-            />
-          ))
-        ).flat();
-      })}
-    </>
-  );
-});
-
-MoodGrid.propTypes = {
-  panX: PropTypes.object.isRequired,
-  panY: PropTypes.object.isRequired,
-  isInteracting: PropTypes.object.isRequired,
-};
 
 export const MoodMeterScreen = ({ navigation }) => {
   const [selectedMood, setSelectedMood] = useState('');
@@ -237,8 +191,34 @@ export const MoodMeterScreen = ({ navigation }) => {
     }
   }, []);
 
+  const renderMoodDots = useMemo(() => {
+    const dots = [];
+    Object.entries(moodData).forEach(([quadrant, moods], quadrantIndex) => {
+      const colorInfo = Object.values(colorPalette)[quadrantIndex];
+      const startX = (quadrantIndex % 2) * (GRID_SIZE / 2);
+      const startY = Math.floor(quadrantIndex / 2) * (GRID_SIZE / 2);
+
+      for (let i = 0; i < GRID_SIZE / 2; i++) {
+        for (let j = 0; j < GRID_SIZE / 2; j++) {
+          dots.push(
+            <MoodDot
+              key={`${startX + i}-${startY + j}`}
+              x={startX + i}
+              y={startY + j}
+              colorInfo={colorInfo}
+              panX={panX}
+              panY={panY}
+              moodIndex={quadrant}
+              isInteracting={isInteracting}
+            />
+          );
+        }
+      }
+    });
+    return dots;
+  }, [panX, panY, isInteracting]);
+
   return (
-   <RootLayout  screenName = {'MoodMeter'} navigation={navigation}>
     <View style={styles.container}>
       <Text style={styles.title}>How are you feeling right now?</Text>
 
@@ -254,14 +234,9 @@ export const MoodMeterScreen = ({ navigation }) => {
         onFailed={handleGestureEnd}
         onCancelled={handleGestureEnd}
       >
-        <Animated.View 
-          style={styles.gridContainer}
-          accessible={true}
-          accessibilityLabel="Mood selection grid"
-          accessibilityHint="Drag your finger across the grid to select your mood"
-        >
-          <MoodGrid panX={panX} panY={panY} isInteracting={isInteracting} />
-        </Animated.View>
+        <View style={styles.gridContainer}>
+          {renderMoodDots}
+        </View>
       </PanGestureHandler>
 
       <View style={styles.bottomLabelContainer}>
@@ -280,22 +255,15 @@ export const MoodMeterScreen = ({ navigation }) => {
         )}
       </View>
 
-      <TouchableOpacity 
-        style={styles.button} 
-        onPress={() => navigation.navigate('Mood2')}
-        accessible={true}
-        accessibilityLabel="Next"
-        accessibilityHint="Navigate to the next screen"
-      >
+      <TouchableOpacity style={styles.button} 
+        onPress={() => {
+          console.log('Selected mood: ', selectedMood);
+          navigation.navigate('Mood2', { selectedMood });
+        }}>
         <Text style={styles.buttonText}>Next</Text>
       </TouchableOpacity>
     </View>
-  </RootLayout>   
   );
-};
-
-MoodMeterScreen.propTypes = {
-  navigation: PropTypes.object.isRequired,
 };
 
 const styles = StyleSheet.create({
@@ -317,6 +285,7 @@ const styles = StyleSheet.create({
     width: GRID_WIDTH,
     height: GRID_WIDTH,
     backgroundColor: '#fff',
+    alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
     borderRadius: 20,
@@ -327,34 +296,33 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    marginVertical: 20,
   },
   leftLabelContainer: {
-    position: 'absolute',
-    top: '40%',
-    left: '2%',
-    justifyContent: 'space-between',
-    height: '20%',
-  },
-  bottomLabelContainer: {
-    position: 'absolute',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    bottom: '32%',
-    width: '70%',
-  },
-  energyLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    transform: [{ rotate: '-90deg' }],
-  },
-  pleasantnessLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
+   position:'absolute',
+   top:'38%',
+   left:'-5%',
+   justifyContent:'space-between',
+   height:'22%',
+},
+ bottomLabelContainer: {
+   position:'absolute',
+   flexDirection:'row',
+   justifyContent:'space-between',
+   bottom:'29%',
+   width:'77%',
+ },
+energyLabel:{
+   fontSize:14,
+   fontWeight:'bold',
+   transform:[{rotate:'-90deg'}],
+},
+pleasantnessLabel:{
+   fontSize:14,
+   fontWeight:'bold',
+},
   moodDot: {
     position: 'absolute',
-    width: DOT_SIZE,
+    shadowColor: '#fff',
     shadowOffset: { width: 0, height: 2 },
   },
   moodTextContainer: {
@@ -362,9 +330,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
+    bottom: -40,
     marginTop: 20,
-    paddingHorizontal: 20,
-    bottom: -20,
   },
   moodText: {
     fontSize: 20,
@@ -381,17 +348,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
-    bottom: -50,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    bottom: -70,
   },
   buttonText: {
     color: "white",
     fontSize: 16,
   },
 });
-
-export default MoodMeterScreen;
