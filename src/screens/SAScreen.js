@@ -23,7 +23,7 @@ export const SAScreen = ({ navigation }) => {
         {/* Bottom Text and Button */}
         <View style={styles.bottomContainer}>
           <Text style={styles.bottomText}>
-            Disclaimer: The series of test is a self-administered instrument used in primary care settings. This assessment is <Text style={{ color: 'red', fontWeight: 'bold', fontStyle: 'italic' }}>NOT</Text> a diagnostic test. Please consult a professional if you are concerned about your well-being.
+            Disclaimer: The series of test is a self-administered instrument used in primary care settings. This assessment is <Text style={{ color: 'red', fontWeight: 'bold', fontStyle: 'italic' }}>NOT</Text> a diagnostic test. Please consult your doctor or a professional if you are concerned about your well-being.
           </Text>
           <TouchableOpacity 
             style={styles.button} 
