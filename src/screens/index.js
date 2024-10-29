@@ -29,6 +29,8 @@ import { MoodMeterScreen } from './MoodMeterScreen';
 import {MoodScreen2} from './MoodScreen2';
 import {MoodResultScreen} from './MoodResultScreen';
 
+import { ProfessionalProfileScreen } from './ProfessionalProfileScreen';
+import { EditProfessionalProfileScreen } from './editProfessionalProfileScreen';
 
 export { WelcomeScreen, RegisterAsScreen, LoginScreen, 
     SignupScreen, ProfessionalRegisterScreen, UploadCredentialsScreen, ViewProfScreen, ViewOrgScreen, ForumsScreen, 
@@ -37,4 +39,5 @@ export { WelcomeScreen, RegisterAsScreen, LoginScreen,
     SAPreferenceScreen, SAResultScreen, PostDetailsScreen,
     ForumPostScreen, OrganizationDetailsScreen, ProfessionalDetailsScreen,
     EditProfileScreen, ProfessionalHomeScreen, ViewRequestScreen,
-    ViewRequestHistoryScreen, MoodMeterScreen, MoodScreen2, MoodResultScreen };
+    ViewRequestHistoryScreen, MoodMeterScreen, MoodScreen2, MoodResultScreen,
+    EditProfessionalProfileScreen, ProfessionalProfileScreen };
