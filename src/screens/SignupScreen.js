@@ -31,7 +31,7 @@ export const SignupScreen = ({ navigation, route }) => {
 
       const collectionName = userType === 'professional' ? 'professionals' : 'users';      
 
-      await createUserInFirestore(userId, username, email, collectionName);
+      await createUserInFirestore(userId, username, email, collectionName, userType);
     } catch (error) {
       console.log('Error creating user:', error.message);
       setErrorState(error.message);

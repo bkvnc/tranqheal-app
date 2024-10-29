@@ -2,7 +2,7 @@ import { doc, setDoc , serverTimestamp} from 'firebase/firestore';
 import { firestore } from '../config';
 import { getDefaultProfileImage } from './getDefaultProfileImage';
 
-export const createUserInFirestore = async (userId, username, email, collectionName) => {
+export const createUserInFirestore = async (userId, username, email, collectionName, userType) => {
   const userRef = doc(firestore, collectionName, userId);
 
   try {
@@ -13,6 +13,7 @@ export const createUserInFirestore = async (userId, username, email, collectionN
       email: email,
       profileImage: profileImageUrl,
       createdAt: serverTimestamp(),
+      userType: userType,
     });
     console.log('User created successfully!');
   } catch (error) {
