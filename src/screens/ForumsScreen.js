@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
-  TextInput,
+  TextInput, 
   Modal,
   StyleSheet,
   Dimensions,
@@ -13,15 +13,18 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
-import { firestore } from '../config/firebase'; 
-import { getDocs, getFirestore, collection, addDoc, query, where } from 'firebase/firestore';
+import { getDocs, getFirestore, collection, addDoc,doc, getDoc } from 'firebase/firestore';
+import { auth, firestore } from 'src/config';
 
 const { width } = Dimensions.get('window');
 
 export const ForumsScreen = ({ navigation }) => {
+  const [userType, setUserType] = useState(null);
+  const [authorName,setAuthorName] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [forums, setForums] = useState([]);
+  const [filteredForums, setFilteredForums] = useState([]); // State for filtered forums
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [forumTitle, setForumTitle] = useState('');
   const [forumContent, setForumContent] = useState('');
@@ -29,7 +32,29 @@ export const ForumsScreen = ({ navigation }) => {
 
   // Predefined tags
   const predefinedTags = ['Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'];
-
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        if (auth.currentUser) { 
+          const userRef = doc(firestore, 'users', auth.currentUser.uid);
+          const userSnapshot = await getDoc(userRef);
+          
+  
+          if (userSnapshot.exists()) {
+            const userData = userSnapshot.data();
+            setUserType(userData.userType);
+            setAuthorName(`${userData.firstName} ${userData.lastName}`); 
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        Alert.alert('Error', 'Could not fetch user data.');
+      }
+    };
+  
+    fetchUserData();
+  }, [auth.currentUser, firestore]); // Include dependencies
+  
   // Fetch forums from Firestore on component mount
   useEffect(() => {
     const fetchPosts = async () => {
@@ -42,6 +67,7 @@ export const ForumsScreen = ({ navigation }) => {
           ...doc.data()
         }));
         setForums(fetchedForums);
+        setFilteredForums(fetchedForums); // Initialize filtered forums with all forums
       } catch (error) {
         console.error("Error fetching forums: ", error);
         Alert.alert('Error', 'Could not fetch forums.');
@@ -50,6 +76,21 @@ export const ForumsScreen = ({ navigation }) => {
 
     fetchPosts();
   }, []);
+
+  // Search function to filter forums
+  const searchFilterFunction = (text) => {
+    if (text) {
+      const newData = forums.filter((forum) => {
+        const forumTitle = forum.title ? forum.title.toUpperCase() : '';
+        return forumTitle.indexOf(text.toUpperCase()) > -1;
+      });
+      setFilteredForums(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredForums(forums); // Reset to original list if search is empty
+      setSearchQuery(text);
+    }
+  };
 
   // Handle tag selection
   const toggleTag = (tag) => {
@@ -66,11 +107,15 @@ export const ForumsScreen = ({ navigation }) => {
       Alert.alert('Error', 'Please enter both a title and content for the forum.');
       return;
     }
-
+    
     const newForum = {
+      authorId: auth.currentUser.uid,
+      authorName: authorName,
+      authorType: userType,
       title: forumTitle,
+      status:'pending',
       content: forumContent,
-      timeFrame: new Date().toLocaleString(),
+      dateCreated: new Date().toLocaleString(),
       tags: tags,
     };
 
@@ -78,6 +123,7 @@ export const ForumsScreen = ({ navigation }) => {
       const db = getFirestore();
       const docRef = await addDoc(collection(db, 'forums'), newForum);
       setForums([...forums, { id: docRef.id, ...newForum }]);
+      setFilteredForums([...filteredForums, { id: docRef.id, ...newForum }]); // Update filtered list as well
       setForumTitle('');
       setForumContent('');
       setTags([]);
@@ -88,39 +134,24 @@ export const ForumsScreen = ({ navigation }) => {
     }
   };
 
-  const renderForumItem = ({ item }) => {
-    const displayedTags = item.tags.slice(0, 2);
-    const remainingTagsCount = item.tags.length - displayedTags.length;
-
-    return (
-      <View style={styles.forumContainer}>
-        <Text style={styles.forumTitle}>{item.title}</Text>
-        <View style={styles.metaContainer}>
-          <Text style={styles.timeFrame}>{item.timeFrame}</Text>
-          <View style={styles.tagContainer}>
-            {displayedTags.map((tag, index) => (
-              <Text key={index} style={styles.tag}>{tag}</Text>
-            ))}
-            {remainingTagsCount > 0 && (
-              <Text style={styles.moreTagsText}>{`+${remainingTagsCount}`}</Text>
-            )}
-          </View>
-        </View>
-        <TouchableOpacity
-          style={styles.visitButton}
-          onPress={() => navigation.navigate('ForumDetails', 
-            {
-              forumId: item.id,
-              forumTitle: item.title,
-              forumTags: item.tags,
-            })}
-        >
-          <Ionicons name="arrow-forward" size={18} color="white" />
-          <Text style={styles.visitButtonText}>Visit Forum</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
+// Render forum item
+const renderForumItem = ({ item }) => (
+  <View style={styles.forumContainer}>
+    <Text style={styles.forumTitle}>{item.title}</Text>
+    <TouchableOpacity
+      style={styles.visitButton}
+      onPress={() => navigation.navigate('ForumDetails', 
+        {
+          forumId: item.id,
+          forumTitle: item.title,
+          forumAuthorId: item.authorId, // Pass the creator's ID to ForumPostScreen
+        })}
+    >
+      <Ionicons name="arrow-forward" size={18} color="white" />
+      <Text style={styles.visitButtonText}>Visit Forum</Text>
+    </TouchableOpacity>
+  </View>
+);
 
   return (
     <RootLayout navigation={navigation} screenName="Forums">
@@ -149,14 +180,14 @@ export const ForumsScreen = ({ navigation }) => {
               style={styles.searchInput}
               placeholder="Search forums..."
               value={searchQuery}
-              onChangeText={(text) => setSearchQuery(text)}
+              onChangeText={(text) => searchFilterFunction(text)} // Call search function
             />
           </View>
         )}
 
         {/* Forum List */}
         <ScrollView style={styles.forumsList}>
-          {forums.map((forum) => renderForumItem({ item: forum }))}
+          {filteredForums.map((forum) => renderForumItem({ item: forum }))}
         </ScrollView>
 
         {/* Modal for Adding New Forum */}
@@ -211,6 +242,7 @@ export const ForumsScreen = ({ navigation }) => {
   );
 };
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -248,23 +280,22 @@ const styles = StyleSheet.create({
   iconContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  searchContainer: {
-    marginTop: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  searchInput: {
-    height: 40,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 10,
-  },
-  
-   forumsList: {
-     marginTop:20 ,
+   },
+   searchContainer:{
+     marginTop :20 ,
+     borderBottomWidth :1 ,
+     borderBottomColor :'#ccc' ,
+   },
+   searchInput:{
+     height :40 ,
+     paddingHorizontal :10 ,
+     fontSize :16 ,
+     borderColor :'#ddd' ,
+     borderWidth :1 ,
+     borderRadius :10 ,
+   },
+   forumsList:{
+     marginTop :20 ,
    },
    forumContainer:{
      padding :15 ,
@@ -328,7 +359,7 @@ const styles = StyleSheet.create({
      marginBottom :10 ,
    },
    selectedTag:{
-     backgroundColor:'#B9A2F1',
+       backgroundColor:'#B9A2F1',
    },
    unselectedTag:{
        backgroundColor:'#ECE6F0',

@@ -1,146 +1,135 @@
 import React, { useState, useEffect, useContext } from 'react'; 
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Modal, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, Alert, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import moment from 'moment';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
+import { getFirestore, collection, addDoc, getDocs, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
 
 export const PostDetailsScreen = ({ route, navigation }) => {
-  const { userType } = useContext(AuthenticatedUserContext);
-  const { postId, postTitle, postContent, postAuthor, postTime, userId } = route.params;
+  const { userType, user } = useContext(AuthenticatedUserContext); // Access user context
+  const { postId, postTitle, postContent, postAuthor, postTime } = route.params;
 
-  const [comments, setComments] = useState([
-    { id: '1', author: 'User1', content: 'This is so insightful!', time: moment().subtract(1, 'hours').fromNow(), userId: 'user1', avatar: 'https://randomuser.me/api/portraits/men/1.jpg' },
-    { id: '2', author: 'User2', content: 'I completely agree!', time: moment().subtract(2, 'hours').fromNow(), userId: 'user2', avatar: 'https://randomuser.me/api/portraits/women/2.jpg' },
-  ]);
-
+  const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
-  const [likes, setLikes] = useState(10);
-  const [userReacted, setUserReacted] = useState(null);
-  const [commentToEdit, setCommentToEdit] = useState(null);
+  const [likes, setLikes] = useState(0);
+  const [userReacted, setUserReacted] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [isMember, setIsMember] = useState(true); // Placeholder for membership check
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [commentToEdit, setCommentToEdit] = useState(null);
+  const [isReportModalVisible, setIsReportModalVisible] = useState(false); 
+  const [commentToReportId, setCommentToReportId] = useState(null); 
 
+  // Fetch comments from Firestore when component mounts
   useEffect(() => {
-    checkMembership();
-  }, []);
+    const fetchComments = async () => {
+      try {
+        const db = getFirestore();
+        const commentsRef = collection(db, 'comments');
+        const q = query(commentsRef, where('postId', '==', postId));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+          setComments([]); // Handle empty comments
+          return;
+        }
 
-  const checkMembership = async () => {
-    setIsMember(true); // Assuming the user is a member
-  };
+        const fetchedComments = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setComments(fetchedComments);
+      } catch (error) {
+        console.error("Error fetching comments: ", error);
+        Alert.alert('Error', 'Could not fetch comments.');
+      }
+    };
 
-  const handleAddComment = () => {
+    fetchComments();
+  }, [postId]);
+
+  // Handle adding a new comment
+  const handleAddComment = async () => {
     if (newComment.trim()) {
       const newCommentObj = {
-        id: String(comments.length + 1),
-        author: 'You',
         content: newComment,
-        time: moment().fromNow(),
-        userId: userId,
-        avatar: 'https://randomuser.me/api/portraits/lego/5.jpg' // Placeholder avatar for the user
+        dateCreated: new Date(),
+        author: user.displayName || 'You', // Use display name or fallback to 'You'
+        authorId: user.uid, // Use the authenticated user's ID
+        postId: postId,
       };
-      setComments([newCommentObj, ...comments]);
-      setNewComment('');
+      try {
+        const db = getFirestore();
+        await addDoc(collection(db, 'comments'), newCommentObj); 
+        setComments([newCommentObj, ...comments]); 
+        setNewComment('');
+      } catch (error) {
+        console.error("Error adding comment: ", error);
+        Alert.alert('Error', 'Could not add comment.');
+      }
     } else {
       Alert.alert('Error', 'Please enter a comment before submitting.');
     }
   };
 
-  const handleReact = () => {
-    if (userReacted !== 'like') {
-      setLikes(likes + 1);
-      setUserReacted('like');
-    } else {
-      setLikes(likes - 1);
-      setUserReacted(null);
+  // Handle user reaction (like/unlike)
+  const handleReact = async () => {
+    try {
+      const db = getFirestore();
+      const postRef = doc(db, 'posts', postId);
+      if (!userReacted) {
+        // Add a like
+        setLikes(likes + 1);
+      } else {
+        // Remove a like
+        setLikes(likes > 0 ? likes - 1 : 0);
+      }
+      setUserReacted(!userReacted);
+      await updateDoc(postRef, {
+        likes: userReacted ? likes - 1 : likes + 1,
+      });
+    } catch (error) {
+      console.error("Error updating reaction: ", error);
+      Alert.alert('Error', 'Could not update reaction.');
     }
   };
 
-  const handleEditComment = (commentId) => {
-    const commentToEdit = comments.find(comment => comment.id === commentId);
-    setCommentToEdit(commentToEdit);
-    setIsEditModalVisible(true);
-  };
-
-  const saveEditedComment = () => {
-    setComments(comments.map(comment =>
-      comment.id === commentToEdit.id
-        ? { ...comment, content: commentToEdit.content }
-        : comment
-    ));
+  // Handle editing a comment
+  const handleEditComment = async (commentId, updatedContent) => {
+    const commentRef = doc(getFirestore(), 'comments', commentId);
+    await updateDoc(commentRef, { content: updatedContent });
+    // Update the local state
+    setComments(prevComments =>
+      prevComments.map(comment =>
+        comment.id === commentId ? { ...comment, content: updatedContent } : comment
+      )
+    );
     setIsEditModalVisible(false);
   };
 
-  const handleDeleteComment = (commentId) => {
-    Alert.alert(
-      'Delete Comment',
-      'Are you sure you want to delete this comment?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', onPress: () => setComments(comments.filter(comment => comment.id !== commentId)) },
-      ]
-    );
+  // Handle deleting a comment
+  const handleDeleteComment = async (commentId) => {
+    const commentRef = doc(getFirestore(), 'comments', commentId);
+    await deleteDoc(commentRef);
+    // Update the local state
+    setComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
   };
 
-  const confirmReport = (type, id) => {
-    Alert.alert(
-      `Report ${type}`,
-      `Are you sure you want to report this ${type}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Report', onPress: () => handleReport(type, id) },
-      ]
-    );
-  };
-
-  const handleReport = (type, id) => {
-    Alert.alert(`Report ${type}`, `You have reported the ${type}.`);
-    setIsReportModalVisible(false);
-  };
-
-  const toggleComments = () => {
-    setShowComments(prevState => !prevState);
-  };
-
-  const handleEllipsisPress = (type, item) => {
-    if (type === 'comment') {
-      if (item.userId === userId) {
-        Alert.alert('Actions', null, [
-          { text: 'Edit', onPress: () => handleEditComment(item.id) },
-          { text: 'Delete', onPress: () => handleDeleteComment(item.id) },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-      } else {
-        confirmReport('comment', item.id);
-      }
-    } else if (type === 'post') {
-      if (postAuthor === 'You') {
-        Alert.alert('Actions', null, [
-          { text: 'Edit Post', onPress: () => {} }, // Add functionality to edit post
-          { text: 'Delete Post', onPress: () => {} }, // Add functionality to delete post
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-      } else {
-        confirmReport('post', postId);
-      }
-    }
-  };
-
+  // Render a single comment
   const renderCommentItem = ({ item }) => (
-    <View style={styles.commentImage}>
-      <Image source={{ uri: item.avatar }} style={styles.commentAvatar} />
-        <View style={styles.commentContainer}>
-          <View style={styles.commentContentContainer}>
-            <Text style={styles.commentAuthor}>{item.author}</Text>
-            <Text style={styles.commentContent}>{item.content}</Text>
-            <Text style={styles.commentTime}>{item.time}</Text>
-            <View style={styles.commentActions}>
-              <TouchableOpacity onPress={() => handleEllipsisPress('comment', item)}>
-                <Ionicons name="ellipsis-horizontal" size={20} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+    <View style={styles.commentContainer}>
+      <Text style={styles.commentAuthor}>{item.author}</Text>
+      <Text style={styles.commentContent}>{item.content}</Text>
+      <Text style={styles.commentDate}>{moment(item.dateCreated.toDate()).fromNow()}</Text>
+      <TouchableOpacity onPress={() => {
+        setCommentToEdit(item);
+        setIsEditModalVisible(true);
+      }}>
+        <Ionicons name="create-outline" size={20} color="#007AFF" />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => handleDeleteComment(item.id)}>
+        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -148,65 +137,76 @@ export const PostDetailsScreen = ({ route, navigation }) => {
     <RootLayout navigation={navigation} screenName="Post Details" userType={userType}>
       <View style={styles.container}>
         <Text style={styles.postTitle}>{postTitle}</Text>
+        
         <View style={styles.metaContainer}>
           <Text style={styles.timeText}>{postTime}</Text>
           <Text style={styles.authorText}>by {postAuthor}</Text>
         </View>
+
         <Text style={styles.postContent}>{postContent}</Text>
+
+        {/* Reaction and Comments Section */}
         <View style={styles.reactContainer}>
-          <TouchableOpacity onPress={toggleComments} style={styles.commentButton}>
-            <Ionicons name="chatbox-ellipses-outline" size={24} />
-            <Text style={styles.commentCountText}>{comments.length}</Text>
+          <TouchableOpacity onPress={() => setShowComments(!showComments)} style={styles.iconButton}>
+            <Ionicons name="chatbox-ellipses-outline" size={24} color="#333" />
+            <Text>{comments.length}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleReact} style={styles.reactButton}>
-            <Ionicons name={userReacted === 'like' ? 'heart' : 'heart-outline'} size={24} color={userReacted === 'like' ? '#d9534f' : '#333'} />
-            <Text style={styles.reactText}>{likes}</Text>
+
+          <TouchableOpacity onPress={handleReact} style={styles.iconButton}>
+            <Ionicons name={userReacted ? 'heart' : 'heart-outline'} size={24} color={userReacted ? '#d9534f' : '#333'} />
+            <Text>{likes}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleEllipsisPress('post', { postId })} style={styles.reactButton}>
+
+          <TouchableOpacity style={styles.iconButton}>
             <Ionicons name="ellipsis-horizontal" size={24} color="#333" />
           </TouchableOpacity>
         </View>
 
         {showComments && (
           <>
-            <Text style={styles.commentSectionTitle}>Comments</Text>
             <FlatList
               data={comments}
               renderItem={renderCommentItem}
               keyExtractor={(item) => item.id}
               style={styles.commentList}
             />
+
+            {/* Comment Input */}
+            <View style={styles.addCommentContainer}>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Write a comment..."
+                value={newComment}
+                onChangeText={(text) => setNewComment(text)}
+              />
+              <TouchableOpacity style={styles.submitCommentButton} onPress={handleAddComment}>
+                <Text style={styles.submitButtonText}>Submit</Text>
+              </TouchableOpacity>
+            </View>
           </>
         )}
 
-        {isMember ? (
-          <View style={styles.addCommentContainer}>
-            <TextInput
-              style={styles.commentInput}
-              placeholder="Write a comment..."
-              value={newComment}
-              onChangeText={setNewComment}
-            />
-            <TouchableOpacity style={styles.submitCommentButton} onPress={handleAddComment}>
-              <Text style={styles.submitCommentButtonText}>Submit</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <Text style={styles.notMemberText}>You must join this forum to comment.</Text>
+        {/* Edit Comment Modal */}
+        {isEditModalVisible && (
+          <Modal visible={isEditModalVisible} transparent animationType="slide">
+            {/* Modal content for editing a comment */}
+            {/* ... */}
+          </Modal>
+        )}
+
+        {/* Report Comment Modal */}
+        {isReportModalVisible && (
+          <Modal visible={isReportModalVisible} transparent animationType="slide">
+            {/* Report confirmation modal content */}
+            {/* ... */}
+          </Modal>
         )}
       </View>
     </RootLayout>
   );
 };
 
-// Style
 const styles = StyleSheet.create({
-  centeredView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 22,
-  },
   container: {
     flex: 1,
     padding: 16,
@@ -214,20 +214,19 @@ const styles = StyleSheet.create({
   postTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
   },
   metaContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  authorText: {
-    fontSize: 14,
-    fontWeight: '600',
+    marginVertical: 8,
   },
   timeText: {
     fontSize: 12,
-    color: '#666',
+    color: '#888',
+  },
+  authorText: {
+    fontSize: 12,
+    color: '#888',
   },
   postContent: {
     fontSize: 16,
@@ -235,75 +234,14 @@ const styles = StyleSheet.create({
   },
   reactContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-around',
     marginBottom: 16,
+  },
+  iconButton: {
     alignItems: 'center',
-    justifyContent: 'space-evenly',
-  },
-  reactButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  commentButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  reactText: {
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  commentCountText: {
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  commentSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
   },
   commentList: {
-    marginBottom: 16,
-  },
-  commentImage: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  commentContainer: {
-    backgroundColor: '#F4F4F4',
-    padding: 12,  // Adjust padding for consistent spacing
-    borderRadius: 15,
-    marginBottom: 15,
-    flex: 1,      // Allow the container to take up available space based on content
-  },
-  commentAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  commentContentContainer: {
-    flex: 1,
-  },
-  commentAuthor: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  commentContent: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  commentTime: {
-    fontSize: 12,
-    color: '#666',
-  },
-  commentActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
+    marginVertical: 16,
   },
   addCommentContainer: {
     flexDirection: 'row',
@@ -313,27 +251,48 @@ const styles = StyleSheet.create({
     flex: 1,
     borderColor: '#ccc',
     borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    padding: 8,
+    marginRight: 8,
   },
   submitCommentButton: {
-    backgroundColor: '#7129F2',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginLeft: 8,
+    backgroundColor: '#007BFF',
+    padding: 8,
     borderRadius: 4,
   },
-  submitCommentButtonText: {
+  submitButtonText: {
     color: '#fff',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 20,
+  },
+  actionText: {
+    color: '#007BFF',
+    marginHorizontal: 8,
+  },
+  commentItem: {
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+    paddingVertical: 8,
+  },
+  commentAuthor: {
     fontWeight: 'bold',
   },
-  notMemberText: {
-    color: '#dc3545',
-    fontWeight: 'bold',
-    textAlign: 'center',
+  commentContent: {
+    marginVertical: 4,
+  },
+  commentDate: {
+    fontSize: 12,
+    color: '#888',
+  },
+  commentActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  cancelButtonText: {
+    color: '#FF0000',
   },
 });
-
-
-export default PostDetailsScreen;
