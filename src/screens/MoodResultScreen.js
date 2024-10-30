@@ -22,7 +22,7 @@ export const MoodResultScreen = ({ navigation }) => {
         </View>
 
         {/* Buttons */}
-        <TouchableOpacity style={styles.button} >
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('SeekProfessional')} >
           <Text style={styles.buttonText}>Seek Professional</Text>
         </TouchableOpacity>
         
@@ -85,4 +85,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-

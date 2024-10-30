@@ -137,6 +137,7 @@ const MoodDot = ({ x, y, colorInfo, panX, panY, moodIndex, isInteracting }) => {
 
 export const MoodMeterScreen = ({ navigation }) => {
   const [selectedMood, setSelectedMood] = useState('');
+  const [selectedEmoji, setSelectedEmoji] = useState('');
   const [selectedColor, setSelectedColor] = useState(null);
   const panX = useSharedValue(0);
   const panY = useSharedValue(0);

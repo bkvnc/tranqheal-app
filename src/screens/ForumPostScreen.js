@@ -1,149 +1,221 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, Modal, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  FlatList,
+  Alert
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
-
-const { width } = Dimensions.get('window');
+import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc } from 'firebase/firestore';
+import { auth, firestore } from 'src/config';
 
 export const ForumPostScreen = ({ route, navigation }) => {
-    const { forumId, forumTitle, forumTags } = route.params;
+  const { forumId, forumTitle, forumAuthorId } = route.params;
+  const [userType, setUserType] = useState(null);
+  const [authorName, setAuthorName] = useState('');
+  const [posts, setPosts] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newPostTitle, setNewPostTitle] = useState('');
+  const [newPostContent, setNewPostContent] = useState('');
+  const [isMember, setIsMember] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
 
-    // Sample data for posts
-    const [posts, setPosts] = useState([
-        { id: '1', title: 'How do I manage anxiety?', content: 'I need advice on coping with anxiety...', time: '2h ago', author: 'John Doe' },
-        { id: '2', title: 'What are the best practices for self-care?', content: 'Looking for tips on self-care routines.', time: '4h ago', author: 'Jane Smith' },
-    ]);
+  useEffect(() => { 
+    const fetchUserData = async () => {
+      try {
+        if (auth.currentUser) {
+          const userRef = doc(firestore, 'users', auth.currentUser.uid);
+          const userSnapshot = await getDoc(userRef);
 
-    const [modalVisible, setModalVisible] = useState(false);
-    const [newPostTitle, setNewPostTitle] = useState('');
-    const [newPostContent, setNewPostContent] = useState('');
-    const [isJoined, setIsJoined] = useState(false);
-    const [memberCount, setMemberCount] = useState(50); // Sample member count
-    const [selectedTags, setSelectedTags] = useState(['Mental Health', 'Self-care']); // Sample selected tags
-
-    const handleJoinForum = () => {
-        if (!isJoined) {
-            setIsJoined(true);
-            setMemberCount(memberCount + 1);
+          if (userSnapshot.exists()) {
+            const userData = userSnapshot.data();
+            setUserType(userData.userType);
+            setAuthorName(`${userData.firstName} ${userData.lastName}`);
+            setIsCreator(auth.currentUser.uid === forumAuthorId); // Check if user is creator
+          }
         }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        Alert.alert('Error', 'Could not fetch user data.');
+      }
     };
 
-    const handleAddPost = () => {
-        if (newPostTitle && newPostContent) {
-            const newPost = {
-                id: String(posts.length + 1),
-                title: newPostTitle,
-                content: newPostContent,
-                time: 'Just now',
-                author: 'You',
-            };
-            setPosts([newPost, ...posts]);
-            setNewPostTitle('');
-            setNewPostContent('');
-            setModalVisible(false);
+    fetchUserData();
+    fetchPosts();
+    checkMembership();
+  }, [auth.currentUser]);
+
+  // Function to fetch posts
+  const fetchPosts = async () => {
+    try {
+      const db = getFirestore();
+      const postsRef = collection(db, 'posts');
+      const q = query(postsRef, where('forumId', '==', forumId), where('status', '==', 'approved'));
+
+      const snapshot = await getDocs(q);
+      const fetchedPosts = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setPosts(fetchedPosts);
+    } catch (error) {
+      console.error('Error fetching posts: ', error);
+      Alert.alert('Error', 'Could not fetch posts.');
+    }
+  };
+
+  // Placeholder membership check
+  const checkMembership = async () => {
+    try {
+      const db = getFirestore();
+      const membershipRef = collection(db, 'memberships'); // assuming there is membership collection
+      const q = query(membershipRef, where('forumId', '==', forumId), where('userId', '==', auth.currentUser.uid));
+      const snapshot = await getDocs(q);
+      
+      setIsMember(!snapshot.empty); // Set isMember based on whether a document exists
+    } catch (error) {
+      console.error('Error checking membership:', error);
+      Alert.alert('Error', 'Could not check membership status.');
+    }
+  };
+
+  // Join forum handler
+  const handleJoinForum = async () => {
+    setIsMember(true);
+    Alert.alert('Success', 'You have joined the forum!');
+  };
+
+  // Add new post handler
+  const handleAddPost = async () => {
+    if (newPostTitle && newPostContent) {
+      const newPost = {
+        title: newPostTitle,
+        content: newPostContent,
+        time: new Date().toLocaleString(),
+        userType,
+        authorId: auth.currentUser.uid,
+        authorName,
+        forumId,
+        status: 'pending'
+      };
+      try {
+        await addDoc(collection(getFirestore(), 'posts'), newPost);
+        setNewPostTitle('');
+        setNewPostContent('');
+        setModalVisible(false);
+        fetchPosts(); // Refresh posts after adding a new one
+      } catch (error) {
+        console.error('Error adding post: ', error);
+        Alert.alert('Error', 'Could not add post.');
+      }
+    } else {
+      Alert.alert('Error', 'Please fill in both the title and content fields.');
+    }
+  };
+
+  const renderPostItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.postContainer}
+      onPress={() => {
+        if (isMember || isCreator) {
+          navigation.navigate('PostDetails', {
+            postId: item.id,
+            postTitle: item.title,
+            postContent: item.content,
+            postAuthor: item.author,
+            postTime: item.time,
+          });
         } else {
-            alert('Please fill in both the title and content fields.');
+          Alert.alert('Membership Required', 'You must join this forum to view posts.');
         }
-    };
+      }}
+    >
+      <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
+      <Text style={styles.postContent} numberOfLines={2}>{item.content}</Text>
+      <View style={styles.metaContainer}>
+        <Text style={styles.timeText}>{item.time}</Text>
+        <Text style={styles.authorText}>by {item.author}</Text>
+      </View>
+    </TouchableOpacity>
+  );
 
-    const renderPostItem = ({ item }) => (
-        <TouchableOpacity
-            style={styles.postContainer}
-            onPress={() =>
-                navigation.navigate('PostDetails', {
-                    postId: item.id,
-                    postTitle: item.title,
-                    postContent: item.content,
-                    postAuthor: item.author,
-                    postTime: item.time,
-                })
-            }
-        >
-            <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
-            <Text style={styles.postContent} numberOfLines={2}>
-                {item.content}
-            </Text>
-            <View style={styles.metaContainer}>
-                <Text style={styles.timeText}>{item.time}</Text>
-                <Text style={styles.authorText}>by {item.author}</Text>
-            </View>
-        </TouchableOpacity>
-    );
-
-    const renderTags = () => {
-      return (
-        <View style={styles.tagContainer}>
-          {forumTags.map((tag, index) => (
-            <View key={index} style={styles.tag}>
-              <Text color="white">{tag}</Text>
-            </View>
-          ))}
-        </View>
-      );
-    };
-
-    return (
-        <RootLayout navigation={navigation} screenName={forumTitle}>
-            <View style={styles.container}>
-                <View style={styles.headerContainer}>
-                    <View style={styles.titleContainer}>
-                        <Text style={styles.header} numberOfLines={1}>{forumTitle}</Text>
-                    </View>
-                    <View style={styles.joinSection}>
-                        <Text style={styles.memberCount}>{memberCount} Members</Text>
-                        {!isJoined ? (
-                            <TouchableOpacity style={styles.joinButton} onPress={handleJoinForum}>
-                                <Text style={styles.joinButtonText}>Join</Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <Text style={styles.joinedText}>Joined</Text>
-                        )}
-                    </View>
-                </View>
-                {renderTags()}
-                <View style={styles.divider} />
-
-                <TouchableOpacity
-                    style={styles.addPostButton}
-                    onPress={() => (isJoined ? setModalVisible(true) : alert('Join the forum to post'))}
-                >
-                    <Ionicons name="add-circle-outline" size={24} color="white" />
-                    <Text style={styles.addPostButtonText}>Add Post</Text>
-                </TouchableOpacity>
-
-                <FlatList data={posts} renderItem={renderPostItem} keyExtractor={(item) => item.id} style={styles.postList} />
-
-                <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
-                    <View style={styles.modalContainer}>
-                        <View style={styles.modalContent}>
-                            <Text style={styles.modalTitle}>Create a New Post</Text>
-                            <TextInput
-                                style={styles.newPostTitleInput}
-                                placeholder="Post Title"
-                                value={newPostTitle}
-                                onChangeText={setNewPostTitle}
-                            />
-                            <TextInput
-                                style={styles.newPostContentInput}
-                                placeholder="What's on your mind?"
-                                value={newPostContent}
-                                onChangeText={setNewPostContent}
-                                multiline={true}
-                            />
-                            <View style={styles.modalButtons}>
-                                <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-                                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.submitButton} onPress={handleAddPost}>
-                                    <Text style={styles.submitButtonText}>Submit</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                </Modal>
-            </View>
-        </RootLayout>
-    );
+  return (
+    <RootLayout navigation={navigation} screenName={forumTitle}>
+      <View style={styles.container}>
+        <Text style={styles.forumTitle}>{forumTitle}</Text>
+  
+        {/* Conditionally render Join or Add Post Button */}
+        {isCreator ? (
+          <TouchableOpacity 
+            style={styles.addButton} 
+            onPress={() => setModalVisible(true)}
+          >
+            <Ionicons name="add-circle-outline" size={24} color="#fff" />
+            <Text style={styles.addButtonText}>Add New Post</Text>
+          </TouchableOpacity>
+        ) : (
+          !isMember && (
+            <TouchableOpacity 
+              style={styles.joinButton} 
+              onPress={handleJoinForum}
+            >
+              <Ionicons name="person-add" size={24} color="#fff" />
+              <Text style={styles.joinButtonText}>Join Forum</Text>
+            </TouchableOpacity>
+          )
+        )}
+  
+        {/* Render posts or no posts message */}
+        {posts.length === 0 ? (
+          <View style={styles.noPostsContainer}>
+            <Text style={styles.noPostsText}>No posts available for this forum.</Text>
+          </View>
+        ) : (
+          <FlatList 
+            data={posts} 
+            renderItem={renderPostItem} 
+            keyExtractor={(item) => item.id} 
+            style={styles.postList} 
+          />
+        )}
+  
+        {/* Modal for adding a new post */}
+        <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
+          <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>Create New Post</Text>
+                  <TextInput
+                      style={styles.newPostTitleInput}
+                      placeholder="Post Title"
+                      value={newPostTitle}
+                      onChangeText={setNewPostTitle}
+                  />
+                  <TextInput
+                      style={styles.newPostContentInput}
+                      placeholder="Post Content"
+                      value={newPostContent}
+                      onChangeText={setNewPostContent}
+                      multiline
+                  />
+                  <View style={styles.modalButtons}>
+                      <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+                          <Text style={styles.cancelButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.submitButton} onPress={handleAddPost}>
+                          <Text style={styles.submitButtonText}>Submit</Text>
+                      </TouchableOpacity>
+                  </View>
+              </View>
+          </View>
+        </Modal>
+      </View>
+    </RootLayout>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -152,110 +224,45 @@ const styles = StyleSheet.create({
         padding: 20,
         backgroundColor: '#ffffff',
     },
-    headerContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    titleContainer: {
-        flex: 1, // Adjust to occupy available space
-        marginRight: 10, // Margin to avoid overlap with joinSection
-    },
-    header: {
-        fontSize: 28,
+    forumTitle: {
+        fontSize: 24,
         fontWeight: 'bold',
-        flexWrap: 'wrap',
-    },
-    joinSection: {
-        alignItems: 'center',
-    },
-    memberCount: {
-        fontSize: 12,
-        marginBottom: 5,
-        color: '#6c757d',
+        marginBottom: 20,
     },
     joinButton: {
-        backgroundColor: '#7129F2',
-        padding: 10,
-        borderRadius: 8,
-    },
-    joinButtonText: {
-        color: 'white',
-    },
-    joinedText: {
-        color: '#6c757d',
-        fontSize: 16,
-    },
-    tagContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginVertical: 10, 
-    },
-    tag: {
-      backgroundColor: '#B9A2F1',
-      color: '#fff',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      margin: 2,
-      borderRadius: 12,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#ddd',
-        marginVertical: 20,
-    },
-    addPostButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#7129F2',
+        backgroundColor: '#7f4dff',
         padding: 10,
         borderRadius: 8,
         marginBottom: 20,
     },
-    addPostButtonText: {
-        color: 'white',
+    joinButtonText: {
+        color: '#fff',
         marginLeft: 5,
         fontSize: 16,
     },
-    postList: {
-        marginTop: 20,
-    },
-    postContainer: {
-        backgroundColor: '#f0f0f0',
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 15,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 2,
-    },
-    postTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 5,
-        maxWidth: width - 40,
-        flexWrap: 'wrap',
-        color: '#333',
-    },
-    postContent: {
-        fontSize: 14,
-        color: '#333',
-        marginBottom: 10,
-    },
-    metaContainer: {
+    addButton: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#7129F2',
+        padding: 10,
+        borderRadius: 8,
+        marginBottom: 20,
     },
-    timeText: {
-        fontSize: 12,
-        color: '#6c757d',
+    addButtonText: {
+        color: '#fff',
+        marginLeft: 5,
+        fontSize: 16,
     },
-    authorText: {
-        fontSize: 12,
-        color: '#6c757d',
+    noPostsContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    noPostsText: {
+        fontSize: 18,
+        color: '#888',
     },
     modalContainer: {
         flex: 1,
@@ -264,51 +271,57 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     modalContent: {
-        width: '90%',
-        backgroundColor: '#fff',
-        borderRadius: 10,
+        width: '80%',
+        backgroundColor: 'white',
         padding: 20,
+        borderRadius: 10,
     },
     modalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 10,
-    },
-    newPostTitleInput: {
-        fontSize: 16,
-        backgroundColor: '#f0f0f0',
-        padding: 10,
-        borderRadius: 8,
-        marginBottom: 10,
-    },
-    newPostContentInput: {
-        fontSize: 16,
-        backgroundColor: '#f0f0f0',
-        padding: 10,
-        borderRadius: 8,
-        minHeight: 80,
-        marginBottom: 10,
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    cancelButton: {
-        backgroundColor: '#f44336',
-        padding: 10,
-        borderRadius: 8,
-    },
-    cancelButtonText: {
-        color: 'white',
-        fontSize: 16,
-    },
-    submitButton: {
-        backgroundColor: '#7129F2',
-        padding: 10,
-        borderRadius: 8,
-    },
-    submitButtonText: {
-        color: 'white',
-        fontSize: 16,
-    },
+       fontSize: 18,
+       fontWeight: 'bold',
+       marginBottom: 10,
+   },
+   newPostTitleInput:{
+       borderBottomWidth :1 ,
+       borderBottomColor :'#ccc' ,
+       marginBottom :10 ,
+       paddingVertical :5 ,
+   },
+   newPostContentInput:{
+       borderWidth :1 ,
+       borderColor :'#ccc' ,
+       borderRadius :5 ,
+       padding :10 ,
+       height :100 ,
+       textAlignVertical :'top' ,
+       marginBottom :10 ,
+   },
+   modalButtons:{
+       flexDirection :'row' ,
+       justifyContent :'space-between' ,
+   },
+   cancelButton:{
+       paddingVertical :8 ,
+       paddingHorizontal :20 ,
+       backgroundColor :'#ccc' ,
+       borderRadius :5 ,
+   },
+   cancelButtonText:{
+       color :'#000' ,
+   },
+   submitButton:{
+       paddingVertical :8 ,
+       paddingHorizontal :20 ,
+       backgroundColor :'#7f4dff' ,
+       borderRadius :5 ,
+   },
+   submitButtonText:{
+       color :'#fff' ,
+   },
+   postContainer:{ 
+       padding :15,
+       marginVertical :8 , 
+       backgroundColor :'#f0f0f0',
+       borderRadius :10,
+   },
 });
