@@ -1,5 +1,4 @@
 
-import { Ticket } from 'lucide-react';
 import { lazy } from 'react';
 
 const Calendar = lazy(() => import('../pages/Calendar'));
@@ -37,6 +36,7 @@ const LatestCalls = lazy(() => import('../pages/CustomPages/ListCalls'));
 
 //SUBSCRIPTION MANAGEMENT
 const ViewAllSubscriptions = lazy(() => import('../pages/CustomPages/SubscriptionManagement/ViewAllSubscriptions'));
+const ViewSubscriptionComponent = lazy(() => import('../pages/CustomPages/SubscriptionManagement/ViewSubscriptionComponent'));
 
 //User Management
 const ViewAllUsers = lazy(() => import('../pages/CustomPages/UserManagement/ViewAllUsers'));
@@ -107,6 +107,11 @@ const coreRoutes = [
     path: '/subscriptions',
     title: 'Subscriptions',
     component: ViewAllSubscriptions,
+  },
+  {
+    path: '/subscriptionComponent',
+    title: 'Subscription Component',
+    component: ViewSubscriptionComponent,
   },
   {
     path: '/users',

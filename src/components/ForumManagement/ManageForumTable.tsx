@@ -80,7 +80,7 @@ const ManageForumTable = () => {
         const forumsData = forumsSnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-            dateCreated: doc.data().dateCreated?.toDate(), // Convert Firestore timestamp
+            dateCreated: doc.data().dateCreated instanceof Date ? doc.data().dateCreated : doc.data().dateCreated?.toDate?.(), 
         } as Forum));
         setForums(forumsData);
     };
@@ -97,11 +97,13 @@ const ManageForumTable = () => {
         }
     };
 
-    // Filter forums by search term
-    const filteredForums = forums.filter(forum =>
-        forum.authorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        forum.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    
+            // Filter forums by search term
+            const filteredForums = forums.filter(forum =>
+                forum.authorName && forum.authorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                forum.title && forum.title.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
 
     // Pagination logic
     const indexOfLastForum = currentPage * forumsPerPage;

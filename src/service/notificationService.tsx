@@ -1,5 +1,5 @@
 // src/services/notificationService.ts
-import { collection, addDoc, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
 import { db } from "../config/firebase";
 
 export const addNotification = async (userId: string, message: string) => {
