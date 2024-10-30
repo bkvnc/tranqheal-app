@@ -4,10 +4,34 @@ import RadioGroup from 'react-native-radio-buttons-group';   //https://www.npmjs
 import { RootLayout } from '../navigation/RootLayout';
 import { Colors } from '../config';
 import { AuthenticatedUserContext } from '../providers';
+import { getFirestore, doc, addDoc, collection } from 'firebase/firestore';
+import { auth, firestore } from '../config';
 
 export const SAScreen3 = ({navigation, route}) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const { gad7Total, phq9Total } = route.params;
+
+  const interpretPHQ9 = (score) => {
+    if (score <= 4) return 'Minimal or no depression';
+    if (score <= 9) return 'Mild depression';
+    if (score <= 14) return 'Moderate depression';
+    if (score <= 19) return 'Moderately severe depression';
+    return 'Severe depression';
+  };
+
+  const interpretGAD7 = (score) => {
+    if (score <= 4) return 'Minimal or no anxiety';
+    if (score <= 9) return 'Mild anxiety';
+    if (score <= 14) return 'Moderate anxiety';
+    return 'Severe anxiety';
+  };
+
+  const interpretPSS = (score) => {
+    if (score <= 13) return 'Low stress';
+    if (score <= 26) return 'Moderate stress';
+    return 'Severe stress';
+  };
+
   // State for each question's answer
   const [answers, setAnswers] = useState({
     upsetUnexpectedly: null, 
@@ -75,9 +99,35 @@ export const SAScreen3 = ({navigation, route}) => {
     }, 0); //Initialize total to 0
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
+    const user = auth.currentUser;
     const pssTotal = calculatePSSTotalScore();
-    navigation.navigate('SelfAssessmentResult', { gad7Total, phq9Total, pssTotal });
+    const phq9Interpretation = interpretPHQ9(phq9Total);
+    const gad7Interpretation = interpretGAD7(gad7Total);
+    const pssInterpretation = interpretPSS(pssTotal);
+
+    if (user) {
+      try {
+        const userId = user.uid;
+
+        const userAssessmentRef = doc(firestore, 'users', userId);
+        const selfAssessmentRef = collection(userAssessmentRef, 'selfAssessment');
+        await addDoc(selfAssessmentRef, {
+          phq9Total,
+          gad7Total,
+          pssTotal,
+          phq9Interpretation,
+          gad7Interpretation,
+          pssInterpretation,
+          createdAt: new Date(),
+        });
+        navigation.navigate('SelfAssessmentResult');
+      } catch (error) {
+        console.error('Error saving assessment:', error);
+      }
+    } else {
+      console.error('User not authenticated!');
+    }
   };
 
   const radioOptions = [
