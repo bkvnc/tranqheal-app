@@ -21,10 +21,12 @@ const ForumDetailsPage: React.FC = () => {
     const [creatingPost, setCreatingPost] = useState<boolean>(false); 
 
     const userStatus = {
-        canJoinOrLeave: !isAuthor && !isMember,
-        canAddPosts: isAuthor || isMember,
-        canDeletePosts: isAuthor || isMember,
+        canJoinOrLeave: !isAuthor && !isMember,   
+        canAddPosts: isAuthor || isMember,        
+        canDeletePosts: isAuthor,                
     };
+    
+    
 
     const formattedDate = (date: Date | Timestamp | null): string => {
         if (!date) return 'Unknown date';
@@ -102,7 +104,7 @@ const ForumDetailsPage: React.FC = () => {
                                             By  <a href={`/profile/${post.authorId}`} className="text-blue-500 hover:underline">{post.author}</a>on {formattedDate(post.dateCreated)}
                                         </p>
                                         {userStatus.canDeletePosts && (
-                                            <button onClick={() => handleDeletePost(post.id)} className="text-red-500 mt-2 hover:text-red-700 transition">
+                                            <button onClick={() => handleDeletePost(post.id)} className="text-black mt-2 hover:text-red-700 transition">
                                                 Delete
                                             </button>
                                         )}

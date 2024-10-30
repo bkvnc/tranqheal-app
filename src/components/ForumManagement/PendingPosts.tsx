@@ -41,33 +41,31 @@ const PendingPosts = () => {
     }, []);
 
     const handleApprove = async (postId: string) => {
+        const confirmed = window.confirm("Are you sure you want to approve this post?");
+        if (!confirmed) return;
+    
         const postDocRef = doc(db, 'posts', postId);
         
         try {
-            // Fetch the post to get the authorId
             const postDoc = await getDoc(postDocRef);
             if (!postDoc.exists()) {
                 throw new Error('Post does not exist');
             }
             
             const postData = postDoc.data();
-            const authorId = postData.authorId; 
+            const authorId = postData.authorId;
             
-           
             await updateDoc(postDocRef, { status: 'approved' });
     
-            
             const notificationData = {
-                message: `Your post has been approved!`, // Adjust title based on your data
+                message: `Your post has been approved!`,
                 userId: authorId,
                 timestamp: new Date(),
                 isRead: false,
             };
             
-            
             await setDoc(doc(collection(db, 'notifications'), `${postId}_approved`), notificationData);
     
-            // Update local posts state
             setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
             setAlert({ type: 'success', message: 'Post approved successfully!' });
     
@@ -76,35 +74,33 @@ const PendingPosts = () => {
             console.error('Error approving post:', error);
         }
     };
-
+    
     const handleReject = async (postId: string) => {
+        const confirmed = window.confirm("Are you sure you want to reject this post?");
+        if (!confirmed) return;
+    
         const postDocRef = doc(db, 'posts', postId);
         
         try {
-            // Fetch the post to get the authorId
             const postDoc = await getDoc(postDocRef);
             if (!postDoc.exists()) {
                 throw new Error('Post does not exist');
             }
             
             const postData = postDoc.data();
-            const authorId = postData.authorId; // Assuming you have an authorId field
+            const authorId = postData.authorId;
             
-            // Update the post status to 'rejected'
             await updateDoc(postDocRef, { status: 'rejected' });
     
-            // Create a notification for the author
             const notificationData = {
-                message: `Your post "${postData.title}" has been rejected.`, // Adjust title based on your data
+                message: `Your post "${postData.title}" has been rejected.`,
                 userId: authorId,
                 timestamp: new Date(),
                 isRead: false,
             };
             
-            // Add the notification to the notifications collection
             await setDoc(doc(collection(db, 'notifications'), `${postId}_rejected`), notificationData);
     
-            // Update local posts state
             setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
             setAlert({ type: 'success', message: 'Post rejected successfully!' });
     
@@ -115,7 +111,7 @@ const PendingPosts = () => {
     };
 
     const filteredPending = posts.filter(post =>
-        (post.author?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
+        (post.authorName?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
         (post.title?.toLowerCase().includes(searchTerm.toLowerCase()) || '')
     );
 
@@ -174,13 +170,13 @@ const PendingPosts = () => {
                                     <td className="border-b py-5 px-4">
                                         <button
                                             onClick={() => handleApprove(post.id)}
-                                            className="py-1 px-3 bg-green-500 dark:text-white rounded-md hover:bg-success"
+                                            className="py-1 px-3 bg-green-500 dark:text-white rounded-md hover:bg-success hover:text-white"
                                         >
                                             Approve
                                         </button>
                                         <button
                                             onClick={() => handleReject(post.id)}
-                                            className="py-1 px-3 bg-green-500 dark:text-white rounded-md hover:bg-danger"
+                                            className="py-1 px-3 bg-green-500 dark:text-white rounded-md hover:text-white hover:bg-danger"
                                         >
                                             Reject
                                         </button>

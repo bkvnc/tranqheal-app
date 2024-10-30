@@ -59,7 +59,7 @@ const useForum = (forumId: string) => {
             dateCreated: doc.data().dateCreated instanceof Date ? doc.data().dateCreated : doc.data().dateCreated?.toDate(),
         })) as Post[];
     };
-    
+   
 
     useEffect(() => {
         const fetchData = async () => {
@@ -70,45 +70,66 @@ const useForum = (forumId: string) => {
             }
             try {
                 const forumData = await fetchForumById(forumId);
+                if (!forumData) {
+                    throw new Error('Forum data not found');
+                }
+    
                 setForum(forumData);
+    
                 const postData = await fetchPostsByForumId(forumId);
                 setPosts(postData);
-
+    
                 const user = auth.currentUser;
                 if (user) {
                     setIsAuthor(user.uid === forumData.authorId);
                     setIsMember(forumData.members?.includes(user.uid) || false);
                 }
-            } catch (err) {
-                setError(err.message);
+            } catch (err: any) {
+                console.error("Error fetching forum or posts:", err);
+                setError(`Error: ${err.message || 'Failed to load data'}`);
             } finally {
                 setLoading(false);
             }
         };
+    
         fetchData();
     }, [forumId]);
 
+    useEffect(() => {
+        const user = auth.currentUser;
+        if (user) {
+            const authorCheck = posts.some(post => post.authorId === user.uid);
+            setIsAuthor(authorCheck);
+        }
+    }, [posts]); 
+    
+
     const handleJoinLeaveForum = async () => {
         const user = auth.currentUser;
-        if (!user || !forum) return;
+        if (!user || !forum || isAuthor) return; // Prevent authors from joining/leaving
     
         try {
             const forumRef = doc(db, 'forums', forum.id);
+            
             await updateDoc(forumRef, {
                 members: isMember ? arrayRemove(user.uid) : arrayUnion(user.uid),
-                totalMembers: isMember ? (forum.totalMembers || 0) - 1 : (forum.totalMembers || 0) + 1,
+                totalMembers: increment(isMember ? -1 : 1),
             });
     
             const action = isMember ? 'left' : 'joined';
             const notificationType = isMember ? NotificationTypes.LEAVE : NotificationTypes.JOIN;
+            
             await sendNotification(user.uid, `You have ${action} the forum ${forum.title}`, notificationType);
-    
+            
             setAlert({ type: 'success', message: `You have ${action} the forum ${forum.title}` });
             setIsMember(!isMember);
-        } catch (error) {
+        } catch (error: any) {
+            console.error('Error updating membership:', error);
             setError(`Failed to update membership: ${error?.message || 'An unknown error occurred'}`);
         }
     };
+    
+    
 
     const handlePostContentChange = (e, blacklistedWords: string[]) => {
         const content = e.target.value;
@@ -133,9 +154,9 @@ const useForum = (forumId: string) => {
         }
     }, [alert]);
 
-    const handleSubmitPost = async (e) => {
-        const currentDate = new Date();
+    const handleSubmitPost = async (e: React.FormEvent) => {
         e.preventDefault();
+        const currentDate = new Date();
     
         if (containsBlacklistedWords(postContent, blacklistedWords)) {
             setAlert({ type: 'error', message: 'Your post contains inappropriate language and cannot be submitted.' });
@@ -150,6 +171,7 @@ const useForum = (forumId: string) => {
                 const orgRef = doc(db, 'organizations', user.uid);
                 const profRef = doc(db, 'professionals', user.uid);
     
+                // Fetch the user's name or organization name
                 const userDoc = await getDoc(userRef);
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
@@ -169,46 +191,77 @@ const useForum = (forumId: string) => {
                 }
     
                 setCreatingPost(true);
+    
+                // Add the post to the 'posts' collection
                 const postRef = collection(db, 'posts');
-                await addDoc(postRef, {
-                    content: postContent, 
+                const newPostRef = await addDoc(postRef, {
+                    content: postContent,
                     dateCreated: currentDate,
                     author: anonymous ? 'Anonymous' : authorName,
                     authorId: user.uid,
                     forumId: forum.id,
-                    status: 'pending', 
+                    status: 'pending', // For admin review
                 });
-
-                await sendNotification(
-                    forum.authorId, 
-                    `${anonymous ? 'Anonymous' : authorName} submitted a post in ${forum.title}`, 
-                    NotificationTypes.POST_SUBMISSION
-                );
+    
+                // Update the post document to include its own ID as `postId`
+                await updateDoc(newPostRef, { postId: newPostRef.id });
+    
+                // Increment totalPosts in the forum document
                 const forumDocRef = doc(db, 'forums', forum.id);
                 await updateDoc(forumDocRef, {
                     totalPosts: increment(1),
                 });
     
+                // Send notification
+                await sendNotification(
+                    forum.authorId,
+                    `${anonymous ? 'Anonymous' : authorName} submitted a post in ${forum.title}`,
+                    NotificationTypes.POST_SUBMISSION
+                );
+    
                 setPostContent('');
                 setAlert({ type: 'success', message: 'Your post has been submitted for review and will be visible once approved.' });
-            } catch (error) {
-                setError(`Failed to create post: ${error?.message || 'An unknown error occurred'}`);
+            } catch (error: any) {
+                setError(`Failed to create post: ${error.message || 'An unknown error occurred'}`);
             } finally {
                 setCreatingPost(false);
             }
         }
     };
-
+    
+    
+    
     const handleDeletePost = async (postId: string) => {
+        const user = auth.currentUser;
+        if (!user || !isAuthor) {
+            setError('Only the author can delete this post');
+            return;
+        }
         try {
+            // Delete the post document
             await deleteDoc(doc(db, 'posts', postId));
+            
+            // Update local state to remove the deleted post
             setPosts(posts.filter(post => post.id !== postId));
+            
+            // Decrement totalPosts in the forum document
+            const forumDocRef = doc(db, 'forums', forum.id);
+            await updateDoc(forumDocRef, {
+                totalPosts: increment(-1),
+            });
+            
+            // Send notification of post deletion
             await sendNotification(auth.currentUser.uid, 'Post deleted successfully.', NotificationTypes.POST_DELETION);
+            
             setAlert({ type: 'success', message: 'Post deleted successfully!' });
-        } catch (error) {
+        } catch (error: any) {
+            console.error('Error deleting post:', error);
             setError(`Failed to delete post: ${error?.message || 'An unknown error occurred'}`);
         }
     };
+    
+    
+    
 
     return {
         forum,

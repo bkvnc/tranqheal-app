@@ -56,3 +56,28 @@ export interface UserData {
     profilePicture?: string;
     profileImage?: string;
 }
+
+
+export interface Application{
+    id: string;
+    organizationName: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+    status: string;
+    dateCreated: any;
+    professionalName: string;
+    submissionDate: any;
+    specialization: string;
+    facebookLink: string;
+    linkedInLink: string;
+    instagramLink: string;
+    twitterLink: string;
+    description: string;
+    profilePicture: string;
+    profileImage: string;
+    userId: string;
+    applicantName: string;
+
+}
