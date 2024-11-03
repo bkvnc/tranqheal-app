@@ -13,30 +13,21 @@ import {
 import { db, auth } from '../../config/firebase';
 import dayjs from 'dayjs';
 import { motion } from 'framer-motion';
+import {toast} from 'react-toastify';
+import {Post} from '../../hooks/types';
+import { getBlacklistedWords } from '../../hooks/getBlacklistedWords';
+import {Comment} from '../../hooks/types';
+import useForum from '../../hooks/useForum';
+import { highlightText } from '../../hooks/hightlightText';
+import {containsBlacklistedWords} from '../utils/validationUtils';
 
-interface Comment {
-    id: string;
-    content: string;
-    dateCreated: any;
-    author: string;
-    authorId: string;
-    postId: string;
-}
 
-interface Post {
-    id: string;
-    content: string;
-    dateCreated: any; // Use an appropriate type for the date
-    author: string;
-    authorId: string;
-    userReactions: string[]; // Array of user IDs who reacted
-    reacts: number; // Count of total reactions
-    status: string;
-}
+
 
 
 const PostDetailsPage: React.FC = () => {
     const { postId } = useParams<{ postId: string }>();
+    const { forumId } = useParams<{ forumId: string }>();
     const [post, setPost] = useState<Post | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -49,28 +40,41 @@ const PostDetailsPage: React.FC = () => {
     const [hasReacted, setHasReacted] = useState<boolean>(false);
     const [anonymous, setAnonymous] = useState<boolean>(false);
     const [creatingComment, setCreatingComment] = useState<boolean>(false); 
+    const { 
+        blacklistedWords,
+        setBlacklistedWords
+    } = useForum(forumId);
+
+    useEffect(() => {
+        const fetchBlacklistedWords = async () => {
+            const words = await getBlacklistedWords(); 
+            setBlacklistedWords(words || []);
+        };
+        fetchBlacklistedWords();
+    }, []);
 
     useEffect(() => {
         const fetchPostById = async () => {
-            if (!postId) {
-                setError('Post ID is required');
+            if (!forumId || !postId) {
+                setError('Forum ID and Post ID are required');
                 setLoading(false);
                 return;
             }
+    
             try {
-                const docRef = doc(db, 'posts', postId);
+                const docRef = doc(db, 'forums', forumId, 'posts', postId);
                 const docSnap = await getDoc(docRef);
+    
                 if (docSnap.exists()) {
                     const postData = { id: postId, ...docSnap.data() } as Post; // Cast the fetched data to Post
                     
                     // Check if post is pending
                     if (postData.status === 'pending') {
-                        // You can decide what to do with pending posts here
                         console.log('Post is pending:', postData);
                     }
-        
+    
                     setPost(postData);
-        
+    
                     // Check if the current user has reacted
                     const userId = auth.currentUser?.uid;
                     if (userId) {
@@ -86,20 +90,23 @@ const PostDetailsPage: React.FC = () => {
             }
         };
     
-        const unsubscribeComments = onSnapshot(collection(db, 'comments'), (snapshot) => {
-            const commentsData = snapshot.docs
-                .filter(doc => doc.data().postId === postId)
-                .map(doc => ({ id: doc.id, ...doc.data() })) as Comment[];
-            setComments(commentsData);
-        });
+        const unsubscribeComments = onSnapshot(
+            collection(db, 'forums', forumId, 'posts', postId, 'comments'), 
+            (snapshot) => {
+                const commentsData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                })) as Comment[];
+                setComments(commentsData);
+            }
+        );
     
         fetchPostById();
     
         return () => {
             unsubscribeComments();
         };
-    }, [postId]);
-
+    }, [forumId, postId]);
     const toggleHeart = async () => {
         const userId = auth.currentUser?.uid;
         if (!post || !userId) return;
@@ -121,7 +128,7 @@ const PostDetailsPage: React.FC = () => {
         };
     
         // Update Firestore document
-        await updateDoc(doc(db, 'posts', postId), updatedPost);
+        await updateDoc(doc(db, 'forums', forumId, 'posts', postId), updatedPost);
         
         // Update local state
         setPost(updatedPost);
@@ -131,55 +138,66 @@ const PostDetailsPage: React.FC = () => {
     const handleAddComment = async (e: React.FormEvent) => {
         e.preventDefault();
         setCreatingComment(true);
+    
         if (commentContent.trim() === '' || !auth.currentUser) return;
-
+    
         const currentDate = new Date();
         const user = auth.currentUser;
 
+        if (containsBlacklistedWords(commentContent, blacklistedWords)) {
+            toast.error('Your post contains inappropriate language.');
+            return;
+        }
+    
         try {
-            const commentRef = collection(db, 'comments');
+            // Set the path to the comments subcollection within the post
+            const commentRef = collection(db, 'forums', forumId, 'posts', postId, 'comments');
+            
             let authorName = 'Unknown User';
     
-                // Assuming you have user types stored in separate collections
-                const userRef = doc(db, 'users', user.uid);
-                const orgRef = doc(db, 'organizations', user.uid);
-                const profRef = doc(db, 'professionals', user.uid);
-
-                const userDoc = await getDoc(userRef);
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    authorName = `${userData.firstName} ${userData.lastName}`; // For users
+            // Retrieve user information based on user type
+            const userRef = doc(db, 'users', user.uid);
+            const orgRef = doc(db, 'organizations', user.uid);
+            const profRef = doc(db, 'professionals', user.uid);
+    
+            const userDoc = await getDoc(userRef);
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                authorName = `${userData.firstName} ${userData.lastName}`; // For users
+            } else {
+                const orgDoc = await getDoc(orgRef);
+                if (orgDoc.exists()) {
+                    const orgData = orgDoc.data();
+                    authorName = orgData.organizationName; // For organizations
                 } else {
-                    const orgDoc = await getDoc(orgRef);
-                    if (orgDoc.exists()) {
-                        const orgData = orgDoc.data();
-                        authorName = orgData.organizationName; // For organizations
-                    } else {
-                        const profDoc = await getDoc(profRef);
-                        if (profDoc.exists()) {
-                            const profData = profDoc.data();
-                            authorName = `${profData.firstName} ${profData.lastName}`; // For professionals
-                        }
+                    const profDoc = await getDoc(profRef);
+                    if (profDoc.exists()) {
+                        const profData = profDoc.data();
+                        authorName = `${profData.firstName} ${profData.lastName}`; // For professionals
                     }
                 }
-
+            }
+    
+            // Add the comment to the comments subcollection within the post
             await addDoc(commentRef, {
                 content: commentContent,
                 dateCreated: currentDate,
                 author: anonymous ? 'Anonymous' : authorName,
+                forumId: forumId,
                 authorId: user.uid,
                 postId: postId,
+                reports: 0,
             });
-
-            
+    
             setCommentContent('');
             setShowCommentForm(false);
         } catch (error) {
             console.error('Failed to add comment:', error);
-        }finally {
+        } finally {
             setCreatingComment(false);
         }
     };
+    
 
     const formattedDate = (date) => {
         const now = dayjs();
@@ -201,25 +219,33 @@ const PostDetailsPage: React.FC = () => {
     };
     
 
-    const handleDeleteComment = async (commentId: string) => {
-        const commentDocRef = doc(db, 'comments', commentId);
+    const handleDeleteComment = async (forumId: string, postId: string, commentId: string) => {
+        // Confirm if the user really wants to delete the comment
+        const confirmDelete = window.confirm("Are you sure you want to delete this comment?");
+        if (!confirmDelete) {
+            return; // Exit the function if the user cancels
+        }
+    
+        // Set the path to the specific comment document in the nested structure
+        const commentDocRef = doc(db, 'forums', forumId, 'posts', postId, 'comments', commentId);
         try {
             await deleteDoc(commentDocRef);
         } catch (error) {
             console.error('Failed to delete comment:', error);
         }
     };
-
+    
     const handleEditComment = (commentId: string, content: string) => {
         setEditCommentId(commentId);
         setEditCommentContent(content);
     };
-
-    const handleUpdateComment = async (e: React.FormEvent) => {
+    
+    const handleUpdateComment = async (e: React.FormEvent, forumId: string, postId: string) => {
         e.preventDefault();
         if (editCommentContent.trim() === '' || !editCommentId) return;
-
-        const commentDocRef = doc(db, 'comments', editCommentId);
+    
+        // Set the path to the specific comment document in the nested structure
+        const commentDocRef = doc(db, 'forums', forumId, 'posts', postId, 'comments', editCommentId);
         try {
             await updateDoc(commentDocRef, {
                 content: editCommentContent,
@@ -241,7 +267,7 @@ const PostDetailsPage: React.FC = () => {
             <div className="mb-6">
                 <h1 className="text-4xl font-bold mb-2">{post.content}</h1>
                 <p className="text-sm text-gray-500">
-                    By <a href={`/profile/${post.authorId}`} className="text-blue-500 hover:underline">{post.author}</a> on {dayjs(post.dateCreated.toDate()).format('MMM D, YYYY')}
+                    By <a href={`/profile/${post.authorId}`} className="text-blue-500 hover:underline">{post.authorName}</a> on {dayjs(post.dateCreated.toDate()).format('MMM D, YYYY')}
                 </p>
             </div>
 
@@ -290,6 +316,10 @@ const PostDetailsPage: React.FC = () => {
                     >
                         {showCommentForm ? 'Cancel' : 'Write a Comment'}
                     </button>
+                    <div
+                            className="mt-2 bg-gray-100 p-2 rounded"
+                            dangerouslySetInnerHTML={{ __html: highlightText(commentContent, blacklistedWords) }}
+                        />
                     {comments.length > 0 ? (
                         <ul className="space-y-4">
                             {comments.map(comment => (
@@ -301,7 +331,7 @@ const PostDetailsPage: React.FC = () => {
                                     {comment.authorId === auth.currentUser?.uid && (
                                         <div className="flex space-x-2 mt-2">
                                             <button
-                                                onClick={() => handleDeleteComment(comment.id)}
+                                                onClick={() => handleDeleteComment(forumId, postId, comment.id)}
                                                 className="text-red-500 hover:underline"
                                             >
                                                 Delete
@@ -359,7 +389,13 @@ const PostDetailsPage: React.FC = () => {
 
             {/* Edit Comment Form */}
             {editCommentId && (
-                <form onSubmit={handleUpdateComment} className="mt-4">
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        handleUpdateComment(e, forumId, postId); // Call with additional parameters
+                    }}
+                    className="mt-4"
+                >
                     <textarea
                         value={editCommentContent}
                         onChange={(e) => setEditCommentContent(e.target.value)}
@@ -382,6 +418,7 @@ const PostDetailsPage: React.FC = () => {
                     </div>
                 </form>
             )}
+
             
         </div>
     );

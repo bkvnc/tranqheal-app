@@ -1,37 +1,64 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import Alert from '../../pages/UiElements/Alerts';
+import { toast } from 'react-toastify'; // Import toast
 import useForum from '../../hooks/useForum';
 import dayjs from 'dayjs';
-import SkeletonLoader from '../loader/skeletonLoader';
 import { Timestamp } from 'firebase/firestore';
 import { highlightText } from '../../hooks/hightlightText';
 import { getBlacklistedWords } from '../../hooks/getBlacklistedWords';
+import { getAuth } from 'firebase/auth';
+
 import '../../styles.css';
+
+const auth = getAuth();
+const user = auth.currentUser;
+
 
 const ForumDetailsPage: React.FC = () => {
     const { forumId } = useParams<{ forumId: string }>();
-    const [showPostForm, setShowPostForm] = useState<boolean>(false); 
+    const [showPostForm, setShowPostForm] = useState<boolean>(false);
     const { 
-        forum, posts, loading, error, alert,anonymous, isMember, isAuthor, postContent, 
+        forum, posts, error, anonymous, isMember, isAuthor, postContent, postTitle,creatingPost,
         setBlacklistedWords, handleJoinLeaveForum, blacklistedWords,  
-        handleSubmitPost, handleDeletePost, handlePostContentChange, setAnonymous, 
+        handleSubmitPost, handleDeletePost, handlePostContentChange, setAnonymous, handlePostTitleChange, setError, setLoading,
     } = useForum(forumId);
    
-    const [creatingPost, setCreatingPost] = useState<boolean>(false); 
+   
 
     const userStatus = {
         canJoinOrLeave: !isAuthor && !isMember,   
         canAddPosts: isAuthor || isMember,        
         canDeletePosts: isAuthor,                
     };
+
+    const auth = getAuth();
+    const user = auth.currentUser;
+    try{
+    if (user) {
+        console.log("User authenticated successfully:");
+        console.log("User UID:", user.uid);
+        console.log("User email:", user.email);
+    } else {
+        console.error("User is not authenticated.");
     
-    
+    }
+
+    } catch (error) {
+        console.error("Authentication error:", error);
+        console.error("Error code:", error.code);
+        console.error("Error message:", error.message);
+    } // Check if the user is authenticated
+        if (!user) {
+            console.error("User is not authenticated");
+            setError("User is not authenticated");
+            setLoading(false);
+            return; // Exit early if user is not authenticated
+        }
+
 
     const formattedDate = (date: Date | Timestamp | null): string => {
         if (!date) return 'Unknown date';
         
-        // Check if the date is a Firebase Timestamp and convert it to a JavaScript Date if necessary
         const createdDate = dayjs(date instanceof Timestamp ? date.toDate() : date);
         const now = dayjs();
         const diffInSeconds = now.diff(createdDate, 'second');
@@ -51,13 +78,15 @@ const ForumDetailsPage: React.FC = () => {
         fetchBlacklistedWords();
     }, []);
 
-    // Conditional rendering for loading state
-    if (loading) return <SkeletonLoader />;
-    if (error) return <div className="text-red-500">{error}</div>;
+    useEffect(() => {
+        if (error) {
+            toast.error(error); // Show error toast
+        }
+    }, [error]);
+
 
     return (
         <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-            {alert && <Alert type={alert.type} message={alert.message} />}
 
             <div className="flex items-center justify-between border-b pb-3 mb-4">
                 <div>
@@ -88,37 +117,40 @@ const ForumDetailsPage: React.FC = () => {
                 <h2 className="text-2xl font-semibold mb-4 text-black dark:text-white">Posts</h2>
                 {posts.length > 0 ? (
                     <ul className="space-y-6">
-                        {posts.map(post => (
-                            <li key={post.id} className="p-6 bg-white shadow-md rounded-lg border border-gray-200 transition-transform transform hover:scale-105">
-                                <div className="flex items-start space-x-4">
-                                    <img
-                                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.author || 'Anonymous')}&background=random`}
-                                        alt={post.author || 'Anonymous'}
-                                        className="w-10 h-10 rounded-full"
-                                    />
-                                    <div className="flex-1">
-                                        <Link to={`/posts/${post.id}`} className="text-gray-800 hover:underline">
-                                            {post.content}
-                                        </Link>
-                                        <p className="text-sm text-gray-500 mt-2">
-                                            By  <a href={`/profile/${post.authorId}`} className="text-blue-500 hover:underline">{post.author}</a>on {formattedDate(post.dateCreated)}
-                                        </p>
-                                        {userStatus.canDeletePosts && (
-                                            <button onClick={() => handleDeletePost(post.id)} className="text-black mt-2 hover:text-red-700 transition">
-                                                Delete
-                                            </button>
-                                        )}
+                        {posts.filter(post => post.status === 'approved').map(post => (
+                                <li key={post.id} className="p-6 bg-white shadow-md rounded-lg border border-gray-200 transition-transform transform hover:scale-105">
+                                    <div className="flex items-start space-x-4">
+                                        <img
+                                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'Anonymous')}&background=random`}
+                                            alt={post.authorName || 'Anonymous'}
+                                            className="w-10 h-10 rounded-full"
+                                        />
+                                        <div className="flex-1">
+                                            <Link to={`/forums/${forumId}/posts/${post.id}`} className="text-gray-800 hover:underline">
+                                                {post.title}
+                                            </Link>
+                                            <p className="text-sm text-gray-500 mt-2">
+                                                {post.content}
+                                            </p>
+                                            <p className="text-sm text-gray-500 mt-2">
+                                                By <a href={`/profile/${post.authorId}`} className="text-primary hover:underline">{post.authorName}</a> on {formattedDate(post.dateCreated)}
+                                            </p>
+
+                                            {userStatus.canDeletePosts && (
+                                                <button onClick={() => handleDeletePost(post.id)} className="text-black mt-2 hover:text-red-700 transition">
+                                                    Delete
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            </li>
-                        ))}
+                                </li>
+                            ))}
                     </ul>
                 ) : (
                     <p className="text-gray-600">No posts available.</p>
                 )}
             </div>
 
-            
             {userStatus.canAddPosts && (
                 <div className="mt-8">
                     <button
@@ -133,9 +165,21 @@ const ForumDetailsPage: React.FC = () => {
             {showPostForm && (
                 <div className="mt-6">
                     <form onSubmit={handleSubmitPost}>
+                        <input
+                            type="text"
+                            value={postTitle}
+                            onChange={handlePostTitleChange}
+                            placeholder="Write your title..."
+                            className="w-full p-3 border rounded-md py-2 mb-2"
+                            required
+                        />
+                        <div
+                            className="mt-2 bg-gray-100 p-2 rounded"
+                            dangerouslySetInnerHTML={{ __html: highlightText(postTitle, blacklistedWords) }}
+                        />
                         <textarea
                             value={postContent}
-                            onChange={(e) => handlePostContentChange(e, blacklistedWords)}
+                            onChange={handlePostContentChange}
                             placeholder="Write your post..."
                             rows={4}
                             className="w-full p-3 border rounded-md"

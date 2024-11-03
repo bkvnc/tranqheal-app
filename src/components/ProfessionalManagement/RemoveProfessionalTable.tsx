@@ -1,31 +1,24 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { db } from "../../config/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { db, auth } from "../../config/firebase";
+import { collection, getDocs, doc, query, where, getDoc } from "firebase/firestore";
 import dayjs from 'dayjs';
+import { Professional, Application } from "../../hooks/types";
 
-interface Professional {
-    id: string;
-    firstName: string;
-    lastName: string;
-    middleName: string;
-    email: string;
-    organizationName: string;
-    userType: string;
-    createdAt: any;
-    lastLogin: any;
-    dateApproved: any;
-    status: string;
-}
+
 
 const RemoveProfessionalTable = () => {
     const [professionals, setProfessionals] = useState<Professional[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const professionalsPerPage = 5;
+    const [searchTerm, setSearchTerm] = useState<string>("");
+
 
     useEffect(() => {
         const fetchProfessionals = async () => {
             try {
-                const professionalsCollection = collection(db, "professionals"); // Replace "professionals" with your collection name
+                const professionalsCollection = collection(db, "professionals"); 
                 const professionalSnapshot = await getDocs(professionalsCollection);
                 const professionalList = professionalSnapshot.docs.map(doc => ({
                     id: doc.id,
@@ -42,9 +35,19 @@ const RemoveProfessionalTable = () => {
         fetchProfessionals();
     }, []);
 
-    if (loading) {
-        return <div>Loading...</div>; // Display a loading state
-    }
+    const filteredProfessionals = professionals.filter(professional =>
+        professional.firstName?.toLowerCase().includes(searchTerm.toLowerCase() || '') ||
+        professional.lastName?.toLowerCase().includes(searchTerm.toLowerCase() || '')
+    );
+
+    const indexOfLastProfessional = currentPage * professionalsPerPage;
+    const indexOfFirstProfessional = indexOfLastProfessional- professionalsPerPage;
+    const currentProfessionals = filteredProfessionals.slice(indexOfFirstProfessional, indexOfLastProfessional);
+    const totalPages = Math.ceil(filteredProfessionals.length / professionalsPerPage);
+
+    if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
+
+    
 
     return (
         <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
@@ -74,7 +77,12 @@ const RemoveProfessionalTable = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {professionals.map((professional) => (
+                    {currentProfessionals.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="text-center">No pending posts</td>
+                            </tr>
+                        ) : (
+                            currentProfessionals.map(professional => (
                             <tr key={professional.id}>
                                 <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                 {professional.firstName ? `${professional.firstName} ${professional.lastName}'s` : 'N/A'}
@@ -90,13 +98,32 @@ const RemoveProfessionalTable = () => {
                                 </td>
                                 <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">{professional.status}</td>
                                 <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                                    
                                     <button className="hover:text-primary">Edit</button>
                                     <button className="hover:text-primary">Delete</button>
                                 </td>
                             </tr>
-                        ))}
+                           ))
+                        )}
                     </tbody>
                 </table>
+                <div className="flex justify-between items-center mt-4">
+                    <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        className="bg-gray-300 px-4 py-2 rounded"
+                    >
+                        Previous
+                    </button>
+                    <span>Page {currentPage} of {totalPages}</span>
+                    <button
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        className="bg-gray-300 px-4 py-2 rounded"
+                    >
+                        Next
+                    </button>
+                </div>
             </div>
         </div>
     );

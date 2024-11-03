@@ -4,33 +4,8 @@ import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore'
 import { db, auth } from '../../config/firebase';
 import Alert from '../../pages/UiElements/Alerts';
 import dayjs from 'dayjs'; 
+import {UserData, Forum} from '../../hooks/types';
 
-interface UserData {
-    userType: string;
-    organizationName?: string;
-    email?: string;
-    firstName?: string;
-    lastName?: string;
-    profilePicture?: string;
-    profileImage?: string;
-}
-
-interface Forum {
-    id: string;
-    title: string;
-    dateCreated: any;
-    totalMembers: number | null;
-    totalComments: number | null;
-    totalPosts: number | null;
-    tags: string[];
-    status: string;
-    description: string;
-    authorName: string;
-    authorType: string;
-    reports: number | null;
-    authorId: string;
-    email: string;
-}
 
 const ManageForumTable = () => {
     const [userData, setUserData] = useState<UserData | null>(null);

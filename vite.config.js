@@ -7,8 +7,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    target: 'esnext',  // Ensures Wasm support
   },
   server: {
-    historyApiFallback: true, 
+    historyApiFallback: true,
   },
+  assetsInclude: ['**/*.wasm'],  // Ensures Vite includes Wasm files
 });

@@ -7,5 +7,5 @@
     "allowSyntheticDefaultImports": true,
     "jsx": "react-jsx" // Use "react" for older React versions
   },
-  "include": ["vite.config.js", "**/*.ts", "**/*.tsx"]
+  "include": ["vite.config.js", "**/*.ts", "**/*.tsx", "src/service/notificationService.js"]
 }

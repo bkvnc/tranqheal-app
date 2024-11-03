@@ -121,12 +121,16 @@ const Register: React.FC = () => {
             setAlert({ type: 'success', message: 'Registration successful. You can now log in.' });
         } catch (error: any) {
             let errorMessage = 'An unknown error occurred';
-            if (error.code === 'auth/email-already-in-use') {
+            switch (error.code) {
+              case 'auth/email-already-in-use':
                 errorMessage = 'The email address is already in use.';
-            } else if (error.code === 'auth/invalid-email') {
+                break;
+              case 'auth/invalid-email':
                 errorMessage = 'Invalid email address.';
-            } else if (error.code === 'auth/weak-password') {
+                break;
+              case 'auth/weak-password':
                 errorMessage = 'Password should be at least 6 characters.';
+                break;
             }
             setAlert({ type: 'error', message: errorMessage });
         }

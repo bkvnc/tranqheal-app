@@ -1,30 +1,87 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { db, auth } from '../config/firebase';
-import { collection, where, orderBy, query,  onSnapshot,Timestamp, deleteDoc, getDocs } from 'firebase/firestore';
-import {  markNotificationAsRead } from '../service/notificationService';
-
+import {
+  collection,
+  where,
+  orderBy,
+  query,
+  onSnapshot,
+  Timestamp,
+  deleteDoc,
+  getDocs,
+  doc,
+  updateDoc,
+} from 'firebase/firestore';
 
 interface Notification {
   id: string;
   message: string;
-  timestamp: Timestamp; 
+  timestamp: Timestamp;
   isRead: boolean;
+  organizationId?: string;
+  adminNotification?: boolean;
+  type?: 'subscription_created' | 'subscription_expiring' | 'payment_received';
 }
 
-const DropdownNotification = () => {
+interface NotificationListProps {
+  notifications: Notification[];
+  onMarkAsRead: (id: string) => void;
+  formattedDate: (timestamp: Timestamp | null) => string;
+}
+
+const NotificationList: React.FC<NotificationListProps> = ({
+  notifications,
+  onMarkAsRead,
+  formattedDate,
+}) => {
+  return (
+    <ul className="flex h-auto flex-col overflow-y-auto">
+      {notifications.length > 0 ? (
+        notifications.map((notification) => (
+          <li key={notification.id}>
+            <Link
+              className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
+              to="#"
+            >
+              <p className="text-sm text-black dark:text-white">
+                {notification.message}
+              </p>
+              <span className="text-xs text-bodydark2">
+                {formattedDate(notification.timestamp)}
+              </span>
+            </Link>
+            {!notification.isRead && (
+              <span className="text-xs flex flex-col text-bodydark2">
+                <button 
+                  className="text-xs" 
+                  onClick={() => onMarkAsRead(notification.id)}
+                >
+                  Mark as Read
+                </button>
+              </span>
+            )}
+          </li>
+        ))
+      ) : (
+        <li className="px-4.5 py-3 text-sm text-gray-500">
+          No new notifications
+        </li>
+      )}
+    </ul>
+  );
+};
+
+const DropdownNotification: React.FC = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false); 
+  const [loading, setLoading] = useState(false);
 
-  const trigger = useRef<HTMLAnchorElement>(  null);
+  const trigger = useRef<HTMLAnchorElement>(null);
   const dropdown = useRef<HTMLDivElement>(null);
-
-
   const currentUser = auth.currentUser;
-  
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -33,20 +90,31 @@ const DropdownNotification = () => {
       setLoading(true);
       try {
         const notificationsRef = collection(db, 'notifications');
-        const q = query(notificationsRef, where('userId', '==', currentUser.uid));
-        const snapshot = await getDocs(q);
+        const q = query(
+          notificationsRef, 
+          where('userId', '==', currentUser.uid),
+          orderBy('timestamp', 'desc')
+        );
 
-        const userNotifications: Notification[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          message: doc.data().message,      
-          timestamp: doc.data().timestamp, 
-          isRead: doc.data().isRead || false, 
-          // Add other fields if necessary
-        }));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          const userNotifications: Notification[] = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            message: doc.data().message,
+            timestamp: doc.data().timestamp,
+            isRead: doc.data().isRead || false,
+            organizationId: doc.data().organizationId,
+            adminNotification: doc.data().adminNotification,
+            type: doc.data().type,
+          }));
 
-        setNotifications(userNotifications);
+          setNotifications(userNotifications);
+          setHasUnreadNotifications(userNotifications.some(notification => !notification.isRead));
+        });
+
+        return () => unsubscribe();
       } catch (error) {
         console.error("Error fetching notifications: ", error);
+        setError(error instanceof Error ? error.message : 'Unknown error');
       } finally {
         setLoading(false);
       }
@@ -55,53 +123,53 @@ const DropdownNotification = () => {
     fetchNotifications();
   }, [currentUser]);
 
-
   const formattedDate = (timestamp: Timestamp | null): string => {
-    // Check if timestamp is null
     if (!timestamp) {
-      return "Unknown date"; // or any default string you want to show
+      return "Unknown date";
     }
   
-    const date = timestamp.toDate(); // Now we can safely call toDate()
+    const date = timestamp.toDate();
     const now = new Date();
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
   
-    // Rest of your logic
     if (seconds < 60) return `${seconds} seconds ago`;
     if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
-    return date.toLocaleDateString(); // or use any date formatting you prefer
+    return date.toLocaleDateString();
   };
 
-
-  
-
   const clearNotifications = async () => {
-    if (!currentUser) return; // Exit if no user is logged in
+    if (!currentUser) return;
 
-    setLoading(true); // Set loading to true
-
+    setLoading(true);
     try {
       const notificationsRef = collection(db, 'notifications');
       const q = query(notificationsRef, where('userId', '==', currentUser.uid));
-
       const snapshot = await getDocs(q);
       const deletePromises = snapshot.docs.map((doc) => deleteDoc(doc.ref));
       await Promise.all(deletePromises);
-
-      // Clear local state
       setNotifications([]);
       setHasUnreadNotifications(false);
     } catch (error) {
       console.error("Error clearing notifications: ", error);
-      // Handle error state if needed
     } finally {
-      setLoading(false); // Set loading to false after completion
+      setLoading(false);
     }
   };
 
-
-  
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      const notificationRef = doc(db, 'notifications', id);
+      await updateDoc(notificationRef, { isRead: true });
+      setNotifications((prevNotifications) =>
+        prevNotifications.map((notification) =>
+          notification.id === id ? { ...notification, isRead: true } : notification
+        )
+      );
+    } catch (error) {
+      console.error("Error marking notification as read: ", error);
+    }
+  };
 
   useEffect(() => {
     const clickHandler = ({ target }: MouseEvent) => {
@@ -116,7 +184,7 @@ const DropdownNotification = () => {
     };
     document.addEventListener('click', clickHandler);
     return () => document.removeEventListener('click', clickHandler);
-  });
+  }, [dropdownOpen]);
 
   useEffect(() => {
     const keyHandler = ({ keyCode }: KeyboardEvent) => {
@@ -125,42 +193,8 @@ const DropdownNotification = () => {
     };
     document.addEventListener('keydown', keyHandler);
     return () => document.removeEventListener('keydown', keyHandler);
-  });
+  }, [dropdownOpen]);
 
-  const handleMarkAsRead = async (id: string) => {
-    await markNotificationAsRead(id);
-    setNotifications((prevNotifications) =>
-      prevNotifications.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
-    );
-  };
-
-
-  
-    
-  
-  useEffect(() => {
-    const notificationsRef = collection(db, 'notifications');
-    const q = query(notificationsRef, orderBy('timestamp', 'desc'));
-  
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notificationsList: Notification[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Notification[];
-      
-      setNotifications(notificationsList);
-      
-      // Check if there are any unread notifications
-      setHasUnreadNotifications(notificationsList.some(notification => !notification.isRead));
-    });
-  
-    return () => unsubscribe();
-  }, []);
-
-  
-  
   return (
     <li className="relative">
       <Link
@@ -170,11 +204,10 @@ const DropdownNotification = () => {
         className="relative flex h-8.5 w-8.5 items-center justify-center rounded-full border-[0.5px] border-stroke bg-gray hover:text-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
       >
         {hasUnreadNotifications && (
-        <span className="absolute -top-0.5 right-0 z-1 h-2 w-2 rounded-full bg-meta-1">
-          <span className="absolute -z-1 inline-flex h-full w-full animate-ping rounded-full bg-meta-1 opacity-75"></span>
-        </span>
-      )}
-
+          <span className="absolute -top-0.5 right-0 z-1 h-2 w-2 rounded-full bg-meta-1">
+            <span className="absolute -z-1 inline-flex h-full w-full animate-ping rounded-full bg-meta-1 opacity-75"></span>
+          </span>
+        )}
         <svg
           className="fill-current duration-300 ease-in-out"
           width="18"
@@ -198,38 +231,22 @@ const DropdownNotification = () => {
           dropdownOpen ? 'block' : 'hidden'
         }`}
       >
-        <div className=" flex items-center justify-between px-4.5 py-3">
+        <div className="flex items-center justify-between px-4.5 py-3">
           <h5 className="text-sm font-medium text-bodydark2">Notification</h5>
-          <button onClick={clearNotifications} disabled={loading} className="clear-button text-xs flex-row text-bodydark2">
+          <button 
+            onClick={clearNotifications} 
+            disabled={loading} 
+            className="clear-button text-xs flex-row text-bodydark2"
+          >
             {loading ? "Clearing..." : "Clear Notifications"}
           </button>
         </div>
-       
 
-        <ul className="flex h-auto flex-col overflow-y-auto">
-          {notifications.length > 0 ? (
-            notifications.map((notification) => (
-              <li key={notification.id}>
-                <Link
-                  className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
-                  to="#"
-                >
-                  <p className="text-sm text-black dark:text-white">{notification.message}</p>
-                  <span className="text-xs text-bodydark2">
-                    {formattedDate(notification.timestamp)} 
-                  </span>
-                </Link>
-               {!notification.isRead && (
-                <span className="text-xs flex flex-col text-bodydark2">
-                  <button className="text-xs" onClick={() => handleMarkAsRead(notification.id) }>Mark as Read</button>
-                  </span>
-                )}
-              </li>
-            ))
-          ) : (
-            <li className="px-4.5 py-3 text-sm text-gray-500">No new notifications</li>
-          )}
-        </ul>
+        <NotificationList
+          notifications={notifications}
+          onMarkAsRead={handleMarkAsRead}
+          formattedDate={formattedDate}
+        />
       </div>
     </li>
   );

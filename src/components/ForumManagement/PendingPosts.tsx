@@ -1,112 +1,170 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, doc, updateDoc, query, where,setDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import dayjs from 'dayjs';
-import Alert from '../../pages/UiElements/Alerts';
 import { Link } from 'react-router-dom';
-import {Post} from '../../hooks/types'
-import { sendNotification } from '../../hooks/useNotification';
-import {NotificationTypes} from '../../hooks/notificationTypes';
-
-
+import { Post } from '../../hooks/types';
+import { getAuth } from 'firebase/auth';
+import { ToastContainer, toast } from 'react-toastify'; // Import ToastContainer and toast
+import 'react-toastify/dist/ReactToastify.css';
 
 const PendingPosts = () => {
     const [posts, setPosts] = useState<Post[]>([]);
-    const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [loading, setLoading] = useState(false);
     const pendingsPerPage = 5;
     const [searchTerm, setSearchTerm] = useState<string>("");
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchPendingPosts = async () => {
-            const postsQuery = query(collection(db, 'posts'), where('status', '==', 'pending'));
-            const postsSnapshot = await getDocs(postsQuery);
+        const checkOrganizationAndFetchPosts = async () => {
+            setLoading(true);
             
-            console.log('Pending posts snapshot:', postsSnapshot); // Log the snapshot
+    
+            const auth = getAuth();
+            const user = auth.currentUser;
+            try{
+            if (user) {
+                console.log("User authenticated successfully:");
+                console.log("User UID:", user.uid);
+                console.log("User email:", user.email);
+            } else {
+                console.error("User is not authenticated.");
             
-            const pendingPosts = postsSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
+            }
+    
+            } catch (error) {
+                console.error("Authentication error:", error);
+                console.error("Error code:", error.code);
+                console.error("Error message:", error.message);
+            } // Check if the user is authenticated
+                if (!user) {
+                    console.error("User is not authenticated");
+                    setError("User is not authenticated");
+                    setLoading(false);
+                    return; // Exit early if user is not authenticated
+                }
+    
+            try {
                 
-                dateCreated: doc.data().dateCreated ? doc.data().dateCreated.toDate() : new Date(),
-                
-            })) as Post[];
-
-            console.log('Mapped pending posts:', pendingPosts); // Log the mapped posts
-            setPosts(pendingPosts);
-            
+    
+                console.log('Fetching pending posts from forums...');
+                const forumsSnapshot = await getDocs(collection(db, 'forums'));
+                const pendingPosts = [];
+    
+                for (const forumDoc of forumsSnapshot.docs) {
+                    const forumId = forumDoc.id;
+                    const postsCollectionRef = collection(db, 'forums', forumId, 'posts');
+                    const postsQuery = query(postsCollectionRef, where('status', '==', 'pending'));
+                    const postsSnapshot = await getDocs(postsQuery);
+    
+                    postsSnapshot.forEach(postDoc => {
+                        pendingPosts.push({
+                            id: postDoc.id,
+                            forumId: forumId, // Add forum reference
+                            ...postDoc.data(),
+                            submissionDate: postDoc.data().dateCreated?.toDate() || new Date(),
+                        });
+                    });
+                }
+    
+                console.log('Pending posts found:', pendingPosts.length);
+                setPosts(pendingPosts); 
+            } catch (error) {
+                console.error('Error fetching pending posts:', error);
+                toast.error(`Error: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
         };
-
-        fetchPendingPosts();
+    
+        checkOrganizationAndFetchPosts();
     }, []);
 
-    const handleApprove = async (postId: string) => {
-        const confirmed = window.confirm("Are you sure you want to approve this post?");
-        if (!confirmed) return;
-    
-        const postDocRef = doc(db, 'posts', postId);
+    const handleStatusUpdate = async (forumId: string, postId: string, newStatus: 'approved' | 'rejected') => {  
+        setLoading(true);
+        const auth = getAuth();
+        const user = auth.currentUser;
+        try{
+        if (user) {
+            console.log("User authenticated successfully:");
+            console.log("User UID:", user.uid);
+            console.log("User email:", user.email);
+        } else {
+            console.error("User is not authenticated.");
         
-        try {
-            const postDoc = await getDoc(postDocRef);
-            if (!postDoc.exists()) {
-                throw new Error('Post does not exist');
-            }
-            
-            const postData = postDoc.data();
-            const authorId = postData.authorId;
-            
-            await updateDoc(postDocRef, { status: 'approved' });
-    
-            const notificationData = {
-                message: `Your post has been approved!`,
-                userId: authorId,
-                timestamp: new Date(),
-                isRead: false,
-            };
-            
-            await setDoc(doc(collection(db, 'notifications'), `${postId}_approved`), notificationData);
-    
-            setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
-            setAlert({ type: 'success', message: 'Post approved successfully!' });
-    
+        }
+
         } catch (error) {
-            setAlert({ type: 'error', message: 'Error approving post.' });
-            console.error('Error approving post:', error);
+            console.error("Authentication error:", error);
+            console.error("Error code:", error.code);
+            console.error("Error message:", error.message);
+        } 
+            if (!user) {
+                console.error("User is not authenticated");
+                setError("User is not authenticated");
+                setLoading(false);
+                return; 
+            }
+        try {
+           
+            const postRef = doc(db, 'forums', forumId, 'posts', postId);
+            const postSnap = await getDoc(postRef);
+    
+            if (!postSnap.exists()) {
+                throw new Error('Post not found');
+            }
+    
+            const updateData = {
+                status: newStatus,
+                reviewedBy: auth.currentUser.uid,
+                reviewedAt: new Date(),
+            };
+    
+            
+            await updateDoc(postRef, updateData);
+    
+           
+            const notificationRef = doc(collection(db, 'notifications'));
+            await setDoc(notificationRef, {
+                recipientId: postSnap.data().authorId,
+                message: `Your post has been ${newStatus}`,
+                type: `post_${newStatus}`,
+                createdAt: new Date(),
+                isRead: false,
+                postId: postId,
+                forumId: forumId,
+            });
+    
+            console.log(`Post status updated to ${newStatus}`);
+
+            setPosts((currentPosts) =>
+                currentPosts.filter((post) => post.id !== postId || post.forumId !== forumId)
+            );
+    
+            toast.success(`Post successfully ${newStatus}`);
+
+        } catch (error: any) {
+            console.error('Error updating post status:', error);
+            toast.error(`Error ${newStatus} post: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
     };
     
-    const handleReject = async (postId: string) => {
+   
+    const handleApprove = (forumId: string, postId: string) => {
+        const confirmed = window.confirm("Are you sure you want to approve this post?");
+        if (confirmed) {
+            handleStatusUpdate(forumId, postId, 'approved');
+        }
+    };
+    
+    const handleReject = (forumId: string, postId: string) => {
         const confirmed = window.confirm("Are you sure you want to reject this post?");
-        if (!confirmed) return;
     
-        const postDocRef = doc(db, 'posts', postId);
-        
-        try {
-            const postDoc = await getDoc(postDocRef);
-            if (!postDoc.exists()) {
-                throw new Error('Post does not exist');
-            }
-            
-            const postData = postDoc.data();
-            const authorId = postData.authorId;
-            
-            await updateDoc(postDocRef, { status: 'rejected' });
-    
-            const notificationData = {
-                message: `Your post "${postData.title}" has been rejected.`,
-                userId: authorId,
-                timestamp: new Date(),
-                isRead: false,
-            };
-            
-            await setDoc(doc(collection(db, 'notifications'), `${postId}_rejected`), notificationData);
-    
-            setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
-            setAlert({ type: 'success', message: 'Post rejected successfully!' });
-    
-        } catch (error) {
-            setAlert({ type: 'error', message: 'Error rejecting post.' });
-            console.error('Error rejecting post:', error);
+        if (confirmed) {
+            handleStatusUpdate(forumId, postId, 'rejected');
         }
     };
 
@@ -119,11 +177,11 @@ const PendingPosts = () => {
     const indexOfFirstPending = indexOfLastPending - pendingsPerPage;
     const currentPending = filteredPending.slice(indexOfFirstPending, indexOfLastPending);
     const totalPages = Math.ceil(filteredPending.length / pendingsPerPage);
-    console.log('Current Pending after pagination:', currentPending);
 
     return (
         <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-            {alert && <Alert type={alert.type} message={alert.message} />}
+            <ToastContainer />
+            {loading && <div className="text-center py-4">Loading...</div>}
             <h1 className="text-lg font-bold mb-4">Pending Posts</h1>
             <div className="max-w-full overflow-x-auto">
                 <div className="flex items-center">
@@ -152,57 +210,51 @@ const PendingPosts = () => {
                         </tr>
                     </thead>
                     <tbody>
-                    {currentPending.length === 0 ? (
-                        <tr>
-                            <td colSpan={4} className="text-center">No pending posts</td>
-                        </tr>
-                    ) : (
-                        currentPending.map(post => {
-                            console.log('Rendering post:', post); // Log each post being rendered
-                            return (
+                        {currentPending.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="text-center">No pending posts</td>
+                            </tr>
+                        ) : (
+                            currentPending.map(post => (
                                 <tr key={post.id}>
                                     <td className="border-b py-5 px-4">{post.id}</td>
-                                    <td className="border-b py-5 px-4">{post.author}</td>
+                                    <td className="border-b py-5 px-4">{post.author} {post.authorName}</td>
                                     <td className="border-b py-5 px-4">{post.content}</td>
                                     <td className="border-b py-5 px-4">
                                         {dayjs(post.dateCreated).format('MMM D, YYYY')}
                                     </td>
-                                    <td className="border-b py-5 px-4">
+                                     <td className="border-b py-5 px-4">
                                         <button
-                                            onClick={() => handleApprove(post.id)}
+                                            onClick={() => handleApprove(post.forumId, post.id)}
                                             className="py-1 px-3 bg-green-500 dark:text-white rounded-md hover:bg-success hover:text-white"
                                         >
                                             Approve
                                         </button>
                                         <button
-                                            onClick={() => handleReject(post.id)}
-                                            className="py-1 px-3 bg-green-500 dark:text-white rounded-md hover:text-white hover:bg-danger"
+                                            onClick={() => handleReject(post.forumId, post.id)}
+                                            className="ml-2 py-1 px-3 bg-red-500 dark:text-white rounded-md hover:bg-danger hover:text-white"
                                         >
                                             Reject
                                         </button>
                                     </td>
                                 </tr>
-                            );
-                        })
-                    )}
+                            ))
+                        )}
                     </tbody>
-
                 </table>
-                <div className="flex justify-between mt-4">
+                <div className="flex justify-between items-center mt-4">
                     <button
-                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                         disabled={currentPage === 1}
-                        className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        className="bg-gray-300 px-4 py-2 rounded"
                     >
                         Previous
                     </button>
-                    <div className="flex items-center">
-                        <span>Page {currentPage} of {totalPages}</span>
-                    </div>
+                    <span>Page {currentPage} of {totalPages}</span>
                     <button
-                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                         disabled={currentPage === totalPages}
-                        className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        className="bg-gray-300 px-4 py-2 rounded"
                     >
                         Next
                     </button>
