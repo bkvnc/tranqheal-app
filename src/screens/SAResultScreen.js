@@ -78,7 +78,7 @@ export const SAResultScreen = ({ navigation }) => {
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('SeekProfessionalScreen')}>
+          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('SeekProfessional')}>
             <Text style={styles.buttonText}>Seek Professional</Text>
           </TouchableOpacity>
 
