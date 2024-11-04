@@ -49,19 +49,18 @@ const SignIn = () => {
       const adminSnap = await getDoc(adminRef);
 
       if (orgSnap.exists()) {
-        // User is an organization
+       
         await updateDoc(orgRef, {
           lastLogin: Timestamp.now()
         });
         navigate('/'); // Navigate to organization dashboard or home
       } else if (adminSnap.exists()) {
-        // User is an admin
+       
         await updateDoc(adminRef, {
           lastLogin: Timestamp.now()
         });
         navigate('/'); // Navigate to admin dashboard or home
       } else {
-        // User not found in either collection
         setAlert({ type: 'error', message: 'User not found. Please check your credentials.' });
       }
     } catch (error) {

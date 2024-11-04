@@ -1,17 +1,23 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { db } from "../../config/firebase";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const BlacklistedWordsTable = () => {
     const [blacklistedWords, setBlacklistedWords] = useState<{ id: string, word: string; description: string }[]>([]);
     const [newWord, setNewWord] = useState("");
     const [newDescription, setNewDescription] = useState("");
-    const [searchQuery, setSearchQuery] = useState("")
+    const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const wordsPerPage = 5; // Items per page
+    const [editWordId, setEditWordId] = useState<string | null>(null);
+    const [editWord, setEditWord] = useState("");
+    const [editDescription, setEditDescription] = useState("");
+    const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+    const [wordToDelete, setWordToDelete] = useState<string | null>(null);
 
- 
     useEffect(() => {
         const fetchBlacklistedWords = async () => {
             const querySnapshot = await getDocs(collection(db, "blacklistedWords"));
@@ -22,7 +28,6 @@ const BlacklistedWordsTable = () => {
         fetchBlacklistedWords();
     }, []);
 
-   
     const addWord = async () => {
         if (newWord.trim() && newDescription.trim()) {
             const docRef = await addDoc(collection(db, "blacklistedWords"), {
@@ -32,9 +37,51 @@ const BlacklistedWordsTable = () => {
             setBlacklistedWords([...blacklistedWords, { id: docRef.id, word: newWord, description: newDescription }]);
             setNewWord("");
             setNewDescription("");
+            toast.success("Word added to blacklist");
+        } else {
+            toast.error("Please fill in both fields");
         }
     };
 
+    const handleEdit = (word: { id: string, word: string, description: string }) => {
+        setEditWordId(word.id);
+        setEditWord(word.word);
+        setEditDescription(word.description);
+    };
+
+    const updateWord = async () => {
+        if (editWordId) {
+            const wordRef = doc(db, "blacklistedWords", editWordId);
+            await updateDoc(wordRef, {
+                word: editWord,
+                description: editDescription
+            });
+            setBlacklistedWords(prev =>
+                prev.map(item =>
+                    item.id === editWordId ? { ...item, word: editWord, description: editDescription } : item
+                )
+            );
+            setEditWordId(null);
+            setEditWord("");
+            setEditDescription("");
+            toast.success("Word updated successfully");
+        } else {
+            toast.error("Failed to update word");
+        }
+    };
+
+    const deleteWord = async (id: string) => {
+        const confirmDelete = window.confirm("Are you sure you want to delete this word?");
+        if (!confirmDelete) {
+            return; // Exit the function if the user cancels
+        }
+
+        const wordRef = doc(db, "blacklistedWords", id);
+        await deleteDoc(wordRef);
+        setBlacklistedWords(prev => prev.filter(item => item.id !== id));
+        toast.success("Word deleted successfully");
+    };
+    
     // Handler for search filtering
     const filteredWords = blacklistedWords.filter(({ word }) =>
         word.toLowerCase().includes(searchQuery.toLowerCase())
@@ -47,6 +94,7 @@ const BlacklistedWordsTable = () => {
 
     return (
         <>
+            <ToastContainer />
             <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
                 <div className="max-w-full overflow-x-auto">
                     <div className="flex items-center">
@@ -109,35 +157,54 @@ const BlacklistedWordsTable = () => {
                                         <p className="text-black dark:text-white">{item.description}</p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <div className="flex items-center space-x-3.5">
-                                            {/* Action buttons go here */}
-                                            <button className="hover:text-primary">Edit</button>
-                                            <button className="hover:text-primary">Delete</button>
+                                    <div className="flex items-center space-x-3.5">
+                                            <button className="hover:text-white hover:bg-success py-1 px-3 rounded-md" onClick={() => handleEdit(item)}>Edit</button>
+                                            <button className="hover:text-white hover:bg-danger py-1 px-3 rounded-md" onClick={() => deleteWord(item.id)}>Delete</button>
                                         </div>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                    <div className="flex justify-between mt-4">
-                        <button
-                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                        className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
-                        >
-                        Previous
-                        </button>
-                        <div className="flex items-center">
-                        <span>Page {currentPage} of {totalPages}</span>
+
+                    {editWordId && (
+                        <div className="mt-4">
+                            <h4>Edit Blacklisted Word</h4>
+                            <input
+                                type="text"
+                                value={editWord}
+                                onChange={(e) => setEditWord(e.target.value)}
+                                placeholder="Edit word"
+                                className="mb-2 w-full border-[1.5px] border-stroke py-3 px-5"
+                            />
+                            <input
+                                type="text"
+                                value={editDescription}
+                                onChange={(e) => setEditDescription(e.target.value)}
+                                placeholder="Edit description"
+                                className="mb-2 w-full border-[1.5px] border-stroke py-3 px-5"
+                            />
+                            <button onClick={updateWord} className="mt-2 rounded-md bg-primary px-4 py-2 text-white">Save</button>
                         </div>
+                    )}
+
+                    <div className="mt-4 flex justify-between">
                         <button
-                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                        disabled={currentPage === totalPages}
-                        className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+                            onClick={() => setCurrentPage(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
                         >
-                        Next
+                            Previous
                         </button>
-                </div>
+                        <span>Page {currentPage} of {totalPages}</span>
+                        <button
+                            onClick={() => setCurrentPage(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
             </div>
         </>

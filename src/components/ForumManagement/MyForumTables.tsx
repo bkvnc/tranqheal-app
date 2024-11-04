@@ -3,34 +3,11 @@ import { collection, getDocs, doc, getDoc, addDoc, deleteDoc, query, where } fro
 import { db, auth } from '../../config/firebase';
 import dayjs from 'dayjs'; 
 import Alert from '../../pages/UiElements/Alerts';
-import { NavLink } from 'react-router-dom';
-import {Link } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
+import { UserData, Forum } from '../../hooks/types';
 
-interface UserData {
-    userType: string;
-    organizationName?: string;
-    email?: string;
-    firstName?: string;
-    lastName?: string;
-    profilePicture?: string;
-    profileImage?: string;
-}
 
-interface Forum {
-    id: string;
-    title: string;
-    dateCreated: any;
-    totalMembers: number | null;
-    totalComments: number | null;
-    tags: string[];
-    status: string;
-    description: string;
-    authorName: string;
-    authorType: string;
-    authorId: string;
-    totalPosts: number | null;
-    
-}
+
 
 const MyForumTable: React.FC = () => {
     const [userData, setUserData] = useState<UserData | null>(null);
@@ -40,7 +17,7 @@ const MyForumTable: React.FC = () => {
     const [description, setDescription] = useState('');
     const [tags, setTags] = useState<string[]>([]);
     const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-    const [searchTerm, setSearchTerm] = useState<string>("");
+    const [searchTerm, setSearchTerm] = useState('');
     
     
     const [currentPage, setCurrentPage] = useState(1);
@@ -121,11 +98,12 @@ const MyForumTable: React.FC = () => {
                 status: 'pending',
                 tags,
                 totalMembers: 0,
-                totalUpvotes: 0,
                 authorId: user.uid, // Store authorId here
                 authorName: userData?.organizationName || 'Anonymous',
                 authorType: userData?.userType || 'user',
             });
+
+            
             setAlert({ type: 'success', message: 'Forum created successfully!' });
             setTimeout(() => {
                 setAlert(null);
@@ -151,11 +129,6 @@ const MyForumTable: React.FC = () => {
         }
     };
 
-    const filteredForums = forums.filter(forum =>
-        forum.authorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        forum.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
     // Pagination logic
     const indexOfLastForum = currentPage * forumsPerPage;
     const indexOfFirstForum = indexOfLastForum - forumsPerPage;
@@ -170,7 +143,7 @@ const MyForumTable: React.FC = () => {
                     <div className="flex items-center">
                     <input
                         type="text"
-                        placeholder="Search forum by title "
+                        placeholder="Search post by title or author"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="mb-3 w-100 rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
@@ -203,12 +176,7 @@ const MyForumTable: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                        {filteredForums.length === 0 && currentForums.length === 0 ? (
-                            <tr>
-                                <td colSpan={8} className="text-center">No forums found</td>
-                            </tr>
-                        ) : (
-                            currentForums.map((forum) => (
+                            {currentForums.map((forum) => (
                                 <tr key={forum.id}>
                                     <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
                                         <h5 className="font-medium text-black dark:text-white">{forum.id}</h5>
@@ -247,8 +215,7 @@ const MyForumTable: React.FC = () => {
                                         </button>
                                     </td>
                                 </tr>
-                                ))
-                            )}
+                            ))}
                         </tbody>
                     </table>
                 </div>

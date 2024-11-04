@@ -36,7 +36,13 @@ const LatestCalls = lazy(() => import('../pages/CustomPages/ListCalls'));
 
 //SUBSCRIPTION MANAGEMENT
 const ViewAllSubscriptions = lazy(() => import('../pages/CustomPages/SubscriptionManagement/ViewAllSubscriptions'));
-const ViewSubscriptionComponent = lazy(() => import('../pages/CustomPages/SubscriptionManagement/ViewSubscriptionComponent'));
+//const ViewSubscriptionComponent = lazy(() => import('../pages/CustomPages/SubscriptionManagement/ViewSubscriptionComponent'));
+const CheckoutPage = lazy(() => import('../pages/CustomPages/SubscriptionManagement/CheckoutPage'));
+const CheckoutSuccess = lazy(() => import('../pages/CustomPages/SubscriptionManagement/CheckoutSuccess'));
+const CheckoutFailed = lazy(() => import('../pages/CustomPages/SubscriptionManagement/CheckoutFailed'));
+
+
+const subscriptionPlans = lazy(() => import('../pages/CustomPages/SubscriptionManagement/subscriptionPlan'));
 
 //User Management
 const ViewAllUsers = lazy(() => import('../pages/CustomPages/UserManagement/ViewAllUsers'));
@@ -62,10 +68,10 @@ const coreRoutes = [
     title: 'calls',
     component: LatestCalls,
   },
-  {
-    path: '/posts/:postId',
-    title: 'Post Details',
-    component: PostDetailsPage,
+    {
+      path: '/forums/:forumId/posts/:postId',
+      title: 'Post Details',
+      component: PostDetailsPage,
   },
   {
     path: '/users/:userId',
@@ -108,15 +114,35 @@ const coreRoutes = [
     title: 'Subscriptions',
     component: ViewAllSubscriptions,
   },
+  // {
+  //   path: '/subscriptionComponent',
+  //   title: 'Subscription Component',
+  //   component: ViewSubscriptionComponent,
+  // },
   {
-    path: '/subscriptionComponent',
-    title: 'Subscription Component',
-    component: ViewSubscriptionComponent,
+    path: '/subscription-plans',
+    title: 'Subscription Plans',
+    component: subscriptionPlans,
   },
   {
     path: '/users',
     title: '/users',
     component: ViewAllUsers,
+  },
+  {
+    path: '/checkout/:planId',
+    title: 'Checkout',
+    component: CheckoutPage,
+  },
+  {
+    path: '/subscription/success',
+    title: 'Checkout Success',
+    component: CheckoutSuccess,
+  },
+  {
+    path: '/subscription/failed',
+    title: 'Checkout Failed',
+    component: CheckoutFailed,
   },
   {
     path: '/add-resources',

@@ -4,6 +4,7 @@ import { getAuth } from "firebase/auth"; // for authentication
 import { getFirestore } from "firebase/firestore"; // for Firestore database
 import { getStorage } from "firebase/storage"; // for Firebase Storage
 import { getAnalytics } from "firebase/analytics";
+import { getMessaging } from "firebase/messaging";
 
 
 const firebaseConfig = {
@@ -22,3 +23,4 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const analytics = getAnalytics(app);
+export const messaging = getMessaging(app);
