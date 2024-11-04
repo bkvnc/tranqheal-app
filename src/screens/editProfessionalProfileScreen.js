@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.grey,
     padding: 5,
-    borderRadius: 12,
+    borderRadius: 5,
     height: 40,
   },
   buttonContainer: {

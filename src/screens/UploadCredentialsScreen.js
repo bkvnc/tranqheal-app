@@ -1,18 +1,120 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Linking, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { RootLayout } from '../navigation/RootLayout'; 
+import { firestore, storage, auth } from '../config';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
 
 export const UploadCredentialsScreen = ({ navigation, route }) => {
-  const { isRegistered } = route.params; // Get the registration status from params
+  const { isRegistered, organizationId, organizationName, userType } = route.params;
   const [file, setFile] = useState(null); // To store the file chosen
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
   // Function to pick a document
   const pickDocument = async () => {
-    let result = await DocumentPicker.getDocumentAsync({});
-    if (result.type === 'success') {
-      setFile(result);
+    try {
+      let result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf', // Adjust the file type as needed
+      });
+  
+      console.log('Document Picker Result:', result);
+
+      // Check if the user canceled the document picker
+      if (result.canceled) {
+        Alert.alert('Error', 'Document selection was canceled.');
+        return;
+      }
+      
+      // Check if we have a valid asset
+      if (result.assets && result.assets.length > 0) {
+        // Access the document properties
+        const documentUri = result.assets[0].uri;
+        const documentName = result.assets[0].name;
+        const documentSize = result.assets[0].size;
+
+        // Use the document URI for uploading or other purposes
+        console.log('Document URI:', documentUri);
+        console.log('Document Name:', documentName);
+        console.log('Document Size:', documentSize);
+
+        setFile({ name: documentName, uri: documentUri, size: documentSize }); // Store the result in the state or handle as needed
+      } else {
+        Alert.alert('Error', 'Could not retrieve file. Please try a different file.');
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+      Alert.alert('Error', 'An unexpected error occurred while picking the document.');
+    }
+  };
+
+  // Function to submit the form
+  const handleSubmit = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert('User not authenticated');
+      return;
+    }
+    if(!file) {
+      Alert.alert('No File Selected', "Please upload your credentials to proceed.");
+      return;
+    }
+    if (!firstName || !lastName) {
+      Alert.alert('Missing Information', "Please fill in both first and last names.");
+      return;
+    }
+    
+    const profName = { firstName, lastName };
+
+    try {
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
+      
+      // Create a reference to the file location in storage
+      const fileRef = ref(storage, `tempUploads/${organizationId}/${file.name}`);
+      await uploadBytes(fileRef, blob);
+      const fileUrl = await getDownloadURL(fileRef);
+
+      console.log('userType:', userType);
+
+      await setDoc(doc(firestore, 'professionals', user.uid), profName, { merge: true });
+      console.log('Professional name added successfully!');
+
+      await addDoc(collection(firestore, `organizations/${organizationId}/applications`), {
+        fileUrl,
+        status: 'Pending',
+        createdAt: new Date(),
+        userType: userType,
+        firstName,
+        lastName,
+        professionalId: user.uid,
+      });
+      console.log('Professional application added successfully!');
+
+      await addDoc(collection(firestore, `notifications/${user.uid}/messages`), {
+        organizationId,
+        message: `Your application for ${organizationName} has been submitted.`,
+        createdAt: new Date(),
+        isRead: false,
+        notificationType: 'Application',
+      });
+      console.log('Professional notification added successfully!');
+
+      await addDoc(collection(firestore, `notifications/${organizationId}/messages`), {
+        senderId: user.uid,
+        message: `New application received from ${firstName} ${lastName}.`,
+        createdAt: new Date(),
+        isRead: false,
+        notificationType: 'Application',
+      });
+      console.log('Organization notification added successfully!');
+
+      Alert.alert('Success', 'Your application has been submitted.');
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      Alert.alert('Error', 'Could not upload file.');
     }
   };
 
@@ -34,6 +136,24 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
         <Text style={styles.linkText}>See <Text style={styles.link}>here</Text> for the list of requirements.</Text>
       </TouchableOpacity>
 
+      {/* Input for First Name */}
+      <Text style={styles.inputLabel}>First Name:</Text>
+      <TextInput
+        style={styles.inputBox}
+        placeholder="Enter First Name"
+        value={firstName}
+        onChangeText={(text) => setFirstName(text)}
+      />
+
+      {/* Input for Last Name */}
+      <Text style={styles.inputLabel}>Last Name:</Text>
+      <TextInput
+        style={styles.inputBox}
+        placeholder="Enter Last Name"
+        value={lastName}
+        onChangeText={(text) => setLastName(text)}
+      />
+
       {/* Upload Section */}
       <Text style={styles.uploadLabel}>Upload credentials</Text>
       <TouchableOpacity style={styles.uploadBox} onPress={pickDocument}>
@@ -44,7 +164,7 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
       </TouchableOpacity>
 
       {/* Submit Button */}
-      <TouchableOpacity style={styles.submitButton}>
+      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
         <Text style={styles.submitButtonText}>Submit</Text>
       </TouchableOpacity>
     </View>
@@ -87,6 +207,20 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
     marginBottom: 25,
+  },
+  inputLabel: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: '#333',
+  },
+  inputBox: {
+    borderWidth: 1,
+    borderColor: '#000000',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
   },
   link: {
     color: '#6A0DAD',

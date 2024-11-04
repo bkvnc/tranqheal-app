@@ -11,7 +11,7 @@ import { signupValidationSchema, createUserInFirestore } from '../utils';
 export const SignupScreen = ({ navigation, route }) => {
   const [errorState, setErrorState] = useState('');
 
-  const { userType } = route.params;
+  const { isRegistered, organizationId, organizationName, userType } = route.params;
 
   const {
     passwordVisibility,
@@ -32,6 +32,19 @@ export const SignupScreen = ({ navigation, route }) => {
       const collectionName = userType === 'professional' ? 'professionals' : 'users';      
 
       await createUserInFirestore(userId, username, email, collectionName, userType);
+
+      if (userType === 'professional') {
+        if (organizationId) {
+          console.log('Navigating to UploadCredentials');
+          navigation.navigate('UploadCredentials', { organizationId, organizationName, userType, isRegistered });
+        } else {
+          console.log('Professional without organization selected.');
+          navigation.navigate('Login');
+        }
+      } else {
+        console.log('User signed up successfully!');
+        navigation.navigate('Login');
+      }
     } catch (error) {
       console.log('Error creating user:', error.message);
       setErrorState(error.message);
@@ -69,7 +82,6 @@ export const SignupScreen = ({ navigation, route }) => {
                 autoCapitalize="none"
                 keyboardType="username"
                 textContentType="username"
-                autoFocus={true}
                 value={values.username}
                 onChangeText={handleChange('username')}
                 onBlur={handleBlur('username')}
@@ -82,7 +94,6 @@ export const SignupScreen = ({ navigation, route }) => {
                 autoCapitalize="none"
                 keyboardType="email-address"
                 textContentType="emailAddress"
-                autoFocus={true}
                 value={values.email}
                 onChangeText={handleChange('email')}
                 onBlur={handleBlur('email')}

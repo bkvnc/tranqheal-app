@@ -8,13 +8,19 @@ export const createUserInFirestore = async (userId, username, email, collectionN
   try {
     const profileImageUrl = await getDefaultProfileImage();
 
-    await setDoc(userRef, {
+    const userData = {
       username: username,
       email: email,
       profileImage: profileImageUrl,
       createdAt: serverTimestamp(),
       userType: userType,
-    });
+    }
+
+    if (userType === 'professional') {
+      userData.status = 'Unverified';
+    }
+
+    await setDoc(userRef, userData);
     console.log('User created successfully!');
   } catch (error) {
     console.error('Error creating user in Firestore:', error.message);

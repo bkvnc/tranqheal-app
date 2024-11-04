@@ -15,6 +15,7 @@ const navigationRef = React.createRef();
 export const RootNavigator = () => {
     const { user, setUser, userType, setUserType } = useContext(AuthenticatedUserContext);
     const [isLoading, setIsLoading] = useState(true);
+    const [justSignedUp, setJustSignedUp] = useState(false);
   
     useEffect(() => {
       // onAuthStateChanged returns an unsubscriber
@@ -33,12 +34,14 @@ export const RootNavigator = () => {
             setUserType("user");
           } else if (profDoc.exists()) {
             setUserType("professional");
+            setJustSignedUp(true);
           } else {
             setUserType(null);
           }
         } else {
           setUser(null);
           setUserType(null);
+          setJustSignedUp(false);
         }
 
         setIsLoading(false);
@@ -46,11 +49,11 @@ export const RootNavigator = () => {
   
       // unsubscribe auth listener on unmount
       return unsubscribeAuthStateChanged;
-    }, [setUser, setUserType]);
+    }, [setUser, setUserType, justSignedUp]);
     
     useEffect(() => {
       const logNavigationState = () => {
-        const currentNavigationState = navigationRef.current?.getRootSate();
+        const currentNavigationState = navigationRef.current?.getRootState();
         console.log("Navigation State:", currentNavigationState);
       };
 
@@ -58,20 +61,22 @@ export const RootNavigator = () => {
         logNavigationState();
       }
     }, [user, userType])
-    
+
     if (isLoading) {
       return <LoadingIndicator />;
     }
   
     return (
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         {!user ? (
           <AuthStack/> 
         ) : userType === "user" ? (
           <AppStack/>
-        ) : userType === "professional" ? (
+        ) : userType === "professional" && !justSignedUp ? (
           <ProfessionalStack/>
-        ) : (
+        ) : userType === "professional" && justSignedUp ? (
+          <AuthStack/>
+        ) :(
           <AuthStack/>
         )}
       </NavigationContainer>
