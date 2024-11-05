@@ -1,83 +1,72 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, FlatList } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
 import Modal from 'react-native-modal';
 import RNPickerSelect from 'react-native-picker-select';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
+import { collection, getDocs } from 'firebase/firestore';
+import { firestore } from '../config';
 
-// Sample data for organizations
-const organizations = [
-  {
-    id: '1',
-    name: 'Mental Health NGO',
-    services: 'Counseling, Therapy',
-    rating: 4.5,
-    address: '123 Elm St, Citytown',
-    hoursAvailable: '9 AM - 5 PM',
-    type: 'Non-Government Organization',
-    image: 'https://via.placeholder.com/150',
-  },
-  {
-    id: '2',
-    name: 'Community Health Clinic',
-    services: 'Mental Health Checkups, Therapy',
-    rating: 4.2,
-    address: '456 Oak St, Villagetown',
-    hoursAvailable: '8 AM - 6 PM',
-    type: 'Government Organization',
-    image: 'https://via.placeholder.com/150',
-  },
-  // More organizations
-];
 
-export const ViewOrgScreen = () => {
+export const ViewOrgScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
+  const [organizations, setOrganizations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        const organizationsCollection = collection(firestore, 'organizations');
+        const organizationSnapshot = await getDocs(organizationsCollection);
+        const organizationList = organizationSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return { id: doc.id, ...data, organizationName: data.organizationName, servicesOffered: data.servicesOffered || [] };
+        });
+
+        setOrganizations(organizationList);
+      } catch (error) {
+        console.error('Error fetching organizations:', error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrganizations();
+  }, []);
 
   const filteredOrganizations = organizations.filter(org =>
-    org.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    (org.organizationName || '').toLowerCase().includes(searchQuery.toLowerCase())
+);
 
   const toggleFilterModal = () => setFilterModalVisible(!isFilterModalVisible);
-
-  const navigation = useNavigation();
 
   const handleOrganizationPress = (organization) => {
     navigation.navigate('OrganizationDetails', { organization });
   };
 
-  const renderStars = (rating) => {
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <Ionicons
-          key={i}
-          name={i <= Math.round(rating) ? 'star' : 'star-outline'}
-          size={16}
-          color="#FFD700"
-        />
-      );
-    }
-    return stars;
-  };
-
   const renderOrganization = ({ item }) => (
     <TouchableOpacity style={styles.orgCard} onPress={() => handleOrganizationPress(item)}>
-      <Image source={{ uri: item.image }} style={styles.orgImage} />
+      <Image source={{ uri: item.profileImage }} style={styles.orgImage} />
       <View style={styles.orgDetails}>
-        <Text style={styles.orgName}>{item.name}</Text>
-        <Text style={styles.orgServices}>{item.services}</Text>
-        <View style={styles.ratingRow}>
-          <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
-          <View style={styles.starContainer}>{renderStars(item.rating)}</View>
-        </View>
+        <Text style={styles.orgName}>{item.organizationName}</Text>
+        <Text style={styles.orgServices}>
+          {(item.servicesOffered || []).join(', ')}
+        </Text>
       </View>
       <Ionicons name="arrow-forward-circle-outline" size={24} color="gray" style={styles.forwardIcon} />
     </TouchableOpacity>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Loading organizations...</Text>
+      </View>
+    );
+  }
 
   return (
     <RootLayout navigation={navigation} screenName="ViewOrg" userType={userType}>
@@ -172,18 +161,6 @@ const styles = StyleSheet.create({
   orgServices: {
     fontSize: 14,
     color: '#555',
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 5,
-  },
-  ratingText: {
-    fontSize: 14,
-    marginRight: 5,
-  },
-  starContainer: {
-    flexDirection: 'row',
   },
   forwardIcon: {
     marginLeft: 10,

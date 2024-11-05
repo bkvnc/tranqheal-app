@@ -21,7 +21,10 @@ export const createUserInFirestore = async (userId, username, email, collectionN
     }
 
     await setDoc(userRef, userData);
+
     console.log('User created successfully!');
+    const userDoc = await getDoc(userRef);
+    return userDoc.exists() ? userDoc.data() : null;
   } catch (error) {
     console.error('Error creating user in Firestore:', error.message);
   }

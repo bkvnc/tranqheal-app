@@ -8,7 +8,7 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
 
 export const UploadCredentialsScreen = ({ navigation, route }) => {
-  const { isRegistered, organizationId, organizationName, userType } = route.params;
+  const { isRegistered, organizationId, organizationName, userType, userStatus } = route.params;
   const [file, setFile] = useState(null); // To store the file chosen
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -84,12 +84,13 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
 
       await addDoc(collection(firestore, `organizations/${organizationId}/applications`), {
         fileUrl,
-        status: 'Pending',
+        pending: true,
         createdAt: new Date(),
         userType: userType,
         firstName,
         lastName,
         professionalId: user.uid,
+        status: userStatus,
       });
       console.log('Professional application added successfully!');
 

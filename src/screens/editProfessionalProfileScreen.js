@@ -36,13 +36,27 @@ export const EditProfessionalProfileScreen = ({ navigation }) => {
         setGender(data.gender || '');
         setMobileNumber(data.mobileNumber || '');
         setFacebookLink(data.facebookLink || '');
-        setAvailability(data.availability || {});
-        setSpecialization(data.specialization || {});
+        setAvailability(data.availability || { morning: false, afternoon: false, evening: false });
+        setSpecialization(data.specialization || { depress: false, anxiety: false, stress: false });
       }
     };
 
     fetchProfileData();
   }, []);
+
+  const handleAvailabilityToggle = (period) => {
+    setAvailability((prevState) => ({
+      ...prevState,
+      [period]: !prevState[period],
+    }));
+  };
+
+  const handleSpecializationToggle = (type) => {
+    setSpecialization((prevState) => ({
+      ...prevState,
+      [type]: !prevState[type],
+    }));
+  };
 
   const handleSubmit = async () => {
     const user = auth.currentUser;
@@ -176,19 +190,19 @@ export const EditProfessionalProfileScreen = ({ navigation }) => {
             {/* Availability */}
             <Text style={styles.buttonLabel}>Availability</Text>
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.buttonCheck} onPress={() => setAvailability({ ...availability, morning: !availability.morning })}>
+              <TouchableOpacity style={styles.buttonCheck} onPress={() => handleAvailabilityToggle('morning')}>
                 <Text style={styles.morningButton}>Morning</Text>
                 <Text style={{ fontWeight: availability.morning ? 'bold' : 'normal' }}>
                   {availability.morning ? '✓' : ''}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.buttonCheck} onPress={() => setAvailability({ ...availability, afternoon: !availability.afternoon })}>
+              <TouchableOpacity style={styles.buttonCheck} onPress={() => handleAvailabilityToggle('afternoon')}>
                 <Text style={styles.afternoonButton}>Afternoon</Text>
                 <Text style={{ fontWeight: availability.afternoon ? 'bold' : 'normal' }}>
                   {availability.afternoon ? '✓' : ''}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.buttonCheck} onPress={() => setAvailability({ ...availability, evening: !availability.evening })}>
+              <TouchableOpacity style={styles.buttonCheck} onPress={() => handleAvailabilityToggle('evening')}>
                 <Text style={styles.eveningButton}>Evening</Text>
                 <Text style={{ fontWeight: availability.evening ? 'bold' : 'normal' }}>
                   {availability.evening ? '✓' : ''}
@@ -199,19 +213,19 @@ export const EditProfessionalProfileScreen = ({ navigation }) => {
             {/* Specialization */}
             <Text style={styles.buttonLabel}>Specialization</Text>
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.buttonCheck} onPress={() => setSpecialization({ ...specialization, depress: !specialization.depress })}>
+              <TouchableOpacity style={styles.buttonCheck} onPress={() => handleSpecializationToggle('depress')}>
                 <Text style={styles.specializationButton}>Depress</Text>
                 <Text style={{ fontWeight: specialization.depress ? 'bold' : 'normal' }}>
                   {specialization.depress ? '✓' : ''}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.buttonCheck} onPress={() => setSpecialization({ ...specialization, anxiety: !specialization.anxiety })}>
+              <TouchableOpacity style={styles.buttonCheck} onPress={() => handleSpecializationToggle('anxiety')}>
                 <Text style={styles.specializationButton}>Anxiety</Text>
                 <Text style={{ fontWeight: specialization.anxiety ? 'bold' : 'normal' }}>
                   {specialization.anxiety ? '✓' : ''}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.buttonCheck} onPress={() => setSpecialization({ ...specialization, stress: !specialization.stress })}>
+              <TouchableOpacity style={styles.buttonCheck} onPress={() => handleSpecializationToggle('stress')}>
                 <Text style={styles.specializationButton}>Stress</Text>
                 <Text style={{ fontWeight: specialization.stress ? 'bold' : 'normal' }}>
                   {specialization.stress ? '✓' : ''}
@@ -232,7 +246,7 @@ export const EditProfessionalProfileScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    paddingBottom: 100, // Space for the button
+    paddingBottom: 100, 
   },
   container: {
     flex: 1,
@@ -325,6 +339,6 @@ const styles = StyleSheet.create({
     borderColor: 'gray',
     borderRadius: 12,
     justifyContent: 'center', 
-    height: 40, // Center the picker vertically
+    height: 40, 
   },
 });

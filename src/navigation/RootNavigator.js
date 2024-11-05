@@ -15,10 +15,9 @@ const navigationRef = React.createRef();
 export const RootNavigator = () => {
     const { user, setUser, userType, setUserType } = useContext(AuthenticatedUserContext);
     const [isLoading, setIsLoading] = useState(true);
-    const [justSignedUp, setJustSignedUp] = useState(false);
+    const [isNewProfessional, setIsNewProfessional] = useState(false);
   
     useEffect(() => {
-      // onAuthStateChanged returns an unsubscriber
       const unsubscribeAuthStateChanged = onAuthStateChanged(auth, async (authenticatedUser) => {
         if (authenticatedUser) {
           setUser(authenticatedUser);
@@ -33,15 +32,17 @@ export const RootNavigator = () => {
           if (userDoc.exists()) {
             setUserType("user");
           } else if (profDoc.exists()) {
+            const profData = profDoc.data();
             setUserType("professional");
-            setJustSignedUp(true);
+
+            setIsNewProfessional(profData.isNew || false);
           } else {
             setUserType(null);
           }
         } else {
           setUser(null);
           setUserType(null);
-          setJustSignedUp(false);
+          setIsNewProfessional(false);
         }
 
         setIsLoading(false);
@@ -49,7 +50,7 @@ export const RootNavigator = () => {
   
       // unsubscribe auth listener on unmount
       return unsubscribeAuthStateChanged;
-    }, [setUser, setUserType, justSignedUp]);
+    }, [setUser, setUserType]);
     
     useEffect(() => {
       const logNavigationState = () => {
@@ -72,10 +73,10 @@ export const RootNavigator = () => {
           <AuthStack/> 
         ) : userType === "user" ? (
           <AppStack/>
-        ) : userType === "professional" && !justSignedUp ? (
-          <ProfessionalStack/>
-        ) : userType === "professional" && justSignedUp ? (
+        ) : userType === "professional" && isNewProfessional ? (
           <AuthStack/>
+        ) : userType === "professional" && !isNewProfessional ? (
+          <ProfessionalStack/>
         ) :(
           <AuthStack/>
         )}

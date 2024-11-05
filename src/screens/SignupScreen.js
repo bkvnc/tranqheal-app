@@ -31,12 +31,14 @@ export const SignupScreen = ({ navigation, route }) => {
 
       const collectionName = userType === 'professional' ? 'professionals' : 'users';      
 
-      await createUserInFirestore(userId, username, email, collectionName, userType);
+      const userDoc = await createUserInFirestore(userId, username, email, collectionName, userType);
+      const userStatus = userDoc && userDoc.status ? userDoc.status : 'Unverified';
+
 
       if (userType === 'professional') {
         if (organizationId) {
           console.log('Navigating to UploadCredentials');
-          navigation.navigate('UploadCredentials', { organizationId, organizationName, userType, isRegistered });
+          navigation.navigate('UploadCredentials', { organizationId, organizationName, userType, isRegistered, userStatus });
         } else {
           console.log('Professional without organization selected.');
           navigation.navigate('Login');
