@@ -30,6 +30,7 @@ export const ForumsScreen = ({ navigation }) => {
   const [forumTitle, setForumTitle] = useState('');
   const [forumContent, setForumContent] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [blacklistedWords, setBlacklistedWords] = useState([]);
 
   // Predefined tags
   const predefinedTags = ['Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'];
@@ -72,34 +73,42 @@ export const ForumsScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchUserDataAndForums(); // Fetch user data and forums on mount
+    fetchBlacklistedWords();
   }, []);
 
    // Search function to filter forums by title or tags
-  const searchFilterFunction = (text) => {
+   const searchFilterFunction = (text) => {
     setSearchQuery(text); // Update search query
+  
     let newData = forums; // Start with all forums
-
-    // Filter by search text
+  
+    // Filter by search text, if any
     if (text) {
       newData = newData.filter((forum) => {
         const forumTitle = forum.title ? forum.title.toUpperCase() : '';
         const forumTags = forum.tags ? forum.tags.map(tag => tag.toUpperCase()) : [];
         const searchText = text.toUpperCase();
-
+  
+        // Check if title or tags contain the search text
         return forumTitle.includes(searchText) || forumTags.some(tag => tag.includes(searchText));
       });
     }
-
-    // Filter by selected tags
+  
+    // Always filter by selected tags if any are selected
     if (selectedTags.length > 0) {
       newData = newData.filter((forum) =>
-        forum.tags && selectedTags.some(selectedTag => forum.tags.includes(selectedTag))
+        forum.tags && selectedTags.every(selectedTag => forum.tags.includes(selectedTag)) // Only include forums with all selected tags
       );
     }
-    
+  
+    // Exclude forums without tags when tags are selected (optional)
+    if (selectedTags.length > 0) {
+      newData = newData.filter((forum) => forum.tags && forum.tags.length > 0); // Forums without tags should be excluded
+    }
+  
     setFilteredForums(newData); // Update filtered forums
   };
-
+  
   // Handle tag selection
   const toggleTag = (tag) => {
     if (selectedTags.includes(tag)) {
@@ -107,19 +116,65 @@ export const ForumsScreen = ({ navigation }) => {
     } else {
       setSelectedTags([...selectedTags, tag]);
     }
+  
     // If you're in the search section, call the search filter function
     if (isSearching) {
-      searchFilterFunction(searchQuery);
+      searchFilterFunction(searchQuery); // Apply search logic, even if search is empty
+    } else {
+      // If no search, just filter by tags
+      let filtered = forums.filter(forum => 
+        forum.tags && selectedTags.every(selectedTag => forum.tags.includes(selectedTag))
+      );
+      setFilteredForums(filtered); // Update filtered forums with only tag-based filtering
     }
+  };
+
+  // Function to fetch blacklisted words from Firebase
+  const fetchBlacklistedWords = async () => {
+    try {
+      const blacklistedWordsRef = collection(firestore, 'blacklistedWords');
+      const snapshot = await getDocs(blacklistedWordsRef);
+      const words = snapshot.docs.map(doc => doc.data().word.toLowerCase());
+      setBlacklistedWords(words);
+    } catch (error) {
+      console.error("Error fetching blacklisted words:", error);
+    }
+  };
+
+  // Helper function to create a flexible regex pattern that detects repeated letters
+  const createFlexibleRegex = (word) => {
+    const pattern = word
+      .split('')
+      .map(letter => `[${letter}]{1,3}`)  // Allow up to 3 repetitions of each character
+      .join('[\\W_]*');  // Allow non-word characters (including underscores) between letters
+  
+    return new RegExp(`${pattern}`, 'i');  // Case-insensitive match, no word boundaries
+  };
+
+  // Check if text contains any blacklisted words or their variations
+  const containsBlacklistedWord = (text) => {
+    return blacklistedWords.some((word) => {
+      const regex = createFlexibleRegex(word);  // Create a flexible regex for each blacklisted word
+      return regex.test(text);  // Test the text against the flexible regex pattern
+    });
   };
 
   // Validation and create forum
   const createForum = async () => {
-    if (!forumTitle || !forumContent) {
-      Alert.alert('Error', 'Please enter both a title and content for the forum.');
-      return;
-    }
+  if (!forumTitle || !forumContent) {
+    Alert.alert('Error', 'Please enter both a title and content for the forum.');
+    return;
+  }
 
+  // Check for blacklisted words in title and content
+  const forumTitleLower = forumTitle.toLowerCase();
+  const forumContentLower = forumContent.toLowerCase();
+
+  if (containsBlacklistedWord(forumTitleLower) || containsBlacklistedWord(forumContentLower)) {
+    Alert.alert('Error', 'Forum title or content contains blacklisted words. Please remove them and try again.');
+    return;
+  }
+  
     const newForum = {
       authorId: auth.currentUser.uid,
       authorName: authorName,
@@ -128,17 +183,17 @@ export const ForumsScreen = ({ navigation }) => {
       status: 'pending',
       content: forumContent,
       dateCreated: new Date().toLocaleString(),
-      tags: selectedTags, // Use selectedTags for forum creation
+      tags: selectedTags,
     };
 
     try {
       const db = getFirestore();
       const docRef = await addDoc(collection(db, 'forums'), newForum);
       setForums([...forums, { id: docRef.id, ...newForum }]);
-      setFilteredForums([...filteredForums, { id: docRef.id, ...newForum }]); // Update filtered list as well
+      setFilteredForums([...filteredForums, { id: docRef.id, ...newForum }]);
       setForumTitle('');
       setForumContent('');
-      setSelectedTags([]); // Clear selected tags after creating the forum
+      setSelectedTags([]);
       setIsModalVisible(false);
     } catch (error) {
       console.error("Error creating forum: ", error);
@@ -407,10 +462,10 @@ const styles = StyleSheet.create({
       marginBottom: 10, 
     },
     selectedTagOption: {
-      backgroundColor: '#7129F2', 
+      backgroundColor: '#7129F2',
+      color: '#fff',
     },
     tagOptionText: {
-      color: '#000',
       fontSize: 14,
     },
    modalContainer:{

@@ -24,6 +24,7 @@ export const PostDetailsScreen = ({ route, navigation }) => {
   const [editedTitle, setEditedTitle] = useState(postTitle);
   const [editedContent, setEditedContent] = useState(postContent);
   const [postAuthor, setPostAuthor] = useState('');
+  const [blacklistedWords, setBlacklistedWords] = useState([]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -76,25 +77,6 @@ export const PostDetailsScreen = ({ route, navigation }) => {
     }
   };
   
-  //Edit Post Handle
-  const handleSavePostEdits = async () => {
-    try {
-      const postRef = doc(firestore, `forums/${forumId}/posts`, postId);
-      await updateDoc(postRef, {
-        title: editedTitle,
-        content: editedContent,
-      });
-      
-      // Update local state to reflect changes
-      setEditedTitle(editedTitle);
-      setEditedContent(editedContent);
-      setIsEditPostModalVisible(false);
-      Alert.alert('Success', 'Post updated successfully.');
-    } catch (error) {
-      console.error('Error updating post:', error);
-      Alert.alert('Error', 'Could not update the post.');
-    }
-  };
 
   // Function to handle the delete post action
 const handleDeletePost = () => {
@@ -152,63 +134,141 @@ useEffect(() => {
   fetchComments();
 }, [postId]);
 
-//Handle Comment
-const handleAddComment = async () => {
-  if (newComment.trim()) {
-    try {
-      // Fetch blacklisted words
-      const blacklistedWordsRef = collection(firestore, 'blacklistedWords');
-      const snapshot = await getDocs(blacklistedWordsRef);
-      const blacklistedWords = snapshot.docs.map(doc => doc.data().word.toLowerCase());
+  // Helper function to create a flexible regex pattern that detects repeated letters
+  const createFlexibleRegex = (word) => {
+      const pattern = word
+        .split('')
+        .map(letter => `[${letter}]{1,3}`)  // Allow up to 3 repetitions of each character
+        .join('[\\W_]*');  // Allow non-word characters (including underscores) between letters
 
-      // Normalize the comment for comparison
-      const commentLower = newComment.toLowerCase();
+      return new RegExp(`${pattern}`, 'i');  // Case-insensitive match, no word boundaries
+  };
 
-      // Function to convert words into a regex pattern that detects repeated letters
-      const createFlexibleRegex = (word) => {
-        const pattern = word.split('').map(letter => `${letter}+`).join(''); // Each letter can repeat one or more times
-        return new RegExp(`\\b${pattern}\\b`, 'i'); // Word boundary and case-insensitive match
-      };
+  // Check if text contains any blacklisted words or their variations
+  const containsBlacklistedWord = (text, blacklistedWords) => {
+    return blacklistedWords.some((word) => {
+      const regex = createFlexibleRegex(word);  // Create a flexible regex for each blacklisted word
+      return regex.test(text);  // Test the text against the flexible regex pattern
+    });
+  };
 
-      // Function to check if the text contains blacklisted words or variations
-      const containsBlacklistedWord = (text, words) => {
-        return words.some(word => {
-          const regex = createFlexibleRegex(word); // Create flexible regex for each blacklisted word
-          return regex.test(text); // Test against the text
-        });
-      };
-
-      // Check the comment for blacklisted words
-      const isCommentBlacklisted = containsBlacklistedWord(commentLower, blacklistedWords);
-
-      // If blacklisted words are found, stop the process
-      if (isCommentBlacklisted) {
-        Alert.alert('Error', 'Your comment contains blacklisted words. Please remove them and try again.');
-        return;
+  //Fetch blacklisted words
+  useEffect(() => {
+    const fetchBlacklistedWords = async () => {
+      try {
+        const blacklistedWordsRef = collection(firestore, 'blacklistedWords');
+        const snapshot = await getDocs(blacklistedWordsRef);
+        setBlacklistedWords(snapshot.docs.map(doc => doc.data().word.toLowerCase()));
+      } catch (error) {
+        console.error("Error fetching blacklisted words:", error);
       }
+    };
+  
+    fetchBlacklistedWords();
+  }, []);
 
-      // Proceed to add the comment if no blacklisted words are found
-      const newCommentObj = {
-        content: newComment,
-        dateCreated: new Date(),
-        author: authorName,
-        authorId: user.uid,
-      };
+  //Edit Post Handle
+  const handleSavePostEdits = async () => {
+    // Check for blacklisted words in title and content
+    const titleLower = editedTitle.toLowerCase();
+    const contentLower = editedContent.toLowerCase();
+  
+    const isTitleBlacklisted = containsBlacklistedWord(titleLower, blacklistedWords);
+    const isContentBlacklisted = containsBlacklistedWord(contentLower, blacklistedWords);
+  
+    if (isTitleBlacklisted || isContentBlacklisted) {
+      Alert.alert('Error', 'Your post contains blacklisted words. Please remove them and try again.');
+      return;
+    }
+  
+    try {
+      const postRef = doc(firestore, `forums/${forumId}/posts`, postId);
+      await updateDoc(postRef, {
+        title: editedTitle,
+        content: editedContent,
+      });
+      
+      // Update local state to reflect changes
+      setEditedTitle(editedTitle);
+      setEditedContent(editedContent);
+      setIsEditPostModalVisible(false);
+      Alert.alert('Success', 'Post updated successfully.');
+    } catch (error) {
+      console.error('Error updating post:', error);
+      Alert.alert('Error', 'Could not update the post.');
+    }
+  };
 
+  //Handle Comment
+  const handleAddComment = async () => {
+    if (!newComment.trim()) {
+      Alert.alert('Error', 'Please enter a comment before submitting.');
+      return;
+    }
+  
+    const commentLower = newComment.toLowerCase();
+    const isCommentBlacklisted = containsBlacklistedWord(commentLower, blacklistedWords);
+  
+    if (isCommentBlacklisted) {
+      Alert.alert('Error', 'Your comment contains blacklisted words. Please remove them and try again.');
+      return;
+    }
+  
+    // Proceed to add the comment if no blacklisted words are found
+    const newCommentObj = {
+      content: newComment,
+      dateCreated: new Date(),
+      author: authorName,
+      authorId: user.uid,
+    };
+  
+    try {
       const db = getFirestore();
       const docRef = await addDoc(collection(db, `forums/${forumId}/posts/${postId}/comments`), newCommentObj);
+  
+      // Add the new comment to the local state
       setComments([{ ...newCommentObj, id: docRef.id }, ...comments]);
       setNewComment(''); // Clear the input field
+  
     } catch (error) {
       console.error("Error adding comment:", error);
       Alert.alert('Error', 'Could not add comment.');
     }
-  } else {
-    Alert.alert('Error', 'Please enter a comment before submitting.');
-  }
-};
+  };
 
-
+   //Edit Comment Handle
+   const handleEditComment = async () => {
+    if (!editCommentText.trim() || !commentToEdit) {
+      Alert.alert('Error', 'Please enter some text to update the comment.');
+      return;
+    }
+  
+    const commentLower = editCommentText.toLowerCase();
+    const isCommentBlacklisted = containsBlacklistedWord(commentLower, blacklistedWords);
+  
+    if (isCommentBlacklisted) {
+      Alert.alert('Error', 'Your comment contains blacklisted words. Please remove them and try again.');
+      return;
+    }
+  
+    try {
+      const db = getFirestore();
+      const commentRef = doc(db, `forums/${forumId}/posts/${postId}/comments`, commentToEdit.id);
+      await updateDoc(commentRef, { content: editCommentText });
+  
+      // Update local state to reflect changes
+      setComments(comments.map(comment =>
+        comment.id === commentToEdit.id ? { ...comment, content: editCommentText } : comment
+      ));
+      setIsEditCommentModalVisible(false);
+      setCommentToEdit(null);
+      setEditCommentText('');
+    } catch (error) {
+      console.error("Error updating comment:", error);
+      Alert.alert('Error', 'Could not update comment.');
+    }
+  };
+  
   //Handle React
   const handleReact = async () => {
     try {
@@ -265,29 +325,6 @@ const handleAddComment = async () => {
     } catch (error) {
       console.error("Error deleting comment:", error);
       Alert.alert('Error', 'Could not delete comment.');
-    }
-  };
-
-  //Edit Comment
-  const handleEditComment = async () => {
-    if (editCommentText.trim() && commentToEdit) {
-      try {
-        const db = getFirestore();
-        const commentRef = doc(db, `forums/${forumId}/posts/${postId}/comments`, commentToEdit.id);
-        await updateDoc(commentRef, { content: editCommentText });
-
-        setComments(comments.map(comment =>
-          comment.id === commentToEdit.id ? { ...comment, content: editCommentText } : comment
-        ));
-        setIsEditCommentModalVisible(false);
-        setCommentToEdit(null);
-        setEditCommentText('');
-      } catch (error) {
-        console.error("Error updating comment:", error);
-        Alert.alert('Error', 'Could not update comment.');
-      }
-    } else {
-      Alert.alert('Error', 'Please enter some text to update the comment.');
     }
   };
 
