@@ -1,12 +1,56 @@
-import React, { useContext } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useContext, useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { RootLayout } from '../navigation/RootLayout';
-import { Colors } from '../config';
+import { Colors, firestore, auth } from '../config';
 import { AuthenticatedUserContext } from '../providers';
+import { doc, getDoc } from 'firebase/firestore';
 
+const fetchUserPreferences = async (userId) => {
+  try {
+    const userDocRef = doc(firestore, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists() && userDoc.data().preferences) {
+      return { exists: true, data: userDoc.data().preferences };
+    } else {
+      return { exists: false };
+    }
+  } catch (error) {
+    console.error('Error fetching user preferences:', error);
+    return { exists: false };
+  }
+};
 
 export const SAScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
+
+  const handleNextPress = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    const userId = currentUser.uid;
+    const preferences = await fetchUserPreferences(userId);
+
+    if (preferences.exists) {
+      Alert.alert(
+        "Preferences Found",
+        "You have existing preferences. Would you like to update them?",
+        [
+          {
+            text: "Yes",
+            onPress: () => navigation.navigate("Preferences")
+          },
+          {
+            text: "No",
+            onPress: () => navigation.navigate("SelfAssessment2")
+          }
+        ]
+      );
+    } else {
+      navigation.navigate("Preferences");
+    }
+  };
+
   return (
     <RootLayout screenName={'SelfAssessment'} navigation={navigation} userType={userType}>
       <View style={styles.container}>
@@ -27,7 +71,7 @@ export const SAScreen = ({ navigation }) => {
           </Text>
           <TouchableOpacity 
             style={styles.button} 
-            onPress={() => navigation.navigate('Preferences')} // Replace 'NextScreen' with your target screen name
+            onPress={() => {handleNextPress()}}
           >
             <Text style={styles.buttonText}>Next</Text>
           </TouchableOpacity>
@@ -41,35 +85,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    justifyContent: 'space-between',  // Ensure spacing between top, middle, and bottom sections
+    justifyContent: 'space-between',  
   },
   title: {
-    fontSize: 35,  // Larger font for title effect
+    fontSize: 35,  
     fontWeight: 'bold',
     textAlign: 'center',
     marginTop: 20,
   },
   middleContainer: {
-    justifyContent: 'center',  // Center vertically
-    alignItems: 'center',      // Center horizontally
-    flex: 1,                   // Takes up remaining space
+    justifyContent: 'center',  
+    alignItems: 'center',      
+    flex: 1,                   
   },
   subText: {
     fontSize: 20,
-    textAlign: 'center',  // Center text
-    marginHorizontal: 20, // Optional: add padding to avoid touching the screen edges
+    textAlign: 'center',  
+    marginHorizontal: 20, 
   },
   bottomContainer: {
-    alignItems: 'center',  // Center the bottom text and button
+    alignItems: 'center', 
   },
   bottomText: {
     fontSize: 15,
     color: Colors.grey,
     fontStyle: 'italic',
-    marginBottom: 55,  // Add spacing between text and button
+    marginBottom: 55,  
   },
   button: {
-    backgroundColor: Colors.purple,  // Button color
+    backgroundColor: Colors.purple,  
     paddingVertical: 15,
     paddingHorizontal: 100,
     borderRadius: 30,

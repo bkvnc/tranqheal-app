@@ -55,7 +55,7 @@ export const ProfessionalHomeScreen = ({ navigation }) => {
             </View>
             {/* Profile Picture */}
             <Image
-              source={ {uri: profileData?.profileImage} || require('../assets/testprofile.jpg')} // Replace with your image URI
+              source={ {uri: profileData?.profileImage} || require('../assets/testprofile.jpg')}
               style={styles.profileImage}
             />
           </View>

@@ -1,98 +1,57 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image,  FlatList } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
 import Modal from 'react-native-modal';
 import RNPickerSelect from 'react-native-picker-select';
+import { LoadingIndicator } from '../components';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
+import { collection, getDocs } from 'firebase/firestore';
+import { firestore } from '../config';
 
-
-// Sample data
-const professionals = [
-  {
-    id: '1',
-    name: 'Dr. Sarah Johnson',
-    specialty: 'Psychiatrist',
-    age: '35',
-    gender: 'female',
-    availability: ['morning', 'afternoon'],
-    availableTimes: ['6:00 AM - 11:00 PM'],
-    email: 'bqj8w@example.com',
-    phone: '123-456-7890',
-    rating: 4.5,
-    image: 'https://via.placeholder.com/150',
-  },
-  {
-    id: '2',
-    name: 'Dr. Mark Lee',
-    specialty: 'Therapist',
-    age: '45',
-    rating: 4.0,
-    gender: 'male',
-    availability: ['morning', 'afternoon', 'evening'],
-    availableTimes: ['6:00 AM - 5:00 PM'],
-    email: 'bqj8w@example.com',
-    phone: '123-456-7890',
-    image: 'https://via.placeholder.com/150',
-  },
-  {
-    id: '3',
-    name: 'Dr. Emily Clark',
-    specialty: 'Clinical Psychologist',
-    age: '55',
-    gender: 'female',
-    availability: ['morning', 'afternoon', 'evening'],
-    availableTimes: ['6:00 AM - 5:00 PM'],
-    email: 'bqj8w@example.com',
-    phone: '123-456-7890',
-    rating: 4.7,
-    image: 'https://via.placeholder.com/150',
-  },
-  {
-    id: '4',
-    name: 'Dr. John Williams',
-    specialty: 'Therapist',
-    age: '25',
-    rating: 3.8,
-    gender: 'male',
-    availability: ['morning', 'afternoon', 'evening'],
-    availableTimes: ['6:00 AM - 5:00 PM'],
-    email: 'bqj8w@example.com',
-    phone: '123-456-7890',
-    image: 'https://via.placeholder.com/150',
-  },
-  {
-    id: '5',
-    name: 'Dr. Kate Brown',
-    specialty: 'Counselor',
-    age: '65',
-    gender: 'female',
-    availability: ['morning', 'afternoon', 'evening'],
-    availableTimes: ['6:00 AM - 5:00 PM'],
-    email: 'bqj8w@example.com',
-    phone: '123-456-7890',
-    rating: 4.3,
-    image: 'https://via.placeholder.com/150',
-  },
-];
-
-export const ViewProfScreen = () => {
+export const ViewProfScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
-  const [selectedSpecialty, setSelectedSpecialty] = useState(null);
-  const [selectedGender, setSelectedGender] = useState(null);
-  const [minRating, setMinRating] = useState(0);
-  const [selectedTimeAvailable, setSelectedTimeAvailable] = useState(null);
+  const [ minRating, setMinRating ] = useState(0);
+  const [ selectedGender, setSelectedGender ] = useState(null);
+  const [ selectedTimeAvailable, setSelectedTimeAvailable ] = useState(null);
+  const [ professionals, setProfessionals ] = useState([]);
+  const [ loading, setLoading ] = useState(true);
 
-  const filteredProfessionals = professionals.filter(professional =>
-    (selectedSpecialty ? professional.specialty === selectedSpecialty : true) &&
-    (selectedGender ? professional.gender === selectedGender : true) &&
-    (professional.rating >= minRating) &&
-    (selectedTimeAvailable ? professional.availableTimes.includes(selectedTimeAvailable) : true) &&
-    professional.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    const fetchProfessionals = async () => {
+      try {
+        const professionalsCollection = collection(firestore, 'professionals');
+        const professionalSnapshot = await getDocs(professionalsCollection);
+        const professionalList = professionalSnapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log("Fetched professional: ", data);
+          return { id: doc.id, ...data, availability: data.availability };
+        })
+        .filter(professional => professional.status === 'Verified');
+
+        setProfessionals(professionalList);
+      } catch (error) {
+        console.error('Error fetching professionals:', error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfessionals();
+  }, []);
+
+  const filteredProfessionals = professionals.filter(professional => {
+    const fullName = `${professional.firstName || ''} ${professional.middleName || ''} ${professional.lastName || ''}`.trim();
+  
+    return (
+      (selectedGender ? professional.gender === selectedGender : true) &&
+      (minRating > 0 ? professional.rating >= minRating : true) && 
+      (selectedTimeAvailable ? professional.availability[selectedTimeAvailable.toLowerCase()] : true) &&
+      fullName.toLowerCase().includes(searchQuery.toLowerCase()) 
+    );
+  }).sort((a, b) => b.rating - a.rating);
 
 
   const toggleFilterModal = () => setFilterModalVisible(!isFilterModalVisible);
@@ -101,14 +60,10 @@ export const ViewProfScreen = () => {
     toggleFilterModal();
   };
   const handleClearFilters = () => {
-    setSelectedSpecialty(null);
     setSelectedGender(null);
     setMinRating(0);
     setSelectedTimeAvailable(null);
   };
- 
-
-  const navigation = useNavigation();
 
   const handleProfessionalPress = (professional) => {
     navigation.navigate('ProfessionalDetails', { professional });
@@ -129,20 +84,28 @@ export const ViewProfScreen = () => {
     return stars;
   };
 
-  const renderProfessional = ({ item }) => (
-    <TouchableOpacity style={styles.professionalCard} onPress={() => handleProfessionalPress(item)}>
-      <Image source={{ uri: item.image }} style={styles.professionalImage} />
-      <View style={styles.professionalDetails}>
-        <Text style={styles.professionalName}>{item.name}</Text>
-        <Text style={styles.professionalSpecialty}>{item.specialty}</Text>
-        <View style={styles.ratingRow}>
-          <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
-          <View style={styles.starContainer}>{renderStars(item.rating)}</View>
+  const renderProfessional = ({ item }) => {
+    const fullName = `${item.firstName || ''} ${item.middleName || ''} ${item.lastName || ''}`.trim();
+    const rating = item.rating !== undefined ? item.rating : 0;
+
+    return (
+      <TouchableOpacity style={styles.professionalCard} onPress={() => handleProfessionalPress(item)}>
+        <Image source={{ uri: item.profileImage }} style={styles.professionalImage} />
+        <View style={styles.professionalDetails}>
+          <Text style={styles.professionalName}>{fullName}</Text>
+          <View style={styles.ratingRow}>
+            <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+            <View style={styles.starContainer}>{renderStars(item.rating)}</View>
+          </View>
         </View>
-      </View>
-      <Ionicons name="arrow-forward-circle-outline" size={24} color="gray" style={styles.forwardIcon} />
-    </TouchableOpacity>
-  );
+        <Ionicons name="arrow-forward-circle-outline" size={24} color="gray" style={styles.forwardIcon} />
+      </TouchableOpacity>
+    );
+  };
+
+  if (loading) {
+    return <LoadingIndicator />;
+  }
   
   return (
     <RootLayout navigation={navigation} screenName="ViewProf" userType={userType}>
@@ -200,6 +163,7 @@ export const ViewProfScreen = () => {
                 ]}
                 placeholder={{ label: 'Select Gender', value: null }}
                 style={pickerSelectStyles}
+                value={selectedGender}
               />
 
                 {/* Rating Dropdown */}
@@ -216,6 +180,7 @@ export const ViewProfScreen = () => {
                 ]}
                 placeholder={{ label: 'Select Minimum Rating', value: 0 }}
                 style={pickerSelectStyles}
+                value={minRating}
               />
 
                   {/* Time Available Dropdown */}
@@ -223,13 +188,14 @@ export const ViewProfScreen = () => {
               <RNPickerSelect
                 onValueChange={(value) => setSelectedTimeAvailable(value)}
                 items={[
-                  { label: 'All', value: '' },
-                  { label: 'Morning', value: 'Morning' },
-                  { label: 'Afternoon', value: 'Afternoon' },
-                  { label: 'Evening', value: 'Evening' },
+                  { label: 'All', value: null },
+                  { label: 'Morning', value: 'morning' },
+                  { label: 'Afternoon', value: 'afternoon' },
+                  { label: 'Evening', value: 'evening' },
                 ]}
                 placeholder={{ label: 'Select Time Available', value: null }}
                 style={pickerSelectStyles}
+                value={selectedTimeAvailable}
               />
                   {/* Buttons */}
                 <View style={styles.buttonContainer}>
