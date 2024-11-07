@@ -94,7 +94,7 @@ const PendingApplicationTable = () => {
     
         try {
             // Update application and professional status
-            await updateDoc(applicationDocRef, { status: 'Approved', approvedAt: new Date(), approvedBy: currentUser.uid, professionalStatus: 'Verified' });
+            await updateDoc(applicationDocRef, { status: 'Approved', approvedAt: new Date(), approvedBy: currentUser.uid, professionalStatus: 'Verified', pending: false });
             await updateDoc(professionalDocRef, { status: 'Verified', underOrg: currentUser.uid});
              
             const professionalSnapshot = await getDoc(professionalDocRef);
