@@ -7,6 +7,8 @@ import { ViewRequestHistoryScreen } from '../screens';
 import { MenuScreen } from '../screens';
 import { ProfessionalProfileScreen } from '../screens';
 import { EditProfessionalProfileScreen } from '../screens';
+import { ViewOrgScreen } from '../screens';
+import { OrganizationDetailsScreen } from '../screens';
 
 const Stack = createStackNavigator();
 
@@ -16,22 +18,12 @@ export const ProfessionalStack = () => {
             <Stack.Screen 
                 name="ProfessionalHome" 
                 component={ProfessionalHomeScreen} 
-                options={{ headerShown: false }} // Hide the header for HomeScreen
-            />
-            <Stack.Screen 
-                name="ViewRequest" 
-                component={ViewRequestScreen} 
-                options={{ headerShown: false }} // Show the header for SelfAssessmentScreen
-            />
-            <Stack.Screen 
-                name="ViewRequestHistory" 
-                component={ViewRequestHistoryScreen} 
-                options={{ headerShown: false }} // Show the header for ForumScreen
+                options={{ headerShown: false }}
             />
             <Stack.Screen 
                 name="Menu" 
                 component={MenuScreen} 
-                options={{ headerShown: false }} // Show the header for ViewProfessionalsScreen
+                options={{ headerShown: false }}
             />
             <Stack.Screen
                 name='ProfessionalProfile'
@@ -41,6 +33,26 @@ export const ProfessionalStack = () => {
             <Stack.Screen
                 name='EditProfessionalProfile'
                 component={EditProfessionalProfileScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+                name="ViewRequest" 
+                component={ViewRequestScreen} 
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+                name="ViewRequestHistory" 
+                component={ViewRequestHistoryScreen} 
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+                name="ViewOrganizations" 
+                component={ViewOrgScreen} 
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+                name="OrganizationDetails" 
+                component={OrganizationDetailsScreen} 
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>

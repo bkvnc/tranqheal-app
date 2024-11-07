@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import RadioGroup from 'react-native-radio-buttons-group';  
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
@@ -15,6 +15,11 @@ export const SAPreferenceScreen = ({navigation}) => {
   const user = auth.currentUser;
 
   const handleSavePreferences = async () => {
+    if (!age || parseInt(age) < 25) {
+      Alert.alert('Invalid.', 'Please enter a valid age of professional.');
+      return;
+    }
+
     if (user) {
       try {
         const userId = user.uid;

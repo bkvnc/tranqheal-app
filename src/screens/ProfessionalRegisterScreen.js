@@ -37,7 +37,10 @@ export const ProfessionalRegisterScreen = ({ navigation, route }) => {
       
       {/* Organization List */}
       <RNPickerSelect
-        onValueChange={value => setSelectedOrg(value)}
+        onValueChange={(value) => {
+          const selectedOrganization = organizations.find(org => org.value === value);
+          setSelectedOrg(selectedOrganization);
+        }}
         items={organizations}
         placeholder={{ label: 'Select an organization', value: null }}
         style={{
@@ -52,7 +55,7 @@ export const ProfessionalRegisterScreen = ({ navigation, route }) => {
           if (!selectedOrg) {
             Alert.alert('Error', 'Please select an organization.', [{ text: 'OK' }]);
           } else {
-            navigation.navigate('UploadCredentials', { userType: userType, orgId: selectedOrg, isRegistered: false });
+            navigation.navigate('Signup', { userType: userType, organizationId: selectedOrg.value, organizationName: selectedOrg.label, isRegistered: false });
           }
         }}  
       >

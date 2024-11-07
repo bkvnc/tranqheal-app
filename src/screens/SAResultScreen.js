@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { RootLayout } from '../navigation/RootLayout';
-import { Colors } from '../config';
+import { LoadingIndicator } from '../components';
+import { Colors, auth } from '../config';
 import { AuthenticatedUserContext } from '../providers';
 import { getFirestore, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { auth } from '../config';
+
 
 export const SAResultScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
@@ -18,7 +19,7 @@ export const SAResultScreen = ({ navigation }) => {
         try {
           const userId = user.uid;
           const assessmentsRef = collection(getFirestore(), 'users', userId, 'selfAssessment');
-          const q = query(assessmentsRef, orderBy('createdAt', 'desc'), limit(1)); // Assuming you have a 'createdAt' field to determine the latest assessment
+          const q = query(assessmentsRef, orderBy('createdAt', 'desc'), limit(1)); 
           const querySnapshot = await getDocs(q);
     
           if (!querySnapshot.empty) {
@@ -42,12 +43,7 @@ export const SAResultScreen = ({ navigation }) => {
   }, []);
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.purple} />
-        <Text style={styles.loadingText}>Loading your assessment...</Text>
-      </View>
-    );
+    return <LoadingIndicator />
   }
 
   return (
