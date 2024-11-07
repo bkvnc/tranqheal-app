@@ -55,7 +55,7 @@ const PendingApplicationTable = () => {
                 const organizationRef = collection(db,  `organizations/${currentUser.uid}/applications`,);
                 const applicationQuery = query(
                     organizationRef,
-                    where('status', '==', 'Pending')
+                    where('pending' , '==', true)
                 );
                 const applicationSnapshot = await getDocs(applicationQuery);
                 const pendingApplications = applicationSnapshot.docs.map(doc => {
@@ -111,9 +111,9 @@ const PendingApplicationTable = () => {
     
             await updateDoc(professionalDocRef, updateData);
             
-            await setDoc(doc(collection(db, `notifications/${professionalSnapshot.data().profesionalId}/messages`), `${applicationId}_verified`), {
-                recipientId:  professionalSnapshot.data().profesionalId,
-                recipientType:  professionalSnapshot.data().userType,
+            await setDoc(doc(collection(db, `notifications/${professionalId}/messages`), `${applicationId}_verified`), {
+                recipientId:  professionalId,
+                recipientType:  professionalData.userType,
                 type: "application_approved",
                 message: `Your application has been approved!`,
                 isRead: false,
@@ -123,16 +123,6 @@ const PendingApplicationTable = () => {
                     applicationId: applicationId,
                 },
             });
-    
-           
-
-        
-    
-        
-            
-
-
-        
     
             try{
             const organizationProfessionalRef = doc(db, `organizations/${currentUser.uid}/professionals`, professionalId);
