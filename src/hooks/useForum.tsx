@@ -349,6 +349,17 @@ const useForum = (forumId: string) => {
                     forumId: forumId,
                 },
             });
+
+            const notificationDoc = await getDoc(notificationRef);
+                const notificationData = notificationDoc.data();
+
+                if (notificationData && notificationData.createdAt) {
+                const createdAtDate = notificationData.createdAt.toDate();
+                console.log("Notification createdAt:", createdAtDate); // For debugging
+                }
+
+            
+            
             console.log(`Notification created for post ${newPostRef.id}`);
     
             setPostContent('');

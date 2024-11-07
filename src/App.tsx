@@ -5,7 +5,7 @@ import SignIn from './pages/Authentication/SignIn';
 import SignUp from './pages/Authentication/SignUp';
 import Loader from './common/Loader';
 import routes from './routes';
-import Dashboard from './pages/Dashboard/Home';
+import Dashboard from './pages/CustomPages/ForumsTrends';
 import { auth } from './config/firebase';
 import 'tailwindcss/tailwind.css';
 import { onMessage } from "firebase/messaging";
