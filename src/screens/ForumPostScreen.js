@@ -123,23 +123,6 @@ export const ForumPostScreen = ({ route, navigation }) => {
     }
     };
 
-   // Function to save forum edits
-   const handleSaveForumEdits = async () => {
-    try {
-      const forumRef = doc(firestore, 'forums', forumId);
-      await updateDoc(forumRef, {
-        title: editedTitle,
-        content: editedContent,
-        tags: editedTags,
-      });
-      setModalVisible(false);
-      Alert.alert('Success', 'Forum details updated successfully.');
-    } catch (error) {
-      console.error('Error updating forum:', error);
-      Alert.alert('Error', 'Could not update forum details.');
-    }
-  };
-
   const toggleTag = (tag) => {
     setEditedTags((prevTags) =>
       prevTags.includes(tag)
@@ -166,74 +149,99 @@ export const ForumPostScreen = ({ route, navigation }) => {
       Alert.alert('Error', 'Could not join the forum.');
     }
   };
-  
-  // Add new post handler
-const handleAddPost = async () => {
-  if (newPostTitle && newPostContent) {
+
+ // Helper function to create a flexible regex pattern that detects repeated letters
+ const createFlexibleRegex = (word) => {
+  const pattern = word
+    .split('')
+    .map(letter => `[${letter}]{1,3}`)  // Allow up to 3 repetitions of each character
+    .join('[\\W_]*');  // Allow non-word characters (including underscores) between letters
+
+  return new RegExp(`${pattern}`, 'i');  // Case-insensitive match, no word boundaries
+};
+
+// Check if text contains any blacklisted words or their variations
+const containsBlacklistedWord = (text, blacklistedWords) => {
+  return blacklistedWords.some((word) => {
+    const regex = createFlexibleRegex(word);  // Create a flexible regex for each blacklisted word
+    return regex.test(text);  // Test the text against the flexible regex pattern
+  });
+};
+
+  // Function to save forum edits
+  const handleSaveForumEdits = async () => {
     try {
-      // Fetch blacklisted words
       const blacklistedWordsRef = collection(firestore, 'blacklistedWords');
       const snapshot = await getDocs(blacklistedWordsRef);
       const blacklistedWords = snapshot.docs.map(doc => doc.data().word.toLowerCase());
 
-      // Normalize the title and content for comparison
-      const postTitleLower = newPostTitle.toLowerCase();
-      const postContentLower = newPostContent.toLowerCase();
+      const editedTitleLower = editedTitle.toLowerCase();
+      const editedContentLower = editedContent.toLowerCase();
 
-      // Function to convert words into a regex pattern that detects repeated letters
-      const createFlexibleRegex = (word) => {
-        const pattern = word.split('').map(letter => `${letter}+`).join(''); // Each letter can repeat one or more times
-        return new RegExp(`\\b${pattern}\\b`, 'i'); // Word boundary and case-insensitive match
-      };
-
-      // Function to check if the text contains blacklisted words or variations
-      const containsBlacklistedWord = (text, words) => {
-        return words.some(word => {
-          const regex = createFlexibleRegex(word); // Create flexible regex for each blacklisted word
-          return regex.test(text); // Test against the text
-        });
-      }
-
-      // Check both title and content for blacklisted words
-      const isTitleBlacklisted = containsBlacklistedWord(postTitleLower, blacklistedWords);
-      const isContentBlacklisted = containsBlacklistedWord(postContentLower, blacklistedWords);
-
-      // If blacklisted words are found, stop the process
-      if (isTitleBlacklisted || isContentBlacklisted) {
-        Alert.alert('Error', 'Your post contains blacklisted words. Please remove them and try again.');
+      if (containsBlacklistedWord(editedTitleLower, blacklistedWords) || 
+          containsBlacklistedWord(editedContentLower, blacklistedWords)) {
+        Alert.alert('Error', 'The forum title or content contains blacklisted words. Please remove them and try again.');
         return;
       }
 
-      // If no blacklisted words, proceed to add the post
-      const newPost = {
-        title: newPostTitle,
-        content: newPostContent,
-        dateCreated: new Date().toLocaleString(),
-        userType,
-        authorId: auth.currentUser.uid,
-        authorName,
-        forumId,
-        status: 'pending', // Pending approval
-      };
-
+      // Proceed with saving edits if no blacklisted words are found
       const forumRef = doc(firestore, 'forums', forumId);
-      const postsRef = collection(forumRef, 'posts');
-      await addDoc(postsRef, newPost);
+      await updateDoc(forumRef, {
+        title: editedTitle,
+        content: editedContent,
+      });
 
-      // Clear input fields and refresh posts
-      setNewPostTitle('');
-      setNewPostContent('');
       setModalVisible(false);
-      fetchPosts(); // Refresh posts after adding a new one
-      Alert.alert('Post Pending Approval', 'Your post has been submitted successfully and is currently pending approval.');
+      Alert.alert('Success', 'Forum details updated successfully.');
     } catch (error) {
-      console.error('Error adding post: ', error);
-      Alert.alert('Error', 'Could not add post.');
+      console.error('Error updating forum:', error);
+      Alert.alert('Error', 'Could not update forum details.');
     }
-  } else {
-    Alert.alert('Error', 'Please fill in both the title and content fields.');
-  }
-};
+  };
+
+  // Add new post handler
+  const handleAddPost = async () => {
+    if (newPostTitle && newPostContent) {
+      try {
+        const blacklistedWordsRef = collection(firestore, 'blacklistedWords');
+        const snapshot = await getDocs(blacklistedWordsRef);
+        const blacklistedWords = snapshot.docs.map(doc => doc.data().word.toLowerCase());
+
+        const postTitleLower = newPostTitle.toLowerCase();
+        const postContentLower = newPostContent.toLowerCase();
+
+        if (containsBlacklistedWord(postTitleLower, blacklistedWords) || 
+            containsBlacklistedWord(postContentLower, blacklistedWords)) {
+          Alert.alert('Error', 'Your post contains blacklisted words. Please remove them and try again.');
+          return;
+        }
+
+        const newPost = {
+          title: newPostTitle,
+          content: newPostContent,
+          dateCreated: new Date().toLocaleString(),
+          authorId: auth.currentUser.uid,
+          forumId,
+          status: 'pending',
+        };
+
+        const forumRef = doc(firestore, 'forums', forumId);
+        const postsRef = collection(forumRef, 'posts');
+        await addDoc(postsRef, newPost);
+
+        setNewPostTitle('');
+        setNewPostContent('');
+        setModalVisible(false);
+        fetchPosts();  // Fetch updated posts
+        Alert.alert('Post Pending Approval', 'Your post has been submitted successfully and is currently pending approval.');
+      } catch (error) {
+        console.error('Error adding post:', error);
+        Alert.alert('Error', 'Could not add post.');
+      }
+    } else {
+      Alert.alert('Error', 'Please fill in both the title and content fields.');
+    }
+  };
 
   const renderPostItem = ({ item }) => (
     <TouchableOpacity
