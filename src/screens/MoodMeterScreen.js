@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, interpolateColor } from 'react-native-reanimated';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
+import { LoadingIndicator } from '../components';
 
 const { width, height } = Dimensions.get('window');
 const GRID_SIZE = 10;
@@ -58,7 +59,7 @@ const MoodDot = ({ x, y, colorInfo, panX, panY, moodIndex, isInteracting }) => {
   const animatedZIndex = useSharedValue(0);
   const animatedColorProgress = useSharedValue(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     animatedOpacity.value = withTiming(1, { duration: 300 });
   }, [animatedOpacity]);
 
@@ -139,9 +140,15 @@ export const MoodMeterScreen = ({ navigation }) => {
   const [selectedMood, setSelectedMood] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('');
   const [selectedColor, setSelectedColor] = useState(null);
+  const [loading, setLoading] = useState(true);
   const panX = useSharedValue(0);
   const panY = useSharedValue(0);
   const isInteracting = useSharedValue(false);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setLoading(false), 1000);
+    return () => clearTimeout(timeout);
+  }, []);
 
   const handleGestureStart = useCallback(() => {
     isInteracting.value = true;
@@ -217,6 +224,10 @@ export const MoodMeterScreen = ({ navigation }) => {
     });
     return dots;
   }, [panX, panY, isInteracting]);
+
+  if (loading) {
+    return <LoadingIndicator />;
+  }
 
   return (
     <View style={styles.container}>

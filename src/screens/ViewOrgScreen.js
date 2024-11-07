@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, FlatList } 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import RNPickerSelect from 'react-native-picker-select';
+import { LoadingIndicator } from '../components';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
 import { collection, getDocs } from 'firebase/firestore';
@@ -61,11 +62,7 @@ export const ViewOrgScreen = ({ navigation }) => {
   );
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>Loading organizations...</Text>
-      </View>
-    );
+    return <LoadingIndicator />;
   }
 
   return (
