@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect} from "react";
 import { NavigationContainer } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
@@ -9,8 +10,10 @@ import { ProfessionalStack } from "./ProfessionalStack";
 import { AuthenticatedUserContext } from "../providers";
 import { LoadingIndicator } from "../components";
 import { auth, firestore } from "../config";
+import { UploadCredentialsScreen } from "../screens";
 
 const navigationRef = React.createRef();
+const RootStack = createStackNavigator();
 
 export const RootNavigator = () => {
     const { user, setUser, userType, setUserType } = useContext(AuthenticatedUserContext);
@@ -69,17 +72,21 @@ export const RootNavigator = () => {
   
     return (
       <NavigationContainer ref={navigationRef}>
-        {!user ? (
-          <AuthStack/> 
-        ) : userType === "user" ? (
-          <AppStack/>
-        ) : userType === "professional" && isNewProfessional ? (
-          <AuthStack/>
-        ) : userType === "professional" && !isNewProfessional ? (
-          <ProfessionalStack/>
-        ) :(
-          <AuthStack/>
-        )}
+        <RootStack.Navigator screenOptions={{ headerShown: false }}>
+          {!user ? (
+            <RootStack.Screen name="Auth" component={AuthStack} />
+          ) : userType === "user" ? (
+            <RootStack.Screen name="App" component={AppStack} />
+          ) : userType === "professional" && isNewProfessional ? (
+            <RootStack.Screen name="Auth" component={AuthStack} />
+          ) : userType === "professional" && !isNewProfessional ? (
+            <RootStack.Screen name="Professional" component={ProfessionalStack} />
+          ) : (
+            <RootStack.Screen name="Auth" component={AuthStack} />
+          )}
+          {/* Adding UploadCredentials here */}
+          <RootStack.Screen name="UploadCredentials" component={UploadCredentialsScreen} />
+        </RootStack.Navigator>
       </NavigationContainer>
     );
   };

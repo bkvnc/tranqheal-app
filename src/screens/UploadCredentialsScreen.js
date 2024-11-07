@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Linking, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { RootLayout } from '../navigation/RootLayout'; 
 import { firestore, storage, auth } from '../config';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, setDoc, doc, getDoc } from 'firebase/firestore';
 
 export const UploadCredentialsScreen = ({ navigation, route }) => {
   const { isRegistered, organizationId, organizationName, userType, userStatus } = route.params;
   const [file, setFile] = useState(null); // To store the file chosen
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [fetchedFirstName, setFetchedFirstName] = useState('');
+  const [fetchedLastName, setFetchedLastName] = useState('');
 
   // Function to pick a document
   const pickDocument = async () => {
@@ -50,6 +52,25 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
     }
   };
 
+  // Fetch professional data if registered
+  useEffect(() => {
+    const fetchProfessionalData = async () => {
+      if (isRegistered) {
+        const user = auth.currentUser;
+        if (user) {
+          const profDocRef = doc(firestore, 'professionals', user.uid);
+          const profDoc = await getDoc(profDocRef);
+          if (profDoc.exists()) {
+            const profData = profDoc.data();
+            setFetchedFirstName(profData.firstName);
+            setFetchedLastName(profData.lastName);
+          }
+        }
+      }
+    };
+    fetchProfessionalData();
+  }, [isRegistered]);
+
   // Function to submit the form
   const handleSubmit = async () => {
     const user = auth.currentUser;
@@ -61,12 +82,16 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
       Alert.alert('No File Selected', "Please upload your credentials to proceed.");
       return;
     }
-    if (!firstName || !lastName) {
+    
+
+    // Use fetched names for registered users, else use the state values
+    const submitFirstName = isRegistered ? fetchedFirstName : firstName;
+    const submitLastName = isRegistered ? fetchedLastName : lastName;
+
+    if (!submitFirstName || !submitLastName) {
       Alert.alert('Missing Information', "Please fill in both first and last names.");
       return;
     }
-    
-    const profName = { firstName, lastName };
 
     try {
       const response = await fetch(file.uri);
@@ -78,8 +103,9 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
       const fileUrl = await getDownloadURL(fileRef);
 
       console.log('userType:', userType);
+      console.log('userStatus:', userStatus);
 
-      await setDoc(doc(firestore, 'professionals', user.uid), profName, { merge: true });
+      await setDoc(doc(firestore, 'professionals', user.uid), { firstName: submitFirstName, lastName: submitLastName }, { merge: true });
       console.log('Professional name added successfully!');
 
       await addDoc(collection(firestore, `organizations/${organizationId}/applications`), {
@@ -87,8 +113,8 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
         pending: true,
         createdAt: new Date(),
         userType: userType,
-        firstName,
-        lastName,
+        firstName: submitFirstName,
+        lastName: submitLastName,
         professionalId: user.uid,
         status: userStatus,
       });
@@ -105,14 +131,23 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
 
       await addDoc(collection(firestore, `notifications/${organizationId}/messages`), {
         senderId: user.uid,
-        message: `New application received from ${firstName} ${lastName}.`,
+        message: `New application received from ${submitFirstName} ${submitLastName}.`,
         createdAt: new Date(),
         isRead: false,
         notificationType: 'Application',
       });
       console.log('Organization notification added successfully!');
 
-      Alert.alert('Success', 'Your application has been submitted.');
+      Alert.alert('Success', 'Your application has been submitted.', [
+        {
+          text: 'OK',
+          onPress: () => {
+            if (isRegistered) {
+              navigation.navigate('ProfessionalHome');
+            }
+          },
+        },
+      ]);
     } catch (error) {
       console.error('Error uploading file:', error);
       Alert.alert('Error', 'Could not upload file.');
@@ -137,23 +172,25 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
         <Text style={styles.linkText}>See <Text style={styles.link}>here</Text> for the list of requirements.</Text>
       </TouchableOpacity>
 
-      {/* Input for First Name */}
-      <Text style={styles.inputLabel}>First Name:</Text>
-      <TextInput
-        style={styles.inputBox}
-        placeholder="Enter First Name"
-        value={firstName}
-        onChangeText={(text) => setFirstName(text)}
-      />
-
-      {/* Input for Last Name */}
-      <Text style={styles.inputLabel}>Last Name:</Text>
-      <TextInput
-        style={styles.inputBox}
-        placeholder="Enter Last Name"
-        value={lastName}
-        onChangeText={(text) => setLastName(text)}
-      />
+      {/* Conditional rendering of inputs or fetched data */}
+      {!isRegistered && (
+        <>
+          <Text style={styles.inputLabel}>First Name:</Text>
+          <TextInput
+            style={styles.inputBox}
+            placeholder="Enter First Name"
+            value={firstName}
+            onChangeText={(text) => setFirstName(text)}
+          />
+          <Text style={styles.inputLabel}>Last Name:</Text>
+          <TextInput
+            style={styles.inputBox}
+            placeholder="Enter Last Name"
+            value={lastName}
+            onChangeText={(text) => setLastName(text)}
+          />
+        </>
+      )}
 
       {/* Upload Section */}
       <Text style={styles.uploadLabel}>Upload credentials</Text>
