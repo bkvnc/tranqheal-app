@@ -70,6 +70,7 @@ export interface Organization {
     timeAvailability: string[];
     timeEnd: string;
     timeStart: string;
+    professionalId: string;
   }
 
 
@@ -97,6 +98,7 @@ export interface Application{
     approvedAt: any;
     rejectedAt: any;
     professionalId: string;
+    fileUrl: string;
 }
 
 
@@ -108,10 +110,6 @@ export interface Notification {
     message: string;
     isRead: boolean;
     createdAt: Date;
-    timestamp: Date;
-    adminNotification: boolean;
-    organizationId: string;
-    
 }
 
 export interface PaymentIntent {
@@ -163,32 +161,12 @@ export interface Subscription {
     price: number;
     description: string;
     benefits: string[];
+    billingCycle: number;
+    startDate: Date;
+    endDate: Date;
   }
 
-  export const plans: Plan[] = [
-    {
-      id: 'annual',
-      name: 'Annual Plan',
-      price: 1299,
-      description: 'Full year access to all features',
-      benefits: [
-        'All features included',
-        'Priority support',
-        'Yearly cost savings'
-      ]
-    },
-    {
-      id: 'semi-annual',
-      name: 'Semi-Annual Plan',
-      price: 799,
-      description: '6 months access to all features',
-      benefits: [
-        'All features included',
-        'Standard support',
-        'Flexible payment terms'
-      ]
-    }
-  ];
+ 
 
   export interface SourceCreateParams {
     type: 'gcash' | 'maya';

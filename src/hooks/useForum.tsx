@@ -15,6 +15,8 @@ import {
     arrayUnion,
     increment,
     setDoc,
+    Timestamp,
+    serverTimestamp,
 } from 'firebase/firestore';
 import { sendNotification } from './useNotification';
 import { NotificationTypes } from './notificationTypes';
@@ -170,23 +172,31 @@ const useForum = (forumId: string) => {
     }, [forumId]);
 
     useEffect(() => {
-        const user = auth.currentUser;
-        if (user) {
+        const user = auth.currentUser; // Get the current user once
+        if (user && forum) { // Ensure forum is defined
+            // Check if the user is the author of any posts
             const authorCheck = posts.some(post => post.authorId === user.uid);
-            setIsAuthor(authorCheck);
+            // Check if the user is the author of the forum
+            const forumAuthorCheck = forum.authorId === user.uid;
+    
+            // Set isAuthor to true if the user is either the author of a post or the forum
+            setIsAuthor(authorCheck || forumAuthorCheck);
+        } else {
+            setIsAuthor(false); // Optionally set to false if there's no user or forum
         }
-    }, [posts]); 
-
+    }, [posts, forum]);
+    
+    
     const handleJoinLeaveForum = async () => {
         const user = auth.currentUser; // Check if the user is authenticated
         if (!user || !forum || isAuthor) return; // Prevent authors from joining/leaving
     
         try {
             const membershipRef = doc(db, 'memberships', `${user.uid}_${forum.id}`);
-            
+    
             if (isMember) {
                 // Leave forum logic
-                await deleteDoc(membershipRef); // Optionally, remove the membership document
+                await deleteDoc(membershipRef); 
                 await updateDoc(doc(db, 'forums', forum.id), {
                     members: arrayRemove(user.uid),
                     totalMembers: increment(-1),
@@ -194,7 +204,7 @@ const useForum = (forumId: string) => {
                 toast.success(`You have left the forum ${forum.title}`);
             } else {
                 // Join forum logic
-                await setDoc(membershipRef, { userId: user.uid, forumId: forum.id }); // Create membership document
+                await setDoc(membershipRef, { userId: user.uid, forumId: forum.id }); 
                 await updateDoc(doc(db, 'forums', forum.id), {
                     members: arrayUnion(user.uid),
                     totalMembers: increment(1),
@@ -202,17 +212,20 @@ const useForum = (forumId: string) => {
                 toast.success(`You have joined the forum ${forum.title}`);
             }
     
+            // Determine action type and notification type based on membership status
             const action = isMember ? 'left' : 'joined';
             const notificationType = isMember ? NotificationTypes.LEAVE : NotificationTypes.JOIN;
-            
+    
             await sendNotification(user.uid, `You have ${action} the forum ${forum.title}`, notificationType);
-            
+    
+            // Toggle membership status in state
             setIsMember(!isMember);
         } catch (error: any) {
             console.error('Error updating membership:', error);
             toast.error(`Failed to update membership: ${error?.message || 'An unknown error occurred'}`);
         }
     };
+    
 
     const highlightBlacklistedWords = (content: string, blacklistedWords: string[]): string => {
         const regex = new RegExp(`\\b(${blacklistedWords.join('|')})\\b`, 'gi');
@@ -296,7 +309,7 @@ const useForum = (forumId: string) => {
         
             const newPost = {
                 content: postContent,
-                dateCreated: currentDate,
+                dateCreated: Timestamp.fromDate(new Date()),
                 authorId: user.uid,
                 forumId: forum.id,
                 status: 'pending',
@@ -305,7 +318,7 @@ const useForum = (forumId: string) => {
                 authorType: authorType, 
             };
     
-            // Reference to the `posts` subcollection inside the specific forum document
+            
             const postsRef = collection(doc(db, 'forums', forum.id), 'posts');
             const newPostRef = await addDoc(postsRef, newPost);
     
@@ -319,14 +332,27 @@ const useForum = (forumId: string) => {
                 totalPosts: increment(1)
             });
     
-            // Send notification
-            await sendNotification(
-                forum.authorId,
-                `${anonymous ? 'Anonymous' : authorName} submitted a post in ${forum.title}`,
-                NotificationTypes.POST_SUBMISSION
-            );
+            const forumRef = doc(db, 'forums', forum.id);
+            const postSnap = await getDoc(forumRef);
+
+    
+            const notificationRef = doc(collection(db, `notifications/${postSnap.data().authorId}/messages`));
+            await setDoc(notificationRef, {
+                recipientId: postSnap.data().authorId,
+                recipientType: postSnap.data().authorType,  
+                message: `${authorName} has submitted a new post for review.`,
+                type: `post_review`,
+                createdAt: serverTimestamp(), 
+                isRead: false,
+                additionalData: {
+                    postId: newPostRef.id,
+                    forumId: forumId,
+                },
+            });
+            console.log(`Notification created for post ${newPostRef.id}`);
     
             setPostContent('');
+            setPostTitle('');
             toast.success('Post submitted for review successfully.');
             
         } catch (error: any) {

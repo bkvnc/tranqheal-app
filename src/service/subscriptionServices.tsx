@@ -2,12 +2,6 @@ import { db } from '../config/firebase';
 import { 
   collection, 
   addDoc, 
-  updateDoc, 
-  doc, 
-  getDoc, 
-  query, 
-  where, 
-  getDocs 
 } from 'firebase/firestore';
 import type { Subscription, Notification } from '../hooks/types';
 

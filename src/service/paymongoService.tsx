@@ -52,7 +52,7 @@ import type {
       return this.handleResponse(response);
     }
     static async createSource(sourceParams: SourceCreateParams) {
-        const { type, amount } = sourceParams; // Destructure the type and amount
+        const { type, amount } = sourceParams; 
     
         const payload = {
             data: {
