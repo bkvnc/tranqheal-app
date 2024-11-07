@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import moment from 'moment';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, doc, updateDoc, deleteDoc, setDoc, } from 'firebase/firestore';
 import { auth, firestore } from 'src/config';
 
 export const PostDetailsScreen = ({ route, navigation }) => {
@@ -15,6 +15,7 @@ export const PostDetailsScreen = ({ route, navigation }) => {
   const [newComment, setNewComment] = useState('');
   const [reacts, setReacts] = useState(0);
   const [userReacted, setUserReacted] = useState(false);
+  const [userCommentReacted, setUserCommentReacted] = useState({});
   const [showComments, setShowComments] = useState(false);
   const [isEditPostModalVisible, setIsEditPostModalVisible] = useState(false); 
   const [isEditCommentModalVisible, setIsEditCommentModalVisible] = useState(false);
@@ -269,7 +270,7 @@ useEffect(() => {
     }
   };
   
-  //Handle React
+  //Handle React Post
   const handleReact = async () => {
     try {
       const db = getFirestore();
@@ -308,6 +309,31 @@ useEffect(() => {
       Alert.alert('Error', 'Could not update reaction.');
     }
   };
+
+  // Function to handle reaction on a specific comment
+  const handleCommentReact = (commentId) => {
+    setUserCommentReacted((prevReactions) => ({
+      ...prevReactions,
+      [commentId]: !prevReactions[commentId], // Toggle reaction status for this specific comment
+    }));
+  
+    setComments((prevComments) =>
+      prevComments.map((comment) => {
+        if (comment.id === commentId) {
+          const isReacted = (comment.commentReactedBy || []).includes(user.uid);
+          const updatedReactedBy = isReacted
+            ? (comment.commentReactedBy || []).filter((uid) => uid !== user.uid)
+            : [...(comment.commentReactedBy || []), user.uid];
+          return {
+            ...comment,
+            commentReactedBy: updatedReactedBy,
+            commentReacted: isReacted ? (comment.commentReacted || 1) - 1 : (comment.commentReacted || 0) + 1,
+          };
+        }
+        return comment;
+      })
+    );
+  };
   
   //Delete Comment Handler
   const handleDeleteComment = async (commentId) => {
@@ -328,27 +354,83 @@ useEffect(() => {
     }
   };
 
+  // Report a post
   const handleReportPost = (postId) => {
     Alert.alert(
-      'Report Post',
-      'Are you sure you want to report this post?',
+      "Report Post",
+      "Are you sure you want to report this post?",
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Report', onPress: () => console.log("Reported Post ID:", postId) },
-      ]
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "OK",
+          onPress: async () => {
+            try {
+              const reportRef = doc(firestore, `reports`, postId);
+              const reportDoc = await getDoc(reportRef);
+  
+              if (reportDoc.exists()) {
+                // Increment report count if document exists
+                await updateDoc(reportRef, {
+                  reportCount: (reportDoc.data().reportCount || 0) + 1,
+                });
+              } else {
+                // Create new report document if it doesn't exist
+                await setDoc(reportRef, {
+                  reportType: "post",
+                  reportCount: 1,
+                });
+              }
+  
+              Alert.alert("Success", "Post has been reported.");
+            } catch (error) {
+              console.error("Error reporting post:", error);
+              Alert.alert("Error", "Could not report the post.");
+            }
+          },
+        },
+      ],
+      { cancelable: false }
     );
   };
+  
+ // Report a comment
+ const handleReportComment = (commentId) => {
+  Alert.alert(
+    "Report Comment",
+    "Are you sure you want to report this comment?",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "OK",
+        onPress: async () => {
+          try {
+            const reportRef = doc(firestore, `reports`, commentId);
+            const reportDoc = await getDoc(reportRef);
 
-  const handleReportComment = (commentId) => {
-    Alert.alert(
-      'Report Comment',
-      'Are you sure you want to report this comment?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Report', onPress: () => console.log("Reported Comment ID:", commentId) },
-      ]
-    );
-  };
+            if (reportDoc.exists()) {
+              // Increment report count if document exists
+              await updateDoc(reportRef, {
+                reportCount: (reportDoc.data().reportCount || 0) + 1,
+              });
+            } else {
+              // Create new report document if it doesn't exist
+              await setDoc(reportRef, {
+                reportType: "comment",
+                reportCount: 1,
+              });
+            }
+
+            Alert.alert("Success", "Comment has been reported.");
+          } catch (error) {
+            console.error("Error reporting comment:", error);
+            Alert.alert("Error", "Could not report the comment.");
+          }
+        },
+      },
+    ],
+    { cancelable: false }
+  );
+};
 
   //Render Comments
   const renderCommentItem = ({ item }) => (
@@ -378,6 +460,14 @@ useEffect(() => {
             <Ionicons name="alert-circle-outline" size={20} color="#000" />
           </TouchableOpacity>
         )}
+          <TouchableOpacity onPress={() => handleCommentReact(item.id)}>
+            <Ionicons
+               name={!userCommentReacted[item.id] ? 'heart' : 'heart-outline'}
+               size={20}
+               color={!userCommentReacted[item.id] ? '#d9534f' : '#333'}
+            />
+            <Text>{item.commentReacted || 0}</Text>
+          </TouchableOpacity>
       </View>
     </View>
   );
