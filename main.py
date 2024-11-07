@@ -1,13 +1,14 @@
 import os
+import json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from firebase_admin import credentials, firestore, initialize_app
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
-service_account_path = os.getenv('FIREBASE_SERVICE_ACCOUNT')
-cred = credentials.Certificate(service_account_path)
+# Load the JSON content from the environment variable
+service_account_info = json.loads(os.getenv("FIREBASE_SERVICE_ACCOUNT"))
+
+# Initialize Firebase credentials with the loaded JSON
+cred = credentials.Certificate(service_account_info)
 initialize_app(cred)
 
 # Initialize Firestore
