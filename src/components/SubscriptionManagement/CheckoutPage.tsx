@@ -21,6 +21,8 @@ const CheckoutPage: React.FC = () => {
     toast.success('Subscription successful!');
     
     navigate('subscription/success');
+
+    
   };
 
   const handleError = (error: string) => {

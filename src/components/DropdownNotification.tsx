@@ -33,21 +33,20 @@ const DropdownNotification = () => {
       setLoading(true);
       try {
         const notificationsRef = collection(db, `notifications/${currentUser.uid}/messages`);
-        // const q = query(
-        //   notificationsRef,
-        //   where('recipientId', '==', currentUser.uid),
-        //   orderBy('createdAt', 'desc')
-        // );
+        const q = query(
+          notificationsRef,
+          orderBy('createdAt', 'desc')
+        );
 
       
 
-        const unsubscribe = onSnapshot(notificationsRef, (snapshot) => {
+        const unsubscribe = onSnapshot(q, (snapshot) => {
           const userNotifications: Notification[] = snapshot.docs.map((doc) => ({
             id: doc.id,
             message: doc.data().message,
             recipientId: doc.data().recipientId,
             recipientType: doc.data().recipientType,
-            createdAt: doc.data().timestamp,
+            createdAt: doc.data().createdAt.toDate(), 
             isRead: doc.data().isRead || false,
             type: doc.data().type,
           }));
@@ -74,7 +73,7 @@ const DropdownNotification = () => {
   const formattedDate = (timestamp: Timestamp | Date | null): string => {
     if (!timestamp) return "Unknown date";
     
-    // If it's a Firestore Timestamp, convert it to a Date object
+    // Convert Firestore Timestamp to Date object if necessary
     const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
     const now = new Date();
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);

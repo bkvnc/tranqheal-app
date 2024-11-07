@@ -9,6 +9,8 @@ import {
     deleteDoc,
     onSnapshot,
     updateDoc,
+    setDoc,
+    serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
 import dayjs from 'dayjs';
@@ -188,6 +190,33 @@ const PostDetailsPage: React.FC = () => {
                 postId: postId,
                 reports: 0,
             });
+
+            const postDocRef = doc(db, 'forums', forumId, 'posts', postId,);
+            const commentSnap = await getDoc(postDocRef );
+
+    
+            const notificationRef = doc(collection(db, `notifications/${commentSnap.data().authorId}/messages`));
+            await setDoc(notificationRef, {
+                recipientId: commentSnap.data().authorId,
+                recipientType: commentSnap.data().authorType,  
+                message: `${authorName}  commented on your post.`,
+                type: `post_comment`,
+                createdAt: serverTimestamp(), 
+                isRead: false,
+                additionalData: {
+                    postId: commentRef.id,
+                    forumId: forumId,
+                },
+            });
+
+            const notificationDoc = await getDoc(notificationRef);
+                const notificationData = notificationDoc.data();
+
+                if (notificationData && notificationData.createdAt) {
+                const createdAtDate = notificationData.createdAt.toDate();
+                console.log("Notification createdAt:", createdAtDate); // For debugging
+                }
+
     
             setCommentContent('');
             setShowCommentForm(false);
@@ -323,7 +352,7 @@ const PostDetailsPage: React.FC = () => {
                     {comments.length > 0 ? (
                         <ul className="space-y-4">
                             {comments.map(comment => (
-                                <li key={comment.id} className="p-4 bg-gray-50 border border-gray-200 rounded-md shadow">
+                                <li key={comment.id} className="p-6 bg-white shadow-md rounded-lg border border-gray-200 transition-transform transform hover:scale-105">
                                     <p className="text-gray-800">{comment.content}</p>
                                     <p className="text-sm text-gray-500">
                                         By <a href={`/profile/${comment.authorId}`} className="text-blue-500 hover:underline">{comment.author}</a> on {formattedDate(comment.dateCreated)}

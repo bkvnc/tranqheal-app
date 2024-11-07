@@ -122,14 +122,21 @@ const PendingPosts = () => {
                 recipientType: postSnap.data().authorType,  
                 message: `Your post has been ${newStatus}`,
                 type: `post_${newStatus}`,
-                createdAt: serverTimestamp(), 
+                createdAt: serverTimestamp(),
                 isRead: false,
                 additionalData: {
-                    postId: postId,
-                    forumId: forumId,
+                  postId: postId,
+                  forumId: forumId,
                 },
-            });
-            console.log(`Notification created for post ${postId}`);
+              });
+            const notificationDoc = await getDoc(notificationRef);
+                const notificationData = notificationDoc.data();
+
+                if (notificationData && notificationData.createdAt) {
+                const createdAtDate = notificationData.createdAt.toDate();
+                console.log("Notification createdAt:", createdAtDate); // For debugging
+                }
+                            console.log(`Notification created for post ${postId}`);
     
           
             setPosts((currentPosts) =>
@@ -186,7 +193,7 @@ const PendingPosts = () => {
                     />
                     <Link
                         to="#"
-                        className="h-12 w-40 mb-3 ml-4 inline-flex items-center justify-center rounded-md bg-[#9F4FDD] py-4 px-10 text-center font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
+                        className="h-12 w-40 mb-3 ml-4 inline-flex items-center justify-center rounded-md bg-[#9F4FDD]  hover:shadow-lg hover:shadow-[#9F4FDD]/50  py-4 px-10 text-center font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
                     >
                         Search
                     </Link>
@@ -218,13 +225,13 @@ const PendingPosts = () => {
                                      <td className="border-b py-5 px-4">
                                         <button
                                             onClick={() => handleApprove(post.forumId, post.id)}
-                                            className="py-1 px-3 bg-green-500 dark:text-white rounded-md hover:bg-success hover:text-white"
+                                            className="py-1 px-3 dark:text-white rounded-md hover:bg-success hover:text-white  hover:shadow-lg hover:shadow-success/50"
                                         >
                                             Approve
                                         </button>
                                         <button
                                             onClick={() => handleReject(post.forumId, post.id)}
-                                            className="ml-2 py-1 px-3 bg-red-500 dark:text-white rounded-md hover:bg-danger hover:text-white"
+                                            className="ml-2 py-1 px-3 dark:text-white rounded-md hover:bg-danger hover:text-white  hover:shadow-lg hover:shadow-danger/50"
                                         >
                                             Reject
                                         </button>

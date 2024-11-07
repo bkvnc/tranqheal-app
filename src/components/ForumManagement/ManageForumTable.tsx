@@ -100,7 +100,7 @@ const ManageForumTable = () => {
                     />
                     <Link
                         to="#"
-                        className="h-12 w-40 mb-3 ml-4 inline-flex items-center justify-center rounded-md bg-[#9F4FDD] py-4 px-10 text-center font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
+                        className="h-12 w-40 mb-3 ml-4 inline-flex items-center justify-center rounded-md bg-[#9F4FDD]   hover:shadow-lg hover:shadow-[#9F4FDD]/50 py-4 px-10 text-center font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
                     >
                         Search
                     </Link>
@@ -172,14 +172,14 @@ const ManageForumTable = () => {
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <button className="mr-2 text-sm dark:text-white">
-                                            <NavLink to={`/forums/${forum.id}`} className="flex items-center justify-center">
+                                            <NavLink to={`/forums/${forum.id}`} className="flex items-center justify-center hover:shadow-lg hover:bg-success hover:text-white rounded-md py-1 px-5">
                                                 View
                                             </NavLink>
                                         </button>
                                         <button
                                             onClick={() => handleDelete(forum.id)}
                                             className="
-                                            text-sm text-danger hover:underline dark:text-danger"
+                                            text-sm rounded-md hover:bg-danger hover:text-white text-danger hover:shadow-lg hover:shadow-danger/50  py-1 px-5"
                                         >
                                             Delete
                                         </button>

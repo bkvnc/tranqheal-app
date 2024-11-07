@@ -107,7 +107,7 @@ const BlacklistedWordsTable = () => {
                         />
                         <Link
                             to="#"
-                            className="h-12 w-40 mb-3 ml-4 inline-flex items-center justify-center rounded-md bg-[#9F4FDD] py-4 px-10 font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
+                            className="h-12 w-40 mb-3 ml-4 inline-flex items-center justify-center rounded-md bg-[#9F4FDD] hover:shadow-lg hover:shadow-[#9F4FDD]/50 py-4 px-10 font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
                         >
                             Search
                         </Link>
@@ -127,7 +127,7 @@ const BlacklistedWordsTable = () => {
                         />
                         <button
                             onClick={addWord}
-                            className="h-12 w-25 mb-3 ml-4 inline-flex items-center justify-center rounded-md bg-[#9F4FDD] py-4 px-10 font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
+                            className="h-12 w-25 mb-3 ml-4 inline-flex items-center justify-center rounded-md bg-[#9F4FDD]  hover:shadow-lg hover:shadow-[#9F4FDD]/50  py-4 px-10 font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
                         >
                             Add
                         </button>
@@ -158,8 +158,8 @@ const BlacklistedWordsTable = () => {
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                     <div className="flex items-center space-x-3.5">
-                                            <button className="hover:text-white hover:bg-success py-1 px-3 rounded-md" onClick={() => handleEdit(item)}>Edit</button>
-                                            <button className="hover:text-white hover:bg-danger py-1 px-3 rounded-md" onClick={() => deleteWord(item.id)}>Delete</button>
+                                            <button className="dark:text-white rounded-md hover:bg-success hover:text-white  hover:shadow-lg hover:shadow-success/50 py-1 px-3 " onClick={() => handleEdit(item)}>Edit</button>
+                                            <button className="dark:text-white rounded-md hover:bg-danger hover:text-white  hover:shadow-lg hover:shadow-danger/50 py-1 px-3" onClick={() => deleteWord(item.id)}>Delete</button>
                                         </div>
                                     </td>
                                 </tr>
