@@ -79,76 +79,84 @@ const PendingApplicationTable = () => {
         fetchPendingApplications();
     }, []);
 
-    // Notification fetching code remains the same
-    useEffect(() => {
-        const fetchNotifications = async () => {
-            const currentUser = auth.currentUser;
-            if (!currentUser) return;
-        
-            const notificationQuery = query(
-                collection(db, 'notifications'),
-                where('recipientId', '==', currentUser.uid)
-            );
-        
-            const notificationSnapshot = await getDocs(notificationQuery);
-            const userNotifications = notificationSnapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
-                    timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
-                } as Notification;
-            });
-        
-            setNotifications(userNotifications);
-        };
-        fetchNotifications();
-    }, []);
+   
 
     // Function to handle application approval
     const handleApprove = async (applicationId: string, professionalId: string) => {
         const currentUser = auth.currentUser;
         if (!currentUser) return;
-
+    
+        const professionalDocRef = doc(db, 'professionals', professionalId);
         const applicationDocRef = doc(db, `organizations/${currentUser.uid}/applications`, applicationId);
-
+    
         const confirmed = window.confirm("Are you sure you want to approve this Application?");
         if (!confirmed) return;
-
+    
         try {
-            await updateDoc(applicationDocRef, { status: 'approved' });
-
-            // Notify the applicant
-            await setDoc(doc(collection(db, 'notifications'), `${applicationId}_approved`), {
-                recipientId: applicationId,
-                recipientType: "user",
-                type: "approval",
+            // Update application and professional status
+            await updateDoc(applicationDocRef, { status: 'Approved', approvedAt: new Date(), approvedBy: currentUser.uid, professionalStatus: 'Verified' });
+            await updateDoc(professionalDocRef, { status: 'Verified', underOrg: currentUser.uid});
+             
+            const professionalSnapshot = await getDoc(professionalDocRef);
+            if (!professionalSnapshot.exists()) {
+                throw new Error('Professional not found');
+            }
+            const professionalData = professionalSnapshot.data();
+    
+         
+            const updateData = {
+                reviewedBy: currentUser.uid, 
+                reviewedAt: new Date(),
+            };
+    
+            await updateDoc(professionalDocRef, updateData);
+            
+            await setDoc(doc(collection(db, `notifications/${professionalSnapshot.data().profesionalId}/messages`), `${applicationId}_verified`), {
+                recipientId:  professionalSnapshot.data().profesionalId,
+                recipientType:  professionalSnapshot.data().userType,
+                type: "application_approved",
                 message: `Your application has been approved!`,
                 isRead: false,
                 approvedAt: new Date(),
+                additionalData: {
+                    organizationId: currentUser.uid,
+                    applicationId: applicationId,
+                },
             });
+    
+           
 
+        
+    
+        
             
 
+
+        
+    
+            try{
+            const organizationProfessionalRef = doc(db, `organizations/${currentUser.uid}/professionals`, professionalId);
+            await setDoc(organizationProfessionalRef, {
+                ...professionalData,
+                dateApproved: new Date(),
+                status: 'Verified',
+            });
+            console.log('Organization professional document set successfully');
+        }catch(error){
+            console.error('Error setting organization professional document:', error);
+        }
+            
             setApplicants(prevApplications =>
                 prevApplications.filter(application => application.id !== applicationId)
             );
+    
             toast.success('Application approved successfully!');
-            const professionalRef = doc(db, `professionals`, professionalId); where('applicantId', '==', professionalId);
-            const professionalDoc = await getDoc(professionalRef);
-
-            if (professionalDoc.exists()) {
-                await updateDoc(professionalRef, {
-                    approvedAt: new Date(),
-                });
-            }
-
         } catch (error) {
             toast.error('Error approving application.');
             console.error('Error approving application:', error);
         }
     };
+    
 
     const handleReject = async (applicationId: string) => {
         const currentUser = auth.currentUser;
@@ -225,30 +233,44 @@ const PendingApplicationTable = () => {
                             <tr className="bg-gray-2 text-left dark:bg-meta-4">
                                 <th className="py-4 px-4 font-medium text-black dark:text-white">Applicant Name</th>
                                 <th className="py-4 px-4 font-medium text-black dark:text-white">Date Created</th>
+                                <th className="py-4 px-4 font-medium text-black dark:text-white">View Application File</th>
                                 <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {currentPending.map((applicant) => (
+                        {currentPending.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="text-center">No professionals found</td>
+                            </tr>
+                        ) : (
+                            currentPending.map((applicant) => (
                                 <tr key={applicant.id}>
                                     <td className="border-b py-5 px-4">{applicant.firstName}</td>
                                     <td className="border-b py-5 px-4">{dayjs(applicant.createdAt).format('MMM D, YYYY')}</td>
+                                    <td className="border-b py-5 px-10"> 
+                                        <a href={applicant.fileUrl} target="_blank" rel="noopener noreferrer" 
+                                        className="py-1 px-3 text-primary rounded-md hover:text-white hover:bg-primary dark:text-white dark:hover:bg-primary dark:hover:text-white hover:shadow-lg hover:shadow-primary/50"
+                                        >
+                                            View File
+                                        </a>
+                                    </td>
                                     <td className="border-b py-5 px-3">
                                         <button
-                                            className="py-1 px-3  dark:text-white rounded-md hover:bg-success hover:text-white"
+                                            className="py-1 px-3  dark:text-white rounded-md hover:bg-success hover:text-white  hover:shadow-lg hover:shadow-success/50"
                                             onClick={() => handleApprove(applicant.id, applicant.professionalId)}
                                         >
                                             Approve
                                         </button>
                                         <button
-                                            className="ml-2 py-1 px-3  dark:text-white rounded-md hover:bg-danger hover:text-white"
+                                            className="ml-2 py-1 px-3  text-danger dark:text-white rounded-md hover:bg-danger hover:text-white  hover:shadow-lg hover:shadow-danger/50"
                                             onClick={() => handleReject(applicant.id)}
                                         >
                                             Reject
                                         </button>
                                     </td>
                                 </tr>
-                            ))}
+                            ))
+                        )}  
                         </tbody>
                     </table>
 

@@ -10,9 +10,24 @@ import { getAuth } from 'firebase/auth';
 
 import '../../styles.css';
 
-const auth = getAuth();
-const user = auth.currentUser;
 
+
+
+
+/**
+ * ForumDetailsPage component displays detailed information about a specific forum
+ * including its description, posts, and allows the user to join/leave the forum
+ * or add/delete posts if authorized.
+ *
+ * Features:
+ * - Displays forum title, creation date, author name, tags, and total members.
+ * - Lists approved posts with their content, author, and creation date.
+ * - Allows authors or members to add new posts and optionally post anonymously.
+ * - Enables authors to delete posts.
+ * - Provides user authentication check and error handling.
+ * - Highlights blacklisted words in post titles and content.
+ * - Utilizes Firebase for data fetching and React hooks for state management.
+ */
 
 const ForumDetailsPage: React.FC = () => {
     const { forumId } = useParams<{ forumId: string }>();
@@ -26,10 +41,12 @@ const ForumDetailsPage: React.FC = () => {
    
 
     const userStatus = {
-        canJoinOrLeave: !isAuthor && !isMember,   
-        canAddPosts: isAuthor || isMember,        
-        canDeletePosts: isAuthor,                
+        canJoin: isAuthor && !isMember,   
+        canAddPosts: isAuthor || isMember,
+        canDeletePosts: isAuthor,
+        canJoinOrLeave: !isAuthor && !isMember, // Change to show button if not author and not a member
     };
+    
 
     const auth = getAuth();
     const user = auth.currentUser;
@@ -97,15 +114,16 @@ const ForumDetailsPage: React.FC = () => {
                 </div>
                 <div className="text-right">
                     <p className="text-gray-500 dark:text-white">Members: {forum?.totalMembers || 0}</p>
-                    {userStatus.canJoinOrLeave && (
+                    { userStatus.canJoinOrLeave && !isAuthor && (
                         <button
                             onClick={handleJoinLeaveForum}
                             aria-label={isMember ? 'Leave Forum' : 'Join Forum'}
-                            className={`mt-2 px-4 py-2 ${isMember ? 'bg-red-600' : 'bg-blue-600'} text-white rounded-md hover:bg-opacity-90`}
+                            className={`mt-2 px-4 py-2 ${isMember ? 'bg-[#9F4FDD] hover:bg-danger' : 'bg-[#9F4FDD]'}  hover:bg-[#9F4FDD] text-white hover:text-white rounded-md hover:bg-opacity-90`}
                         >
                             {isMember ? 'Leave Forum' : 'Join Forum'}
                         </button>
                     )}
+
                 </div>
             </div>
 

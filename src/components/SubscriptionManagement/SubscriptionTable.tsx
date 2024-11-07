@@ -5,7 +5,7 @@ import { collection, getDocs } from 'firebase/firestore';
 const SubscriptionTable = () => {
     const [subscriptions, setSubscriptions] = useState([]);
 
-    // Fetch subscriptions from Firestore
+
     useEffect(() => {
         const fetchSubscriptions = async () => {
             try {

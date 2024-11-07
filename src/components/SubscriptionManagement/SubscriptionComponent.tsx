@@ -17,8 +17,7 @@ const SubscriptionComponent = () => {
         try {
             const response = await createPaymentIntent({ planId });
             console.log("Payment Intent Created:", response.data);
-            
-            // Display a success message or handle redirect
+        
             setSuccessMessage(`Successfully subscribed to the ${planId === 'annual' ? 'Annual' : 'Semi-Annual'} Plan!`);
         } catch (error) {
             console.error("Error creating payment intent:", error);

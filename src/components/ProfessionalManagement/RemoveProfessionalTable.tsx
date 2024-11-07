@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import { db, auth } from "../../config/firebase";
 import { collection, getDocs, doc, query, where, getDoc } from "firebase/firestore";
 import dayjs from 'dayjs';
-import { Professional, Application } from "../../hooks/types";
+import { Professional, Application, Organization } from "../../hooks/types";
 
 
 
 const RemoveProfessionalTable = () => {
     const [professionals, setProfessionals] = useState<Professional[]>([]);
+    const [Organizations, setOrganizations] = useState<Organization[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [currentPage, setCurrentPage] = useState(1);
     const professionalsPerPage = 5;
@@ -16,24 +17,45 @@ const RemoveProfessionalTable = () => {
 
 
     useEffect(() => {
-        const fetchProfessionals = async () => {
+        const fetchVerifiedProfessionals = async () => {
+            const currentUser = auth.currentUser;
+            if (!currentUser) return;
+    
             try {
-                const professionalsCollection = collection(db, "professionals"); 
-                const professionalSnapshot = await getDocs(professionalsCollection);
-                const professionalList = professionalSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                })) as Professional[];
-                setProfessionals(professionalList);
+                const organizationsCollection = collection(db, "organizations");
+                const organizationSnapshot = await getDocs(organizationsCollection);
+                
+                const verifiedProfessionals: Professional[] = [];
+    
+                for (const orgDoc of organizationSnapshot.docs) {
+                    const professionalsCollectionRef = collection(db,  `organizations/${currentUser.uid}/professionals`);
+                    const verifiedProfessionalsQuery = query(professionalsCollectionRef, where('status', '==', 'Verified'));
+    
+                    const professionalsSnapshot = await getDocs(verifiedProfessionalsQuery);
+    
+                    professionalsSnapshot.forEach(doc => {
+                        if (!verifiedProfessionals.find(pro => pro.id === doc.id)) { 
+                            verifiedProfessionals.push({
+                                id: doc.id,
+                                ...doc.data(),
+                            } as Professional);
+                        }
+                    });
+                }
+    
+                setProfessionals(verifiedProfessionals);
+                console.log("Verified Professionals:", verifiedProfessionals);
+    
             } catch (error) {
-                console.error("Error fetching professionals: ", error);
+                console.error("Error fetching verified professionals: ", error);
             } finally {
                 setLoading(false);
             }
         };
-
-        fetchProfessionals();
+    
+        fetchVerifiedProfessionals();
     }, []);
+    
 
     const filteredProfessionals = professionals.filter(professional =>
         professional.firstName?.toLowerCase().includes(searchTerm.toLowerCase() || '') ||
@@ -79,7 +101,7 @@ const RemoveProfessionalTable = () => {
                     <tbody>
                     {currentProfessionals.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="text-center">No pending posts</td>
+                                <td colSpan={6} className="text-center">No professionals found</td>
                             </tr>
                         ) : (
                             currentProfessionals.map(professional => (
@@ -103,8 +125,8 @@ const RemoveProfessionalTable = () => {
                                     <button className="hover:text-primary">Delete</button>
                                 </td>
                             </tr>
-                           ))
-                        )}
+                            ))
+                            )}
                     </tbody>
                 </table>
                 <div className="flex justify-between items-center mt-4">

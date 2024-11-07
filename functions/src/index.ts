@@ -1,6 +1,7 @@
 import * as functions from "firebase-functions";
 import * as axios from 'axios';
 import { getFirestore } from "firebase-admin/firestore"; // Import Firestore
+import { Buffer } from 'buffer';
 
 // Initialize Firestore
 const db = getFirestore();

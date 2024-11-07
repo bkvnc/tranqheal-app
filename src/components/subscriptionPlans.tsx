@@ -1,34 +1,18 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Plan } from '../hooks/types';
+import {useSubscriptionPlans} from '../hooks/useSubscriptionPlans';
 
-const plans: Plan[] = [
-  {
-    id: 'annual',
-    name: 'Annual Plan',
-    price: 1299,
-    description: 'Full year access to all features',
-    benefits: [
-      'All features included',
-      'Priority support',
-      'Yearly cost savings'
-    ]
-  },
-  {
-    id: 'semi-annual',
-    name: 'Semi-Annual Plan',
-    price: 799,
-    description: '6 months access to all features',
-    benefits: [
-      'All features included',
-      'Standard support',
-      'Flexible payment terms'
-    ]
-  }
-];
+
+
 
 const SubscriptionPlans: React.FC = () => {
   const navigate = useNavigate();
+  const { plans, loading } = useSubscriptionPlans();
+  if (loading) return <p>Loading subscription plans...</p>;
+
+  console.log('Loading:', loading);
+  console.log('Plans:', plans);
 
   const handleSubscribe = (planId: Plan['id']) => {
     navigate(`/checkout/${planId}`);
@@ -41,7 +25,7 @@ const SubscriptionPlans: React.FC = () => {
           <h2 className="text-2xl font-bold mb-4">{plan.name}</h2>
           <p className="text-gray-600 mb-4">{plan.description}</p>
           <p className="text-3xl font-bold mb-6">₱{plan.price.toLocaleString()}</p>
-          <ul className="mb-6">
+          {/* <ul className="mb-6">
             {plan.benefits.map((benefit, index) => (
               <li key={index} className="flex items-center mb-2">
                 <svg className="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
@@ -54,7 +38,7 @@ const SubscriptionPlans: React.FC = () => {
                 {benefit}
               </li>
             ))}
-          </ul>
+          </ul> */}
           <button
             onClick={() => handleSubscribe(plan.id)}
             className="w-full bg-[#9F4FDD] text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"

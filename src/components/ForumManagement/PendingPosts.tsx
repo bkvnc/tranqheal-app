@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, doc, updateDoc, query, where, setDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { Post } from '../../hooks/types';
 import { getAuth } from 'firebase/auth';
 import { ToastContainer, toast } from 'react-toastify'; // Import ToastContainer and toast
 import 'react-toastify/dist/ReactToastify.css';
+import sendNotifications from '../../service/notificationService';
 
 const PendingPosts = () => {
     const [posts, setPosts] = useState<Post[]>([]);
@@ -19,35 +20,32 @@ const PendingPosts = () => {
     useEffect(() => {
         const checkOrganizationAndFetchPosts = async () => {
             setLoading(true);
-            
     
             const auth = getAuth();
             const user = auth.currentUser;
-            try{
-            if (user) {
-                console.log("User authenticated successfully:");
-                console.log("User UID:", user.uid);
-                console.log("User email:", user.email);
-            } else {
-                console.error("User is not authenticated.");
             
-            }
-    
+            try {
+                if (user) {
+                    console.log("User authenticated successfully:");
+                    console.log("User UID:", user.uid);
+                    console.log("User email:", user.email);
+                } else {
+                    console.error("User is not authenticated.");
+                }
             } catch (error) {
                 console.error("Authentication error:", error);
                 console.error("Error code:", error.code);
                 console.error("Error message:", error.message);
-            } // Check if the user is authenticated
-                if (!user) {
-                    console.error("User is not authenticated");
-                    setError("User is not authenticated");
-                    setLoading(false);
-                    return; // Exit early if user is not authenticated
-                }
+            }
+    
+            if (!user) {
+                console.error("User is not authenticated");
+                setError("User is not authenticated");
+                setLoading(false);
+                return; 
+            }
     
             try {
-                
-    
                 console.log('Fetching pending posts from forums...');
                 const forumsSnapshot = await getDocs(collection(db, 'forums'));
                 const pendingPosts = [];
@@ -59,16 +57,20 @@ const PendingPosts = () => {
                     const postsSnapshot = await getDocs(postsQuery);
     
                     postsSnapshot.forEach(postDoc => {
+                        const postData = postDoc.data();
                         pendingPosts.push({
                             id: postDoc.id,
-                            forumId: forumId, // Add forum reference
-                            ...postDoc.data(),
-                            submissionDate: postDoc.data().dateCreated?.toDate() || new Date(),
+                            forumId: forumId,
+                            ...postData,
+                            dateCreated: postData.dateCreated && postData.dateCreated.toDate
+                            ? postData.dateCreated.toDate() // Convert Firestore Timestamp to Date
+                            : new Date(),  
                         });
                     });
                 }
     
                 console.log('Pending posts found:', pendingPosts.length);
+                console.log(pendingPosts);
                 setPosts(pendingPosts); 
             } catch (error) {
                 console.error('Error fetching pending posts:', error);
@@ -80,34 +82,21 @@ const PendingPosts = () => {
     
         checkOrganizationAndFetchPosts();
     }, []);
+    
 
     const handleStatusUpdate = async (forumId: string, postId: string, newStatus: 'approved' | 'rejected') => {  
         setLoading(true);
         const auth = getAuth();
         const user = auth.currentUser;
-        try{
-        if (user) {
-            console.log("User authenticated successfully:");
-            console.log("User UID:", user.uid);
-            console.log("User email:", user.email);
-        } else {
-            console.error("User is not authenticated.");
-        
+    
+        if (!user) {
+            console.error("User is not authenticated");
+            setError("User is not authenticated");
+            setLoading(false);
+            return; 
         }
-
-        } catch (error) {
-            console.error("Authentication error:", error);
-            console.error("Error code:", error.code);
-            console.error("Error message:", error.message);
-        } 
-            if (!user) {
-                console.error("User is not authenticated");
-                setError("User is not authenticated");
-                setLoading(false);
-                return; 
-            }
+    
         try {
-           
             const postRef = doc(db, 'forums', forumId, 'posts', postId);
             const postSnap = await getDoc(postRef);
     
@@ -117,33 +106,37 @@ const PendingPosts = () => {
     
             const updateData = {
                 status: newStatus,
-                reviewedBy: auth.currentUser.uid,
+                reviewedBy: user.uid,
                 reviewedAt: new Date(),
             };
     
-            
+            // Update the post status
             await updateDoc(postRef, updateData);
-    
-           
-            const notificationRef = doc(collection(db, 'notifications'));
-            await setDoc(notificationRef, {
-                recipientId: postSnap.data().authorId,
-                message: `Your post has been ${newStatus}`,
-                type: `post_${newStatus}`,
-                createdAt: new Date(),
-                isRead: false,
-                postId: postId,
-                forumId: forumId,
-            });
-    
             console.log(`Post status updated to ${newStatus}`);
 
+        
+    
+            const notificationRef = doc(collection(db, `notifications/${postSnap.data().authorId}/messages`));
+            await setDoc(notificationRef, {
+                recipientId: postSnap.data().authorId,
+                recipientType: postSnap.data().authorType,  
+                message: `Your post has been ${newStatus}`,
+                type: `post_${newStatus}`,
+                createdAt: serverTimestamp(), 
+                isRead: false,
+                additionalData: {
+                    postId: postId,
+                    forumId: forumId,
+                },
+            });
+            console.log(`Notification created for post ${postId}`);
+    
+          
             setPosts((currentPosts) =>
                 currentPosts.filter((post) => post.id !== postId || post.forumId !== forumId)
             );
     
             toast.success(`Post successfully ${newStatus}`);
-
         } catch (error: any) {
             console.error('Error updating post status:', error);
             toast.error(`Error ${newStatus} post: ${error.message}`);
@@ -151,7 +144,6 @@ const PendingPosts = () => {
             setLoading(false);
         }
     };
-    
    
     const handleApprove = (forumId: string, postId: string) => {
         const confirmed = window.confirm("Are you sure you want to approve this post?");

@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { getAuth } from "firebase/auth";
 import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
 import '../styles.css';
+import { toast } from 'react-toastify';
 
 type UserData = {
   adminName?: string;
@@ -46,7 +47,6 @@ const Settings = () => {
     days: []
   });
   const [loading, setLoading] = useState(true);
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const auth = getAuth();
   const db = getFirestore();
@@ -65,11 +65,11 @@ const Settings = () => {
           if (docSnap.exists()) {
             setUserData(docSnap.data() as UserData);
           } else {
-            setAlert({ type: "error", message: "No user data found." });
+            toast.error( "No user data found." );
           }
         }
       } catch (error) {
-        setAlert({ type: "error", message: "Error fetching user data." });
+        toast.error( "Error fetching user data." );
       } finally {
         setLoading(false);
       }
@@ -143,14 +143,11 @@ const Settings = () => {
         const docRef = doc(db, userType === "organization" ? "organizations" : "admins", uid);
         await updateDoc(docRef, userData);
 
-        setAlert({ type: "success", message: "User data updated successfully." });
+        toast.success("User data updated successfully." );
       }
     } catch (error) {
-      setAlert({ type: "error", message: "Error updating user data." });
+      toast.error("Error updating user data." );
     }
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
   };
 
   const getUserType = async (uid: string): Promise<string> => {
@@ -198,8 +195,7 @@ const Settings = () => {
       <div className="mx-auto max-w-270">
         <Breadcrumb pageName="Settings" />
 
-        {/* Alert section */}
-        {alert && <Alert type={alert.type} message={alert.message} />}
+    
 
         <div className="grid grid-cols-5 gap-8">
           <div className="col-span-5 xl:col-span-3">

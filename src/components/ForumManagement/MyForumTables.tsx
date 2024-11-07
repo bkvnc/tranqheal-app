@@ -202,14 +202,14 @@ const MyForumTable: React.FC = () => {
                                         </p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <button className="mr-2 text-sm dark:text-white">
-                                            <NavLink to={`/forums/${forum.id}`} className="flex items-center justify-center">
+                                        <button className="mr-2 text-sm ">
+                                            <NavLink to={`/forums/${forum.id}`} className="flex items-center justify-center hover:shadow-lg">
                                                 View
                                             </NavLink>
                                         </button>
                                         <button
                                             onClick={() => handleDelete(forum.id)}
-                                            className="text-sm text-danger"
+                                            className="text-sm text-danger hover:shadow-lg hover:shadow-danger/50 "
                                         >
                                             Delete
                                         </button>

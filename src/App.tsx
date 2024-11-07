@@ -8,9 +8,11 @@ import routes from './routes';
 import Dashboard from './pages/Dashboard/Home';
 import { auth } from './config/firebase';
 import 'tailwindcss/tailwind.css';
-import { getToken, onMessage } from "firebase/messaging";
+import { onMessage } from "firebase/messaging";
 import { messaging } from "./config/firebase";
+import { getToken } from 'firebase/messaging';
 import Message from "./components/Messaage";
+import { saveTokenToFirestore } from './service/fcmService';
 import "react-toastify/dist/ReactToastify.css";
 
 const DefaultLayout = lazy(() => import('./layout/DefaultLayout'));
@@ -20,27 +22,33 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const navigate = useNavigate();
 
-  async function requestPermission() {
-    const permission = Notification.permission;
-  
-    if (permission === "default") {
-      const userPermission = await Notification.requestPermission();
-      if (userPermission === "granted") {
-        const token = await getToken(messaging, {
-          vapidKey: import.meta.env.VITE_APP_VAPID_KEY,
-        });
-        console.log("Token generated:", token);
-      } else if (userPermission === "denied") {
-        toast("You have denied notifications. Enable them in your browser settings.");
-      }
-    } else if (permission === "denied") {
-      toast("Notifications are blocked. Please enable them in your browser settings.");
-    }
-  }
+  // const requestPermission = async () => {
+  //   const permission = Notification.permission;
 
-  useEffect(() => {
-    requestPermission();
-  }, []);
+  //   if (permission === 'default') {
+  //     const userPermission = await Notification.requestPermission();
+  //     if (userPermission === 'granted') {
+  //       const token = await getToken(messaging, {
+  //         vapidKey: 'YOUR_VAPID_KEY', // Replace with your VAPID key
+  //       });
+
+  //       if (token) {
+  //         console.log('FCM Token generated:', token);
+  //         // Save the token to Firestore (pass the correct userId and userType)
+  //         saveTokenToFirestore('userId', token, 'userType');
+  //       }
+  //     } else {
+  //       console.log('Notification permission denied');
+  //     }
+  //   } else if (permission === 'denied') {
+  //     console.log('Notifications are blocked');
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   requestPermission();
+  // }, []);
+
 
   useEffect(() => {
     const checkAuth = () => {
@@ -72,7 +80,7 @@ function App() {
 
   return (
     <>
-      <ToastContainer  />
+      <ToastContainer />
         <Routes>
           <Route path="/auth/signin" element={<SignIn />} />
           <Route path="/auth/signup" element={<SignUp />} />

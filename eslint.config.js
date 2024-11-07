@@ -12,18 +12,23 @@ const __dirname = dirname(__filename);
 
 export default [
   {
-    files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"],
+    files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}","./functions/.eslintrc.js", "./functions/src/index.ts"],
     languageOptions: {
       globals: globals.browser,
       parser: tsParser,
       parserOptions: {
         tsconfigRootDir: __dirname,
-        project: "./tsconfig.json",
+        project: "./functions/tsconfig.json",
       },
     },
     plugins: {
       "@typescript-eslint": tsPlugin,
       "react": reactPlugin,
+    },
+    settings: {
+      react: {
+        version: "detect", // Automatically detect the React version
+      },
     },
     rules: {
       ...eslintPluginJs.configs.recommended.rules,
@@ -32,7 +37,6 @@ export default [
       'react/react-in-jsx-scope': 'off',
     },
   },
-  // Add the overrides section here
   {
     files: ["tailwind.config.cjs", "vite.config.js", "*.mjs"],
     languageOptions: {
