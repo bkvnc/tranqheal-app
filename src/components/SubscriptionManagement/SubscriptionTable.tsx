@@ -61,7 +61,7 @@ const SubscriptionTable = () => {
                                         <p className="text-sm">{subscription.contactEmail}</p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <p className="text-black dark:text-white">{subscription.plan}</p>
+                                        <p className="text-black dark:text-white">{subscription.planName}</p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <p className="text-black dark:text-white">{new Date(subscription.startDate).toLocaleDateString()}</p>

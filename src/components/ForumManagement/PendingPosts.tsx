@@ -114,6 +114,7 @@ const PendingPosts = () => {
             await updateDoc(postRef, updateData);
             console.log(`Post status updated to ${newStatus}`);
 
+            
         
     
             const notificationRef = doc(collection(db, `notifications/${postSnap.data().authorId}/messages`));

@@ -64,7 +64,6 @@ const useForum = (forumId: string) => {
                 console.log("User UID:", user.uid);
                 console.log("User email:", user.email);
     
-               
                 const orgDocRef = doc(db, 'organizations', user.uid);
                 const adminDocRef = doc(db, 'admins', user.uid);
     
@@ -84,7 +83,6 @@ const useForum = (forumId: string) => {
     
                 console.log("userType:", userType);
     
-                
                 if (userType === 'organization') {
                     const postsCollectionRef = collection(db, 'forums', forumId, 'posts');
                     
@@ -95,14 +93,18 @@ const useForum = (forumId: string) => {
             
                     const querySnapshot = await getDocs(postsQuery);
                     
-                    return querySnapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data(),
-                        dateCreated: doc.data().dateCreated instanceof Date 
-                            ? doc.data().dateCreated 
-                            : doc.data().dateCreated?.toDate(),
-                        forumId: forumId
-                    })) as Post[];
+                    return querySnapshot.docs.map(doc => {
+                        const data = doc.data();
+                        
+                        return {
+                            id: doc.id,
+                            ...data,
+                            dateCreated: data.dateCreated instanceof Date
+                                ? data.dateCreated
+                                : data.dateCreated?.toDate?.() ?? data.dateCreated, // use toDate() only if it’s a Firestore Timestamp
+                            forumId: forumId
+                        };
+                    }) as Post[];
                 } else {
                     console.error("Access denied: Only organizations can fetch posts.");
                 }
@@ -332,30 +334,30 @@ const useForum = (forumId: string) => {
                 totalPosts: increment(1)
             });
     
-            const forumRef = doc(db, 'forums', forum.id);
-            const postSnap = await getDoc(forumRef);
+                const forumRef = doc(db, 'forums', forum.id);
+                const postSnap = await getDoc(forumRef);
 
-    
-            const notificationRef = doc(collection(db, `notifications/${postSnap.data().authorId}/messages`));
-            await setDoc(notificationRef, {
-                recipientId: postSnap.data().authorId,
-                recipientType: postSnap.data().authorType,  
-                message: `${authorName} has submitted a new post for review.`,
-                type: `post_review`,
-                createdAt: serverTimestamp(), 
-                isRead: false,
-                additionalData: {
-                    postId: newPostRef.id,
-                    forumId: forumId,
-                },
-            });
+        
+                const notificationRef = doc(collection(db, `notifications/${postSnap.data().authorId}/messages`));
+                await setDoc(notificationRef, {
+                    recipientId: postSnap.data().authorId,
+                    recipientType: postSnap.data().authorType,  
+                    message: `${authorName} has submitted a new post for review.`,
+                    type: `post_review`,
+                    createdAt: serverTimestamp(), 
+                    isRead: false,
+                    additionalData: {
+                        postId: newPostRef.id,
+                        forumId: forumId,
+                    },
+                });
 
-            const notificationDoc = await getDoc(notificationRef);
-                const notificationData = notificationDoc.data();
+                const notificationDoc = await getDoc(notificationRef);
+                    const notificationData = notificationDoc.data();
 
-                if (notificationData && notificationData.createdAt) {
-                const createdAtDate = notificationData.createdAt.toDate();
-                console.log("Notification createdAt:", createdAtDate); // For debugging
+                    if (notificationData && notificationData.createdAt) {
+                    const createdAtDate = notificationData.createdAt.toDate();
+                    console.log("Notification createdAt:", createdAtDate); // For debugging
                 }
 
             

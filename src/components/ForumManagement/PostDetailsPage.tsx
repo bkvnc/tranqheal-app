@@ -42,6 +42,10 @@ const PostDetailsPage: React.FC = () => {
     const [hasReacted, setHasReacted] = useState<boolean>(false);
     const [anonymous, setAnonymous] = useState<boolean>(false);
     const [creatingComment, setCreatingComment] = useState<boolean>(false); 
+    const [replyContent, setReplyContent] = useState<string>('');
+    const [replyToCommentId, setReplyToCommentId] = useState<string | null>(null);
+    const [showReplyForms, setShowReplyForms] = useState<boolean>(false);
+    
     const { 
         blacklistedWords,
         setBlacklistedWords
@@ -54,6 +58,8 @@ const PostDetailsPage: React.FC = () => {
         };
         fetchBlacklistedWords();
     }, []);
+
+    
 
     useEffect(() => {
         const fetchPostById = async () => {
@@ -114,28 +120,109 @@ const PostDetailsPage: React.FC = () => {
         if (!post || !userId) return;
     
         const newReactions = new Set(post.userReactions || []);
+       
         
-        // Toggle the user's reaction
+        
         if (hasReacted) {
-            newReactions.delete(userId); // Remove reaction
+            newReactions.delete(userId);
         } else {
-            newReactions.add(userId); // Add reaction
+            newReactions.add(userId); 
         }
     
-        // Create the updated post object
+       
         const updatedPost = {
             ...post,
             userReactions: Array.from(newReactions),
             reacts: newReactions.size,
         };
     
-        // Update Firestore document
+       
         await updateDoc(doc(db, 'forums', forumId, 'posts', postId), updatedPost);
         
         // Update local state
         setPost(updatedPost);
         setHasReacted(!hasReacted); // Toggle the local reaction state
     };
+
+    const toggleCommentReaction = async (commentId: string) => {
+        const userId = auth.currentUser?.uid;
+        if (!userId) return;
+    
+        const commentIndex = comments.findIndex(comment => comment.id === commentId);
+        if (commentIndex === -1) return;
+    
+        const comment = comments[commentIndex];
+        const newReactions = new Set(comment.userReactions || []);
+    
+        if (newReactions.has(userId)) {
+            newReactions.delete(userId);
+        } else {
+            newReactions.add(userId);
+        }
+    
+        const updatedComment = {
+            ...comment,
+            userReactions: Array.from(newReactions),
+            reacts: newReactions.size,
+        };
+    
+        try {
+            await updateDoc(doc(db, 'forums', forumId, 'posts', postId, 'comments', commentId), updatedComment);
+            
+            const updatedComments = [...comments];
+            updatedComments[commentIndex] = updatedComment;
+            setComments(updatedComments);
+        } catch (error) {
+            console.error("Error updating comment reaction:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (!forumId || !postId) return;
+
+        const unsubscribeComments = onSnapshot(
+            collection(db, 'forums', forumId, 'posts', postId, 'comments'), 
+            (snapshot) => {
+                const commentsData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                })) as Comment[];
+                setComments(commentsData);
+            }
+        );
+
+        return () => unsubscribeComments();
+    }, [forumId, postId]);
+
+    const handleAddReply = async (e: React.FormEvent, commentId: string) => {
+        e.preventDefault();
+
+        if (replyContent.trim() === '' || !auth.currentUser) return;
+
+        const user = auth.currentUser;
+        const authorName = user.displayName || 'Anonymous';
+
+        try {
+            const replyRef = collection(
+                db, 'forums', forumId, 'posts', postId, 'comments', commentId, 'replies'
+            );
+
+            await addDoc(replyRef, {
+                content: replyContent,
+                dateCreated: serverTimestamp(),
+                author: authorName,
+                authorId: user.uid,
+                commentId: commentId,
+            });
+
+            setReplyContent('');
+            setShowReplyForms(false);
+        } catch (error) {
+            console.error('Failed to add reply:', error);
+        }
+    };
+
+    
     
     const handleAddComment = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -349,16 +436,68 @@ const PostDetailsPage: React.FC = () => {
                             className="mt-2 bg-gray-100 p-2 rounded"
                             dangerouslySetInnerHTML={{ __html: highlightText(commentContent, blacklistedWords) }}
                         />
+                        
                     {comments.length > 0 ? (
                         <ul className="space-y-4">
                             {comments.map(comment => (
                                 <li key={comment.id} className="p-6 bg-white shadow-md rounded-lg border border-gray-200 transition-transform transform hover:scale-105">
                                     <p className="text-gray-800">{comment.content}</p>
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-sm text-black">
                                         By <a href={`/profile/${comment.authorId}`} className="text-blue-500 hover:underline">{comment.author}</a> on {formattedDate(comment.dateCreated)}
                                     </p>
+                                    <motion.button
+                                        onClick={() => toggleCommentReaction(comment.id)}
+                                        className={`flex items-center mt-2 px-2 py-1 rounded-md transition-all duration-200 ${
+                                            comment.userReactions?.includes(auth.currentUser?.uid || '') ? 'text-danger' : 'text-gray-400'
+                                        }`}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="ionicon" viewBox="0 0 512 512" width={16} height={16}>
+                                            <path
+                                                d="M352.92 80C288 80 256 144 256 144s-32-64-96.92-64c-52.76 0-94.54 44.14-95.08 96.81-1.1 109.33 86.73 187.08 183 252.42a16 16 0 0018 0c96.26-65.34 184.09-143.09 183-252.42-.54-52.67-42.32-96.81-95.08-96.81z"
+                                                fill={comment.userReactions?.includes(auth.currentUser?.uid || '') ? 'currentColor' : 'none'}
+                                                stroke="currentColor"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth="32"
+                                            />
+                                        </svg>
+                                        <span className="ml-1 text-sm">
+                                            {comment.reacts || 0}
+                                        </span>
+                                    </motion.button>
+                                    <div key={comment.id} className="comment-item">
+                                        <button
+                                            onClick={() => setReplyToCommentId(comment.id)}
+                                            className="text-blue-500"
+                                        >
+                                            Reply
+                                        </button>
+
+                                        {/* Replies */}
+                                        {comment.replies?.map((reply) => (
+                                            <div key={reply.id} className="reply-item ml-4">
+                                                <p>{reply.content} - <span className="text-gray-500">{reply.author}</span></p>
+                                            </div>
+                                        ))}
+
+                                        {/* Reply Form */}
+                                        {replyToCommentId === comment.id && (
+                                            <form onSubmit={(e) => handleAddReply(e, comment.id)}>
+                                                <input
+                                                    type="text"
+                                                    value={replyContent}
+                                                    onChange={(e) => setReplyContent(e.target.value)}
+                                                    placeholder="Write a reply..."
+                                                    className="border rounded p-2 mt-2 w-full"
+                                                />
+                                                <button type="submit" className="btn-primary mt-2">Submit Reply</button>
+                                            </form>
+                                        )}
+                                    </div>
                                     {comment.authorId === auth.currentUser?.uid && (
-                                        <div className="flex space-x-2 mt-2">
+                                        <div className="flex space-x-2 mt-2 ">
                                             <button
                                                 onClick={() => handleDeleteComment(forumId, postId, comment.id)}
                                                 className="text-red-500 hover:underline"
@@ -445,6 +584,7 @@ const PostDetailsPage: React.FC = () => {
                             Cancel
                         </button>
                     </div>
+                    
                 </form>
             )}
 

@@ -112,7 +112,9 @@ const ForumDetailsPage: React.FC = () => {
                     <p className="text-sm text-gray-500">Author: {forum?.authorName}</p>
                     <p className="text-sm text-gray-500">Tags: {forum?.tags.join(', ')}</p>
                 </div>
+                
                 <div className="text-right">
+                    <p className="text-gray-500 dark:text-white">Reports: {forum?.reportCount || 0}</p>
                     <p className="text-gray-500 dark:text-white">Members: {forum?.totalMembers || 0}</p>
                     { userStatus.canJoinOrLeave && !isAuthor && (
                         <button
@@ -144,7 +146,7 @@ const ForumDetailsPage: React.FC = () => {
                                             className="w-10 h-10 rounded-full"
                                         />
                                         <div className="flex-1">
-                                            <Link to={`/forums/${forumId}/posts/${post.id}`} className="text-gray-800 hover:underline">
+                                            <Link to={`/forums/${forumId}/posts/${post.id}`} className="text-black hover:underline">
                                                 {post.title}
                                             </Link>
                                             <p className="text-sm text-gray-500 mt-2">

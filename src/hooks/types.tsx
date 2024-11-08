@@ -17,7 +17,27 @@ export interface Forum {
     authorId: string;
     members: string[];
     reports: number | null;
+    reportCount: number | null;
 }
+
+
+// src/hooks/types.ts (or wherever the Report type is defined)
+export type ReportBody = 'spam' | 'inappropriate' | 'harassment'; // Example of specific values
+
+export interface Report {
+  id: string;
+  body: ReportBody; // Make sure this matches how you want to store and use `body`
+  type: string;
+  url?: string;
+  dateCreated: Date;
+  toJSON(): string;
+}
+
+
+export interface ForumReport extends Report {}
+export interface PostReport extends Report {}
+export interface CommentReport extends Report {}
+
 
 export interface Post {
     id: string;
@@ -43,8 +63,12 @@ export interface Comment {
     author: string;
     authorId: string;
     postId: string;
-    userReactions: string[];
-    reports: number;
+    commentReactions: string[];
+    reports: string[];
+    userReactions?: string[];
+    reacts?: number;
+    replies?: Comment[]
+    
 }
 
 

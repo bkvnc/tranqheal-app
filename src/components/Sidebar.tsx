@@ -385,8 +385,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen}: SidebarProps) => {
               </>
             )}
           
-
-            {/* <!-- Menu Item Forum Management --> */}    
+          
+            {/* <!-- Menu Item Forum Management --> */}  
+            {userData && userData.userType === "organization" && (  
               <SidebarLinkGroup
                 activeCondition={
                   pathname === '/manageforums' || pathname.includes('manageforums')
@@ -502,6 +503,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen}: SidebarProps) => {
                   );
                 }}
               </SidebarLinkGroup>
+            )}
               {userData && userData.userType === "admin" && (
                 
             
@@ -528,7 +530,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen}: SidebarProps) => {
                       fill=""
                     />
                   </svg>
-                  Users
+                  View Reported Users
                 </NavLink>
               </li>
                 )}

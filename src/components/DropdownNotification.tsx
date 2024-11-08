@@ -105,7 +105,7 @@ const DropdownNotification = () => {
     }
   };
 
-  const markNotificationAsRead = async (id: string) => {
+  const markNotificationAsRead = async (id) => {
     try {
       const notificationRef = doc(db, `notifications/${currentUser?.uid}/messages`, id);
       await updateDoc(notificationRef, { isRead: true });
@@ -113,8 +113,8 @@ const DropdownNotification = () => {
       console.error("Error marking notification as read: ", error);
     }
   };
-
-  const handleMarkAsRead = async (id: string) => {
+  
+  const handleMarkAsRead = async (id) => {
     try {
       await markNotificationAsRead(id);
       setNotifications((prevNotifications) =>
@@ -126,7 +126,7 @@ const DropdownNotification = () => {
       console.error("Error marking notification as read: ", error);
     }
   };
-
+  
   useEffect(() => {
     const clickHandler = ({ target }: MouseEvent) => {
       if (!dropdown.current) return;

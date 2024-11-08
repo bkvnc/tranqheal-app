@@ -1,170 +1,282 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { collection, getDocs, getDoc, doc } from 'firebase/firestore';
+import { db, auth } from '../../config/firebase';
 import { NavLink } from 'react-router-dom';
 import dayjs from 'dayjs';
-import Alert from '../../pages/UiElements/Alerts';
+import { UserData } from '../../hooks/types';
 
-interface UserData {
+import BanUserButton from '../../Buttons/BanUserButton';
+import SuspendUserButton from '../../Buttons/SuspendButton';
+
+interface Report {
   id: string;
-  userType: string;
-  organizationName?: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  profilePicture?: string;
-  profileImage?: string;
-  createdAt?: Date;
-  status: string; // Adding the status field
+  authorName: string;
+  contentType: 'Forum' | 'Post' | 'Comment';
+  forumId: string;
+  postId?: string;
+  commentId?: string;
+  reason: string; 
+  reportedBy: string; 
+  timestamp: Date;
 }
 
 const UserTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage] = useState(5);
-  const [users, setUsers] = useState<UserData[]>([]);
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [reportsPerPage] = useState(5);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userType, setUserType] = useState<string | null>(null); // State for userType
+  const user = auth.currentUser;
 
-  const fetchUsers = async () => {
-    const usersCollectionRef = collection(db, 'users');
-    const professionalsCollectionRef = collection(db, 'professionals');
-
-    try {
-      const [usersSnapshot, professionalsSnapshot] = await Promise.all([
-        getDocs(usersCollectionRef),
-        getDocs(professionalsCollectionRef),
-      ]);
-
-      const usersData = usersSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(), 
-        status: doc.data().status || 'pending', 
-      })) as UserData[];
-
-      const professionalsData = professionalsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        status: doc.data().status || 'pending',
-      })) as UserData[];
-
-      const mergedData = [...usersData, ...professionalsData].sort(
-        (a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)
-      );
-      
-      setUsers(mergedData);
-    } catch (error) {
-      console.error('Error fetching users or professionals:', error);
-    }
-  };
-
-  // New delete function
-  const handleDeleteUser = async (id: string) => {
-    const userDocRef = doc(db, 'users', id); // Reference to the user's document
-    const professionalDocRef = doc(db, 'professionals', id); // Reference to the professional's document
-
-    try {
-      await deleteDoc(userDocRef); // Delete user document
-      await deleteDoc(professionalDocRef); // Delete professional document if exists
-      setAlert({ type: 'success', message: 'User deleted successfully' });
-      fetchUsers(); // Refresh the list after deletion
-    } catch (error) {
-      console.error('Error deleting document:', error);
-      setAlert({ type: 'error', message: 'Error deleting user. Please try again.' });
-    }
-  };
+  if (user) {
+    console.log('User authenticated successfully');
+  }
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    const checkPermissionsAndFetch = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(users.length / usersPerPage);
+        if (!user?.uid) {
+          setError('User not authenticated');
+          return;
+        }
+
+        // Fetch user data from the respective collections
+        const userDocPromise = getDoc(doc(db, 'users', user.uid));
+        const profDocPromise = getDoc(doc(db, 'professionals', user.uid));
+        const orgDocPromise = getDoc(doc(db, 'organizations', user.uid));
+        const adminDocPromise = getDoc(doc(db, 'admins', user.uid));
+
+        try {
+          // Wait for all promises to resolve
+          const [userDoc, profDoc, orgDoc, adminDoc] = await Promise.all([
+            userDocPromise,
+            profDocPromise,
+            orgDocPromise,
+            adminDocPromise,
+          ]);
+
+          let userData = null;
+
+          // Check which document exists and assign user data accordingly
+          if (userDoc.exists()) {
+            userData = { ...userDoc.data(), userType: 'user' };
+          } else if (profDoc.exists()) {
+            userData = { ...profDoc.data(), userType: 'professional' };
+          } else if (orgDoc.exists()) {
+            userData = { ...orgDoc.data(), userType: 'organization' };
+          } else if (adminDoc.exists()) {
+            userData = { ...adminDoc.data(), userType: 'admin' };
+          }
+
+          if (!userData) {
+            setError('User data not found');
+            return;
+          }
+
+          setUserData(userData); // Store user data
+          setUserType(userData.userType); // Set the userType
+          console.log(userData.userType)
+
+        } catch (error) {
+          setError('An error occurred while fetching user data');
+          console.error(error);
+        }
+
+        // Only allow admin and organization to view reports
+        if (userType !== 'admin') {
+          setError('Insufficient permissions - Admin or Organization access required');
+          return;
+        }
+
+        // Fetch reports if user has appropriate permissions
+        const allReports = await fetchAllReports();
+        setReports(allReports);
+        console.log(allReports);
+
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'An error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkPermissionsAndFetch();
+  }, [user?.uid, userType]); // Added userType as a dependency
+
+  const renderActions = (report: Report) => {
+    return (
+      <div className="flex items-center space-x-3.5">
+        <NavLink to={`/reports/${report.id}`} className="mr-2 text-sm dark:text-white">
+          View Details
+        </NavLink>
+
+        {/* Only show suspend button to admin and organization */}
+        {userData?.userType === 'admin'&& (
+          <SuspendUserButton userId={report.id} forumId={report.forumId} />
+        )}
+
+        {/* Only show ban button to admins */}
+        {userData?.userType === 'admin' && (
+          <BanUserButton
+            forumId={report.forumId}
+            reportId={report.id}
+            adminId={user?.uid || ''}
+          />
+        )}
+      </div>
+    );
+  };
+
+  const fetchAllReports = async () => {
+    try {
+      const forumsSnapshot = await getDocs(collection(db, 'forums'));
+      let allReports: Report[] = [];
+
+      // 1. Fetch forum-level reports
+      for (const forumDoc of forumsSnapshot.docs) {
+        const forumId = forumDoc.id;
+        
+        // Get forum reports
+        const forumReportsSnapshot = await getDocs(collection(db, `forums/${forumId}/reports`));
+        const forumReports: Report[] = forumReportsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          authorName: doc.data().authorName || '',
+          contentType: 'Forum' as const,
+          forumId,
+          reason: doc.data().reason || '',
+          reportedBy: doc.data().reportedBy || '',
+          timestamp: doc.data().timestamp?.toDate() || new Date(),
+        }));
+        allReports = [...allReports, ...forumReports];
+
+        // 2. Fetch post-level reports
+        const postsSnapshot = await getDocs(collection(db, `forums/${forumId}/posts`));
+        for (const postDoc of postsSnapshot.docs) {
+          const postId = postDoc.id;
+
+          const postReportsSnapshot = await getDocs(
+            collection(db, `forums/${forumId}/posts/${postId}/reports`)
+          );
+          const postReports: Report[] = postReportsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            authorName: doc.data().authorName || '',
+            contentType: 'Post' as const,
+            forumId,
+            postId,
+            reason: doc.data().reason || '',
+            reportedBy: doc.data().reportedBy || '',
+            timestamp: doc.data().timestamp?.toDate() || new Date(),
+          }));
+          allReports = [...allReports, ...postReports];
+
+          // 3. Fetch comment-level reports
+          const commentsSnapshot = await getDocs(
+            collection(db, `forums/${forumId}/posts/${postId}/comments`)
+          );
+          for (const commentDoc of commentsSnapshot.docs) {
+            const commentId = commentDoc.id;
+            const commentReportsSnapshot = await getDocs(
+              collection(db, `forums/${forumId}/posts/${postId}/comments/${commentId}/reports`)
+            );
+            const commentReports: Report[] = commentReportsSnapshot.docs.map((doc) => ({
+              id: doc.id,
+              authorName: doc.data().authorName,
+              authorId: doc.data().authorId ,
+              contentType: 'Comment' as const,
+              forumId,
+              postId,
+              commentId,
+              reason: doc.data().reason || '',
+              reportedBy: doc.data().reportedBy || '',
+              timestamp: doc.data().timestamp?.toDate() || new Date(),
+            }));
+            allReports = [...allReports, ...commentReports];
+          }
+        }
+      }
+      return allReports;
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      throw error;
+    }
+  };
+  
+
+  const indexOfLastReport = currentPage * reportsPerPage;
+  const indexOfFirstReport = indexOfLastReport - reportsPerPage;
+  const currentReports = reports.slice(indexOfFirstReport, indexOfLastReport);
+  const totalPages = Math.ceil(reports.length / reportsPerPage);
+
+  
+
+  if (error) {
+    return (
+      <div className="rounded-sm border border-stroke bg-white p-4 shadow-default dark:border-strokedark dark:bg-boxdark">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-64">Loading...</div>;
+  }
 
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-        {alert && <Alert type={alert.type} message={alert.message} />}
       <div className="max-w-full overflow-x-auto">
-        <div className="mb-3">
-          <h4 className="text-xl font-semibold text-black dark:text-white">
-            Users and Professionals
-          </h4>
-        </div>
+        
         <table className="w-full table-auto">
           <thead>
-            <tr className="bg-gray-2 text-left dark:bg-meta-4">
-              <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">
-                Name
-              </th>
-              <th className="min-w-[150px] py-4 px-4 font-medium text-black dark:text-white">
-                Date of Registration
-              </th>
-              <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
-                Status
-              </th>
-              <th className="py-4 px-4 font-medium text-black dark:text-white">
-                Actions
-              </th>
+            <tr className="h-14 border-b dark:border-strokedark">
+              <th className="px-4 text-black dark:text-white">Author Name</th>
+              <th className="px-4 text-black dark:text-white">Reported At</th>
+              <th className="px-4 text-black dark:text-white">Content Type</th>
+              <th className="px-4 text-black dark:text-white">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {currentUsers.map((user) => (
-              <tr key={user.id}>
-                <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
-                  <h5 className="font-medium text-black dark:text-white">
-                    {user.firstName ? `${user.firstName} ${user.lastName}'s` : 'N/A'}
-                  </h5>
-                  <p className="text-sm">{user.email}</p>
+            {currentReports.map((report) => (
+              <tr key={report.id}>
+                <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">
+                  {report.authorName}
                 </td>
-                <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                  <p className="text-black dark:text-white">
-                    {user.createdAt ? dayjs(user.createdAt).format('MMM D, YYYY') : 'N/A'}
-                  </p>
+                <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">
+                  {dayjs(report.timestamp).format('YYYY-MM-DD HH:mm:ss')}
                 </td>
-                <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                  <p className={`inline-flex rounded-full py-1 px-3 text-sm font-medium ${
-                    user.status === 'active' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                  }`}>
-                    {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                  </p>
+                <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">
+                  {report.contentType}
                 </td>
-                <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                  <div className="flex items-center space-x-3.5">
-                    <NavLink to={`/users/${user.id}`}  className="mr-2 text-sm dark:text-white">
-                      View
-                    </NavLink>
-                    <button className="hover:text-primary ml-2" onClick={() => handleDeleteUser(user.id)}>
-                      Delete
-                    </button>
-                  </div>
-                </td>
+                <td className="whitespace-nowrap px-4 py-3.5">{renderActions(report)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        {/* PAGINATION */}
-        <div className="flex justify-between mt-4">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <div className="flex items-center">
-            <span>Page {currentPage} of {totalPages}</span>
-          </div>
-          <button
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
-            className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
       </div>
+
+      {/* Pagination */}
+      <div className="flex justify-between mt-4">
+                    <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+                    >
+                    Previous
+                    </button>
+                    <div className="flex items-center">
+                    <span>Page {currentPage} of {totalPages}</span>
+                    </div>
+                    <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+                    >
+                    Next
+                    </button>
+                </div>
     </div>
   );
 };
