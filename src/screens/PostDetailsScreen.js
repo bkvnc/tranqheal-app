@@ -311,28 +311,51 @@ useEffect(() => {
   };
 
   // Function to handle reaction on a specific comment
-  const handleCommentReact = (commentId) => {
-    setUserCommentReacted((prevReactions) => ({
-      ...prevReactions,
-      [commentId]: !prevReactions[commentId], // Toggle reaction status for this specific comment
-    }));
+  const handleCommentReact = async (commentId) => {
+    try {
+      const commentRef = doc(firestore, 'forums', forumId, 'posts', postId, 'comments', commentId);
+      const commentSnapshot = await getDoc(commentRef);
   
-    setComments((prevComments) =>
-      prevComments.map((comment) => {
-        if (comment.id === commentId) {
-          const isReacted = (comment.commentReactedBy || []).includes(user.uid);
-          const updatedReactedBy = isReacted
-            ? (comment.commentReactedBy || []).filter((uid) => uid !== user.uid)
-            : [...(comment.commentReactedBy || []), user.uid];
-          return {
-            ...comment,
-            commentReactedBy: updatedReactedBy,
-            commentReacted: isReacted ? (comment.commentReacted || 1) - 1 : (comment.commentReacted || 0) + 1,
-          };
-        }
-        return comment;
-      })
-    );
+      if (commentSnapshot.exists()) {
+        const commentData = commentSnapshot.data();
+        const isReacted = (commentData.commentReactedBy || []).includes(user.uid);
+  
+        // Toggle reaction in Firebase
+        const updatedReactedBy = isReacted
+          ? commentData.commentReactedBy.filter((uid) => uid !== user.uid)
+          : [...(commentData.commentReactedBy || []), user.uid];
+  
+        const updatedReactCount = isReacted
+          ? (commentData.commentReacted || 1) - 1
+          : (commentData.commentReacted || 0) + 1;
+  
+        await updateDoc(commentRef, {
+          commentReactedBy: updatedReactedBy,
+          commentReacted: updatedReactCount,
+        });
+  
+        // Update local state
+        setComments((prevComments) =>
+          prevComments.map((comment) =>
+            comment.id === commentId
+              ? {
+                  ...comment,
+                  commentReactedBy: updatedReactedBy,
+                  commentReacted: updatedReactCount,
+                }
+              : comment
+          )
+        );
+  
+        setUserCommentReacted((prevReactions) => ({
+          ...prevReactions,
+          [commentId]: !isReacted,
+        }));
+      }
+    } catch (error) {
+      console.error('Error reacting to comment:', error);
+      Alert.alert('Error', 'Could not update reaction.');
+    }
   };
   
   //Delete Comment Handler
@@ -355,46 +378,52 @@ useEffect(() => {
   };
 
   // Report a post
-  const handleReportPost = (postId) => {
-    Alert.alert(
-      "Report Post",
-      "Are you sure you want to report this post?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "OK",
-          onPress: async () => {
-            try {
-              const reportRef = doc(firestore, `reports`, postId);
-              const reportDoc = await getDoc(reportRef);
-  
-              if (reportDoc.exists()) {
-                // Increment report count if document exists
-                await updateDoc(reportRef, {
-                  reportCount: (reportDoc.data().reportCount || 0) + 1,
-                });
-              } else {
-                // Create new report document if it doesn't exist
-                await setDoc(reportRef, {
-                  reportType: "post",
-                  reportCount: 1,
-                });
-              }
-  
+const handleReportPost = (postId) => {
+  Alert.alert(
+    "Report Post",
+    "Are you sure you want to report this post?",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "OK",
+        onPress: async () => {
+          try {
+            // Reference to the post document
+            const postRef = doc(firestore, `forums/${forumId}/posts`, postId);
+            const postDoc = await getDoc(postRef);
+
+            if (postDoc.exists()) {
+              // Increment the reportCount field
+              const currentReportCount = postDoc.data().reportCount || 0;
+              await updateDoc(postRef, {
+                reportCount: currentReportCount + 1,
+              });
+
+              // Add a new report document in the 'reports' subcollection
+              await addDoc(collection(postRef, "reports"), {
+                reportedBy: user.uid,
+                reason: "Inappropriate content",  
+                timestamp: new Date(),
+              });
+
               Alert.alert("Success", "Post has been reported.");
-            } catch (error) {
-              console.error("Error reporting post:", error);
-              Alert.alert("Error", "Could not report the post.");
+            } else {
+              Alert.alert("Error", "Post not found.");
             }
-          },
+          } catch (error) {
+            console.error("Error reporting post:", error);
+            Alert.alert("Error", "Could not report the post.");
+          }
         },
-      ],
-      { cancelable: false }
-    );
-  };
+      },
+    ],
+    { cancelable: false }
+  );
+};
+
   
  // Report a comment
- const handleReportComment = (commentId) => {
+const handleReportComment = (commentId) => {
   Alert.alert(
     "Report Comment",
     "Are you sure you want to report this comment?",
@@ -404,23 +433,28 @@ useEffect(() => {
         text: "OK",
         onPress: async () => {
           try {
-            const reportRef = doc(firestore, `reports`, commentId);
-            const reportDoc = await getDoc(reportRef);
+            // Reference to the comment document
+            const commentRef = doc(firestore, `forums/${forumId}/posts/${postId}/comments`, commentId);
+            const commentDoc = await getDoc(commentRef);
 
-            if (reportDoc.exists()) {
-              // Increment report count if document exists
-              await updateDoc(reportRef, {
-                reportCount: (reportDoc.data().reportCount || 0) + 1,
+            if (commentDoc.exists()) {
+              // Increment the reportCount field
+              const currentReportCount = commentDoc.data().reportCount || 0;
+              await updateDoc(commentRef, {
+                reportCount: currentReportCount + 1,
               });
+
+              // Add a new report document in the 'reports' subcollection
+              await addDoc(collection(commentRef, "reports"), {
+                reportedBy: user.uid,
+                reason: "Inappropriate content",  
+                timestamp: new Date(),
+              });
+
+              Alert.alert("Success", "Comment has been reported.");
             } else {
-              // Create new report document if it doesn't exist
-              await setDoc(reportRef, {
-                reportType: "comment",
-                reportCount: 1,
-              });
+              Alert.alert("Error", "Comment not found.");
             }
-
-            Alert.alert("Success", "Comment has been reported.");
           } catch (error) {
             console.error("Error reporting comment:", error);
             Alert.alert("Error", "Could not report the comment.");
@@ -431,6 +465,7 @@ useEffect(() => {
     { cancelable: false }
   );
 };
+
 
   //Render Comments
   const renderCommentItem = ({ item }) => (
@@ -462,11 +497,11 @@ useEffect(() => {
         )}
           <TouchableOpacity onPress={() => handleCommentReact(item.id)}>
             <Ionicons
-               name={!userCommentReacted[item.id] ? 'heart' : 'heart-outline'}
-               size={20}
-               color={!userCommentReacted[item.id] ? '#d9534f' : '#333'}
+            name={userCommentReacted[item.id] ? 'heart' : 'heart-outline'}
+            size={20}
+            color={userCommentReacted[item.id] && (item.commentReacted || 0) > 0 ? '#d9534f' : '#333'}
             />
-            <Text>{item.commentReacted || 0}</Text>
+             <Text style={styles.reactionCountText}>{item.commentReacted || 0}</Text>
           </TouchableOpacity>
       </View>
     </View>
@@ -651,4 +686,10 @@ const styles = StyleSheet.create({
   modalCancel: { fontSize: 16, color: '#000' },
   modalSaveText: { fontSize: 22, color: '#000' }, 
   modalCancelText: { fontSize: 20, color: '#000'},
+  reactionCountText: {
+    fontSize: 12,
+    color: '#333',
+    marginTop: 2, 
+    textAlign: 'center', 
+  },
 });
