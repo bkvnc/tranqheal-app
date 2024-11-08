@@ -9,12 +9,11 @@ import {
   FlatList,
   Alert,
   RefreshControl,
-  ScrollView
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc} from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc, increment} from 'firebase/firestore';
 import { auth, firestore } from 'src/config';
 
 export const ForumPostScreen = ({ route, navigation }) => {
@@ -328,6 +327,44 @@ const handleDeleteForum = async () => {
   ]);
 };
 
+//Report Forum
+const handleReportForum = async () => {
+  Alert.alert(
+    'Report Forum',
+    'Are you sure you want to report this forum?',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'OK',
+        onPress: async () => {
+          try {
+            // Increment the report count
+            const forumRef = doc(firestore, 'forums', forumId);
+            await updateDoc(forumRef, { reportCount: increment(1) });
+
+            // Add report details to the "reports" subcollection
+            const reportsRef = collection(forumRef, 'reports');
+            await addDoc(reportsRef, {
+              reportedBy: auth.currentUser.uid,
+              reason: 'Inappropriate content', 
+              timestamp: new Date(),
+            });
+
+            Alert.alert('Success', 'Report Submitted.');
+          } catch (error) {
+            console.error('Error reporting forum:', error);
+            Alert.alert('Error', 'Could not submit the report. Please try again.');
+          }
+        },
+      },
+    ],
+    { cancelable: true }
+  );
+};
+
 return (
   <RootLayout navigation={navigation} screenName={forumTitle} userType={userType} >
     <View style={styles.container}
@@ -336,11 +373,15 @@ return (
       <View style={styles.titleContainer}>
         <Text style={styles.forumTitle}>{forumTitle}</Text>
         
-        {isCreator && (
-          <TouchableOpacity onPress={() => { setModalType("edit"); setModalVisible(true); }} style={styles.editIconContainer}>
-            <Ionicons name="create-outline" size={24} color="#000" style={styles.editIcon} />
-          </TouchableOpacity>
-        )}
+        {isCreator ? (
+            <TouchableOpacity onPress={() => { setModalType("edit"); setModalVisible(true); }} style={styles.editIconContainer}>
+              <Ionicons name="create-outline" size={24} color="#000" style={styles.editIcon} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={handleReportForum} style={styles.editIconContainer}>
+              <Ionicons name="alert-circle-outline" size={24} color="#000" style={styles.editIcon} />
+            </TouchableOpacity>
+          )}
       </View>
 
       <Text style={styles.forumContent}>

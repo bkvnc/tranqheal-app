@@ -15,7 +15,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AuthenticatedUserContext } from '../providers';
 import { RootLayout } from '../navigation/RootLayout';
-import { getDocs, getFirestore, collection, addDoc,doc, getDoc } from 'firebase/firestore';
+import { getDocs, getFirestore, collection, addDoc,doc, getDoc, Timestamp } from 'firebase/firestore';
 import { auth, firestore } from 'src/config';
 
 
@@ -182,7 +182,7 @@ export const ForumsScreen = ({ navigation }) => {
       title: forumTitle,
       status: 'pending',
       content: forumContent,
-      dateCreated: new Date().toLocaleString(),
+      dateCreated: Timestamp.now(),
       tags: selectedTags,
     };
 
@@ -203,38 +203,46 @@ export const ForumsScreen = ({ navigation }) => {
 
   // Render forum item
   const renderForumItem = ({ item }) => {
-    const maxTagsToShow = 3; // Set the maximum number of tags to display
-
+    const maxTagsToShow = 2;
+  
+    // Convert the Firestore Timestamp to a JavaScript Date object and then format it
+    const formattedDate = item.dateCreated ? new Date(item.dateCreated.seconds * 1000).toLocaleDateString() : '';
+  
     return (
       <View style={styles.forumContainer}>
         <Text style={styles.forumTitle}>{item.title}</Text>
+  
+         {/* Meta Information (Date and Tags) */}
+        <View style={styles.metaContainer}>
+          {/* Date above tags */}
+          <Text style={styles.forumDate}>{formattedDate}</Text>
 
-        {/* Display only the first few tags */}
-        <View style={styles.tagContainer}>
-          {item.tags && item.tags.slice(0, maxTagsToShow).map((tag, index) => (
-            <Text key={index} style={styles.tag}>{tag}</Text>
-          ))}
-          {item.tags && item.tags.length > maxTagsToShow && (
-            <Text style={styles.moreTags}>+{item.tags.length - maxTagsToShow} more</Text> // Show "more" indicator
-          )}
+          {/* Display Tags below Date */}
+          <View style={styles.tagContainer}>
+              {item.tags && item.tags.slice(0, maxTagsToShow).map((tag, index) => (
+                <Text key={index} style={styles.tag}>{tag}</Text>
+              ))}
+              {item.tags && item.tags.length > maxTagsToShow && (
+                <Text style={styles.moreTags}>+{item.tags.length - maxTagsToShow}</Text>
+              )}
+          </View>
         </View>
-
+      
         <TouchableOpacity
           style={styles.visitButton}
-          onPress={() => navigation.navigate('ForumDetails', 
-            {
-              forumId: item.id,
-              forumTitle: item.title,
-              forumAuthorId: item.authorId, // Pass the creator's ID to ForumPostScreen
-            })}
+          onPress={() => navigation.navigate('ForumDetails', {
+            forumId: item.id,
+            forumTitle: item.title,
+            forumAuthorId: item.authorId,
+          })}
         >
           <Ionicons name="arrow-forward" size={18} color="white" />
-          <Text style={styles.visitButtonText}>Visit Forum</Text>
+          <Text style={styles.visitButtonText}>Visit</Text>
         </TouchableOpacity>
       </View>
     );
   };
-
+  
   return (
     <RootLayout navigation={navigation} screenName="Forums" userType={userType}>
        <ScrollView
@@ -252,7 +260,7 @@ export const ForumsScreen = ({ navigation }) => {
           <View style={styles.iconContainer}>
             <TouchableOpacity style={styles.addForumButton} onPress={() => setIsModalVisible(true)}>
               <Ionicons name="add-circle-outline" size={24} color="white" />
-              <Text style={styles.addForumButtonText}> Add Forum</Text>
+              <Text style={styles.addForumButtonText}>Create Forum</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setIsSearching(!isSearching)} style={{ marginLeft: 8 }}>
               <Ionicons name="search-outline" size={32} color="black" />
@@ -350,7 +358,6 @@ export const ForumsScreen = ({ navigation }) => {
   );
 };
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -388,150 +395,157 @@ const styles = StyleSheet.create({
   iconContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-   },
-   searchContainer:{
-     marginTop :20 ,
-     borderBottomWidth :1 ,
-     borderBottomColor :'#ccc' ,
-   },
-   searchInput:{
-     height :40 ,
-     paddingHorizontal :10 ,
-     fontSize :16 ,
-     borderColor :'#ddd' ,
-     borderWidth :1 ,
-     borderRadius :10 ,
-   },
-   forumsList:{
-     marginTop :20 ,
-   },
-   forumContainer:{
-     padding :15 ,
-     marginBottom :15 ,
-     backgroundColor:'#f0f0f0' ,
-     borderRadius :10 ,
-   },
-   forumTitle:{
-     fontSize :18 ,
-     fontWeight:'bold' ,
-   },
-   metaContainer:{
-     flexDirection:'row' ,
-     justifyContent:'space-between' ,
-     alignItems:'center' ,
-   },
-   tagContainer: {
+  },
+  searchContainer: {
+    marginTop: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  searchInput: {
+    height: 40,
+    paddingHorizontal: 10,
+    fontSize: 16,
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 10,
+  },
+  forumsList: {
+    marginTop: 20,
+  },
+  forumContainer: {
+    padding: 15,
+    marginBottom: 15,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 10,
+  },
+  forumTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  metaContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  forumDate: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginBottom: 4,
+  },
+  tagContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 10,
-    gap: 8, 
+    alignItems: 'center',
+    gap: 5,
   },
   tag: {
     backgroundColor: '#B9A2F1',
     color: '#fff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginHorizontal: 5, 
-    marginVertical: 5, 
-    gap: 5,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 7,
+    fontSize: 12,
+    marginHorizontal: 3,
   },
-   moreTags: {
+  moreTags: {
     backgroundColor: '#B9A2F1',
     color: '#fff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    margin: 2,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 7,
+    fontSize: 12,
+    marginHorizontal: 3,
     fontWeight: 'bold',
-    },
-    tagList: {
-      flexDirection: 'row',
-      marginTop: 10,
-    },
-    tagOption: {
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      backgroundColor: '#ECE6F0',
-      borderRadius: 16,
-      margin: 6,
-    },
-    tagSelectionTitle: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      marginBottom: 10, 
-    },
-    selectedTagOption: {
-      backgroundColor: '#7129F2',
-      color: '#fff',
-    },
-    tagOptionText: {
-      fontSize: 14,
-    },
-   modalContainer:{
-     flex :1 ,
-     padding :20 ,
-   },
-   modalHeader:{
-     flexDirection:'row' ,
-     justifyContent:'space-between' ,
-     alignItems:'center' ,
-     marginTop :20 ,
-     marginBottom :20 ,
-   },
-   modalTitle:{
-     fontSize :22 ,
-     fontWeight:'bold' ,
-     marginBottom :8 ,
-   },
-   modalInput:{
-     marginBottom :15 ,
-     borderColor:'#ddd' ,
-     borderWidth :1 ,
-     padding :10 ,
-     borderRadius :10 ,
-   },
-   predefinedTagsContainer:{
-     flexDirection:'row' ,
-     flexWrap:'wrap' ,
-     marginBottom :5 ,
-     gap: 5,
-   },
-   predefinedTag:{
-     padding :10 ,
-     borderRadius :20 ,
-     marginRight :10 ,
-     marginBottom :10 ,
-   },
-   selectedTag:{
-       backgroundColor:'#B9A2F1',
-   },
-   unselectedTag:{
-       backgroundColor:'#ECE6F0',
-   },
-   visitButton:{
-    marginTop: 5,
+  },
+  visitButton: {
+    marginTop: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#7f4dff',
-    paddingVertical: 4,   // Slight padding to fit content snugly
-    paddingHorizontal: 8, // Adjusted padding to fit around text
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  visitButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    marginLeft: 4,
+  },
+  tagList: {
+    flexDirection: 'row',
+    marginTop: 10,
+  },
+  tagOption: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#ECE6F0',
+    borderRadius: 16,
+    margin: 6,
+  },
+  tagSelectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  selectedTagOption: {
+    backgroundColor: '#7129F2',
+    color: '#fff',
+  },
+  tagOptionText: {
+    fontSize: 14,
+  },
+  modalContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  modalInput: {
+    marginBottom: 15,
+    borderColor: '#ddd',
+    borderWidth: 1,
+    padding: 10,
     borderRadius: 10,
-    alignSelf: 'flex-start', 
-   },
-   visitButtonText:{
-       color :'#fff', 
-       fontSize: 14, // Adjust font size as desired
-       marginLeft: 4,
-   },
-   buttonContainer: {
+  },
+  predefinedTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 5,
+    gap: 5,
+  },
+  predefinedTag: {
+    padding: 10,
+    borderRadius: 20,
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  selectedTag: {
+    backgroundColor: '#B9A2F1',
+  },
+  unselectedTag: {
+    backgroundColor: '#ECE6F0',
+  },
+  buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 15,
   },
   createForumButton: {
-    backgroundColor: '#7129F2',  // Violet color
+    backgroundColor: '#7129F2',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -551,12 +565,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#000',  
+    borderColor: '#000',
     flex: 1,
   },
   cancelButtonText: {
-    color: '#000',  // 
+    color: '#000',
     fontSize: 16,
     fontWeight: 'bold',
-  },  
+  },
 });
+
