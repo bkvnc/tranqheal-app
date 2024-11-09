@@ -2,8 +2,8 @@ import React, { useContext, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { Colors, auth, firestore } from '../config';
-import { doc, getDoc } from 'firebase/firestore';
+import { Colors } from '../config';
+
 
 export const SeekProfessionalScreen = ({ navigation, route }) => {
   const { userType } = useContext(AuthenticatedUserContext);

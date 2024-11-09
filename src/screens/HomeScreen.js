@@ -74,7 +74,7 @@ export const HomeScreen = ({ navigation }) => {
             <Image source={require('../assets/selfassessmentpic.jpg')} style={styles.todoImage} />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Forums')} style={styles.todoItem}>
+          <TouchableOpacity onPress={() => navigation.navigate('ForumMain')} style={styles.todoItem}>
             <View style={styles.circle}>
               <Ionicons name="chatbox-outline" size={24} color="white" />
             </View>
