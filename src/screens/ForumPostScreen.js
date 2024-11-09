@@ -14,7 +14,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc} from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc,setDoc, serverTimestamp} from 'firebase/firestore';
 import { auth, firestore } from 'src/config';
 
 export const ForumPostScreen = ({ route, navigation }) => {
@@ -32,6 +32,7 @@ export const ForumPostScreen = ({ route, navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);  
   const [authorName, setAuthorName] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   const predefinedTags = [
     'Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'
@@ -141,6 +142,10 @@ export const ForumPostScreen = ({ route, navigation }) => {
         userId: auth.currentUser.uid, 
         joinedAt: new Date(),
       });
+
+
+
+      
   
       setIsMember(true); // Update UI state to reflect joined status
       Alert.alert('Success', 'You have joined the forum!');
@@ -221,13 +226,48 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
           content: newPostContent,
           dateCreated: new Date().toLocaleString(),
           authorId: auth.currentUser.uid,
+          authorType: userType,
+          authorName: authorName,
           forumId,
           status: 'pending',
         };
 
         const forumRef = doc(firestore, 'forums', forumId);
-        const postsRef = collection(forumRef, 'posts');
-        await addDoc(postsRef, newPost);
+          const postsRef = collection(forumRef, 'posts');
+
+          // Create the new post first and retrieve the document reference
+          const postDocRef = await addDoc(postsRef, newPost);
+
+          const postSnap = await getDoc(forumRef);
+
+          // Now that the post has been added, we can safely use the ID
+          const newPostId = postDocRef.id; // The new post's ID
+
+          // Create the notification reference
+          const notificationRef = doc(collection(firestore, `notifications/${postSnap.data().authorId}/messages`));
+
+          // Set the notification document with the new post ID
+          await setDoc(notificationRef, {
+            recipientId: auth.currentUser.uid,
+            recipientType: postSnap.data().authorType,  
+            message: `${authorName} has submitted a new post for review.`,
+            type: `post_review`,
+            createdAt: serverTimestamp(), 
+            isRead: false,
+            additionalData: {
+              postId: newPostId,  // Use the correct postId here
+              forumId: forumId,
+            },
+          });
+
+          // Fetch and log the notification to check the createdAt field
+          const notificationDoc = await getDoc(notificationRef);
+          const notificationData = notificationDoc.data();
+
+          if (notificationData && notificationData.createdAt) {
+            const createdAtDate = notificationData.createdAt.toDate();
+            console.log("Notification createdAt:", createdAtDate); // For debugging
+          }
 
         setNewPostTitle('');
         setNewPostContent('');

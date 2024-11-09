@@ -2,8 +2,11 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Image, SafeAreaView, StatusBar } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../config';
+import NotificationIndicator from '../components/NotificationIndicator';
+import { useState } from 'react';
 
-export const RootLayout = ({ children, navigation, screenName, userType }) => {
+export const RootLayout = ({ children, navigation, screenName, userType,  }) => {
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
 
   const renderLeftIcon = () => {
     if (screenName === 'Home' || screenName === 'ProfessionalHome') {
@@ -31,7 +34,7 @@ export const RootLayout = ({ children, navigation, screenName, userType }) => {
             {renderLeftIcon()}
             <Image source={require('../assets/small-logo.jpg')} style={styles.logo} />
             <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
-            <Ionicons name="notifications-outline" size={30} color="black" />
+            <NotificationIndicator hasUnreadNotifications={hasUnreadNotifications}/>
             </TouchableOpacity>
         </View>
 
@@ -74,6 +77,7 @@ export const RootLayout = ({ children, navigation, screenName, userType }) => {
         </View>
     </SafeAreaView>
   );
+  
 };
 
 const styles = StyleSheet.create({
