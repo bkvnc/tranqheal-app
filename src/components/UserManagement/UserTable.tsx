@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, getDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
-import { NavLink } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { UserData } from '../../hooks/types';
-
 import BanUserButton from '../../Buttons/BanUserButton';
 import SuspendUserButton from '../../Buttons/SuspendButton';
+
+import { CSSTransition } from 'react-transition-group'; 
+
+interface ReportDetailsModalProps {
+  report: Report | null;
+  onClose: () => void;
+}
 
 interface Report {
   id: string;
@@ -18,7 +23,47 @@ interface Report {
   reason: string; 
   reportedBy: string; 
   timestamp: Date;
+  reportCount: number;
 }
+
+const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose }) => (
+  <CSSTransition
+    in={!!report}
+    timeout={300}
+    classNames="modal"
+    unmountOnExit
+  >
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 "
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-boxdark rounded-lg shadow-lg p-6 w-full max-w-md relative animate-fadeIn"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-lg font-bold text-center border-b dark:border-strokedark pb-4 mb-4 ">Report Details</h2>
+        {report ? (
+          <div className="space-y-4">
+            <p><strong>Author of the {report.contentType}:</strong> {report.authorName}</p>
+            <p><strong>Reason:</strong> {report.reason}</p>
+            <p><strong>Reported By:</strong> {report.reportedBy}</p>
+            <p><strong>Timestamp:</strong> {report.timestamp.toLocaleString()}</p>
+          </div>
+        ) : (
+          <p className="text-center">Report not found</p>
+        )}
+        <button
+          onClick={onClose}
+          className="mt-6 w-full py-2 bg-blue-500 bg-[#9F4FDD] hover:shadow-lg hover:shadow-[#9F4FDD]/50 shadow text-white  rounded-lg font-semibold transition duration-150"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </CSSTransition>
+);
+
+
 
 const UserTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -29,6 +74,9 @@ const UserTable = () => {
   const [error, setError] = useState<string | null>(null);
   const [userType, setUserType] = useState<string | null>(null); // State for userType
   const user = auth.currentUser;
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  
+
 
   if (user) {
     console.log('User authenticated successfully');
@@ -111,9 +159,15 @@ const UserTable = () => {
   const renderActions = (report: Report) => {
     return (
       <div className="flex items-center space-x-3.5">
-        <NavLink to={`/reports/${report.id}`} className="mr-2 text-sm dark:text-white">
-          View Details
-        </NavLink>
+        <button onClick={() => setSelectedReport(report)}>View Details</button>
+
+      {/* Conditionally render ReportDetailsModal */}
+      {selectedReport && (
+        <ReportDetailsModal
+          report={selectedReport}
+          onClose={() => setSelectedReport(null)}
+        />
+      )}
 
         {/* Only show suspend button to admin and organization */}
         {userData?.userType === 'admin'&& (
@@ -140,7 +194,8 @@ const UserTable = () => {
       // 1. Fetch forum-level reports
       for (const forumDoc of forumsSnapshot.docs) {
         const forumId = forumDoc.id;
-        
+        const forumData = forumDoc.data();
+        const forumReportCount = forumData.reportCount || 0;
         // Get forum reports
         const forumReportsSnapshot = await getDocs(collection(db, `forums/${forumId}/reports`));
         const forumReports: Report[] = forumReportsSnapshot.docs.map((doc) => ({
@@ -151,6 +206,8 @@ const UserTable = () => {
           reason: doc.data().reason || '',
           reportedBy: doc.data().reportedBy || '',
           timestamp: doc.data().timestamp?.toDate() || new Date(),
+          reportCount: forumReportCount,
+
         }));
         allReports = [...allReports, ...forumReports];
 
@@ -158,6 +215,8 @@ const UserTable = () => {
         const postsSnapshot = await getDocs(collection(db, `forums/${forumId}/posts`));
         for (const postDoc of postsSnapshot.docs) {
           const postId = postDoc.id;
+          const postData = postDoc.data();
+           const postReportCount = postData.reportCount || 0;
 
           const postReportsSnapshot = await getDocs(
             collection(db, `forums/${forumId}/posts/${postId}/reports`)
@@ -171,6 +230,7 @@ const UserTable = () => {
             reason: doc.data().reason || '',
             reportedBy: doc.data().reportedBy || '',
             timestamp: doc.data().timestamp?.toDate() || new Date(),
+            reportCount: postReportCount
           }));
           allReports = [...allReports, ...postReports];
 
@@ -180,6 +240,8 @@ const UserTable = () => {
           );
           for (const commentDoc of commentsSnapshot.docs) {
             const commentId = commentDoc.id;
+            const commentData = commentDoc.data();
+            const commentReportCount = commentData.reportCount || 0;
             const commentReportsSnapshot = await getDocs(
               collection(db, `forums/${forumId}/posts/${postId}/comments/${commentId}/reports`)
             );
@@ -194,6 +256,7 @@ const UserTable = () => {
               reason: doc.data().reason || '',
               reportedBy: doc.data().reportedBy || '',
               timestamp: doc.data().timestamp?.toDate() || new Date(),
+              reportCount: commentReportCount
             }));
             allReports = [...allReports, ...commentReports];
           }
@@ -227,14 +290,16 @@ const UserTable = () => {
 
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
+      <h1 className="text-lg font-bold mb-4">Reported Users</h1>
       <div className="max-w-full overflow-x-auto">
-        
+      
         <table className="w-full table-auto">
           <thead>
-            <tr className="h-14 border-b dark:border-strokedark">
+            <tr className="bg-gray-2 text-left dark:bg-meta-4">
               <th className="px-4 text-black dark:text-white">Author Name</th>
               <th className="px-4 text-black dark:text-white">Reported At</th>
               <th className="px-4 text-black dark:text-white">Content Type</th>
+              <th className="px-4 text-black dark:text-white">Report Count</th>
               <th className="px-4 text-black dark:text-white">Actions</th>
             </tr>
           </thead>
@@ -249,6 +314,9 @@ const UserTable = () => {
                 </td>
                 <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">
                   {report.contentType}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">
+                  {report.reportCount}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3.5">{renderActions(report)}</td>
               </tr>
