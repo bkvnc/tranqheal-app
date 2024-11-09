@@ -9,12 +9,11 @@ import {
   FlatList,
   Alert,
   RefreshControl,
-  ScrollView
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc,setDoc, serverTimestamp} from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc, increment} from 'firebase/firestore';
 import { auth, firestore } from 'src/config';
 
 export const ForumPostScreen = ({ route, navigation }) => {
@@ -32,7 +31,7 @@ export const ForumPostScreen = ({ route, navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);  
   const [authorName, setAuthorName] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+
 
   const predefinedTags = [
     'Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'
@@ -368,6 +367,85 @@ const handleDeleteForum = async () => {
   ]);
 };
 
+const getUserName = async () => {
+  const currentUserId = auth.currentUser?.uid;
+
+  if (!currentUserId) return null;
+
+  // Function to fetch document from a collection
+  const fetchUserData = async (collectionName) => {
+    const docRef = doc(firestore, collectionName, currentUserId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? docSnap.data() : null;
+  };
+
+  // Try each collection in order
+  const collections = ['users', 'organizations', 'admins', 'professionals'];
+  for (const collection of collections) {
+    const userData = await fetchUserData(collection);
+    if (userData) {
+      // Extract the name based on the collection's field structure
+      switch (collection) {
+        case 'users':
+        case 'professionals':
+          return `${userData.firstName} ${userData.lastName}`;
+        case 'organizations':
+          return userData.organizationName;
+        case 'admins':
+          return `${userData.firstName} ${userData.lastName}`;
+        default:
+          return null;
+      }
+    }
+  }
+
+  // If not found in any collection
+  return null;
+};
+
+
+
+//Report Forum
+const handleReportForum = async () => {
+  const reporterName = await getUserName();
+  Alert.alert(
+    'Report Forum',
+    'Are you sure you want to report this forum?',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'OK',
+        onPress: async () => {
+          try {
+            // Increment the report count
+            const forumRef = doc(firestore, 'forums', forumId);
+            await updateDoc(forumRef, { reportCount: increment(1) });
+
+            // Add report details to the "reports" subcollection
+            const reportsRef = collection(forumRef, 'reports');
+            await addDoc(reportsRef, {
+              authorName: authorName,
+              reporterName: reporterName,
+              reportedBy: auth.currentUser.uid,
+              reason: 'Inappropriate content',  
+              timestamp: new Date(),
+            });
+
+            Alert.alert('Success', 'Report Submitted.');
+          } catch (error) {
+            console.error('Error reporting forum:', error);
+            Alert.alert('Error', 'Could not submit the report. Please try again.');
+          }
+        },
+      },
+    ],
+    { cancelable: true }
+  );
+};
+
 return (
   <RootLayout navigation={navigation} screenName={forumTitle} userType={userType} >
     <View style={styles.container}
@@ -376,11 +454,15 @@ return (
       <View style={styles.titleContainer}>
         <Text style={styles.forumTitle}>{forumTitle}</Text>
         
-        {isCreator && (
-          <TouchableOpacity onPress={() => { setModalType("edit"); setModalVisible(true); }} style={styles.editIconContainer}>
-            <Ionicons name="create-outline" size={24} color="#000" style={styles.editIcon} />
-          </TouchableOpacity>
-        )}
+        {isCreator ? (
+            <TouchableOpacity onPress={() => { setModalType("edit"); setModalVisible(true); }} style={styles.editIconContainer}>
+              <Ionicons name="create-outline" size={24} color="#000" style={styles.editIcon} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={handleReportForum} style={styles.editIconContainer}>
+              <Ionicons name="alert-circle-outline" size={24} color="#000" style={styles.editIcon} />
+            </TouchableOpacity>
+          )}
       </View>
 
       <Text style={styles.forumContent}>

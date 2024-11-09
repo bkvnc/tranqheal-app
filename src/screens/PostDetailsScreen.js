@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import moment from 'moment';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, doc, updateDoc, deleteDoc, setDoc, } from 'firebase/firestore';
 import { auth, firestore } from 'src/config';
 
 export const PostDetailsScreen = ({ route, navigation }) => {
@@ -15,6 +15,7 @@ export const PostDetailsScreen = ({ route, navigation }) => {
   const [newComment, setNewComment] = useState('');
   const [reacts, setReacts] = useState(0);
   const [userReacted, setUserReacted] = useState(false);
+  const [userCommentReacted, setUserCommentReacted] = useState({});
   const [showComments, setShowComments] = useState(false);
   const [isEditPostModalVisible, setIsEditPostModalVisible] = useState(false); 
   const [isEditCommentModalVisible, setIsEditCommentModalVisible] = useState(false);
@@ -269,7 +270,7 @@ useEffect(() => {
     }
   };
   
-  //Handle React
+  //Handle React Post
   const handleReact = async () => {
     try {
       const db = getFirestore();
@@ -308,6 +309,54 @@ useEffect(() => {
       Alert.alert('Error', 'Could not update reaction.');
     }
   };
+
+  // Function to handle reaction on a specific comment
+  const handleCommentReact = async (commentId) => {
+    try {
+      const commentRef = doc(firestore, 'forums', forumId, 'posts', postId, 'comments', commentId);
+      const commentSnapshot = await getDoc(commentRef);
+  
+      if (commentSnapshot.exists()) {
+        const commentData = commentSnapshot.data();
+        const isReacted = (commentData.commentReactedBy || []).includes(user.uid);
+  
+        // Toggle reaction in Firebase
+        const updatedReactedBy = isReacted
+          ? commentData.commentReactedBy.filter((uid) => uid !== user.uid)
+          : [...(commentData.commentReactedBy || []), user.uid];
+  
+        const updatedReactCount = isReacted
+          ? (commentData.commentReacted || 1) - 1
+          : (commentData.commentReacted || 0) + 1;
+  
+        await updateDoc(commentRef, {
+          commentReactedBy: updatedReactedBy,
+          commentReacted: updatedReactCount,
+        });
+  
+        // Update local state
+        setComments((prevComments) =>
+          prevComments.map((comment) =>
+            comment.id === commentId
+              ? {
+                  ...comment,
+                  commentReactedBy: updatedReactedBy,
+                  commentReacted: updatedReactCount,
+                }
+              : comment
+          )
+        );
+  
+        setUserCommentReacted((prevReactions) => ({
+          ...prevReactions,
+          [commentId]: !isReacted,
+        }));
+      }
+    } catch (error) {
+      console.error('Error reacting to comment:', error);
+      Alert.alert('Error', 'Could not update reaction.');
+    }
+  };
   
   //Delete Comment Handler
   const handleDeleteComment = async (commentId) => {
@@ -328,27 +377,137 @@ useEffect(() => {
     }
   };
 
-  const handleReportPost = (postId) => {
-    Alert.alert(
-      'Report Post',
-      'Are you sure you want to report this post?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Report', onPress: () => console.log("Reported Post ID:", postId) },
-      ]
-    );
+  const getUserName = async () => {
+    const currentUserId = auth.currentUser?.uid;
+  
+    if (!currentUserId) return null;
+  
+    // Function to fetch document from a collection
+    const fetchUserData = async (collectionName) => {
+      const docRef = doc(firestore, collectionName, currentUserId);
+      const docSnap = await getDoc(docRef);
+      return docSnap.exists() ? docSnap.data() : null;
+    };
+  
+    // Try each collection in order
+    const collections = ['users', 'organizations', 'admins', 'professionals'];
+    for (const collection of collections) {
+      const userData = await fetchUserData(collection);
+      if (userData) {
+        // Extract the name based on the collection's field structure
+        switch (collection) {
+          case 'users':
+          case 'professionals':
+            return `${userData.firstName} ${userData.lastName}`;
+          case 'organizations':
+            return userData.organizationName;
+          case 'admins':
+            return `${userData.firstName} ${userData.lastName}`;
+          default:
+            return null;
+        }
+      }
+    }
+  
+    // If not found in any collection
+    return null;
   };
 
-  const handleReportComment = (commentId) => {
-    Alert.alert(
-      'Report Comment',
-      'Are you sure you want to report this comment?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Report', onPress: () => console.log("Reported Comment ID:", commentId) },
-      ]
-    );
-  };
+  // Report a post
+const handleReportPost = (postId) => {
+  const reporterName = getUserName();
+  Alert.alert(
+    "Report Post",
+    "Are you sure you want to report this post?",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "OK",
+        onPress: async () => {
+          try {
+            // Reference to the post document
+            const postRef = doc(firestore, `forums/${forumId}/posts`, postId);
+            const postDoc = await getDoc(postRef);
+
+            if (postDoc.exists()) {
+              // Increment the reportCount field
+              const currentReportCount = postDoc.data().reportCount || 0;
+              await updateDoc(postRef, {
+                reportCount: currentReportCount + 1,
+              });
+
+              // Add a new report document in the 'reports' subcollection
+              await addDoc(collection(postRef, "reports"), {
+                authorName: authorName,
+                reporterName: reporterName,
+                reportedBy: auth.currentUser.uid,
+                reason: 'Inappropriate content',  
+                timestamp: new Date(),
+              });
+
+              Alert.alert("Success", "Post has been reported.");
+            } else {
+              Alert.alert("Error", "Post not found.");
+            }
+          } catch (error) {
+            console.error("Error reporting post:", error);
+            Alert.alert("Error", "Could not report the post.");
+          }
+        },
+      },
+    ],
+    { cancelable: false }
+  );
+};
+
+  
+ // Report a comment
+const handleReportComment = (commentId) => {
+  const reporterName = getUserName();
+  Alert.alert(
+    "Report Comment",
+    "Are you sure you want to report this comment?",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "OK",
+        onPress: async () => {
+          try {
+            // Reference to the comment document
+            const commentRef = doc(firestore, `forums/${forumId}/posts/${postId}/comments`, commentId);
+            const commentDoc = await getDoc(commentRef);
+
+            if (commentDoc.exists()) {
+              // Increment the reportCount field
+              const currentReportCount = commentDoc.data().reportCount || 0;
+              await updateDoc(commentRef, {
+                reportCount: currentReportCount + 1,
+              });
+
+              // Add a new report document in the 'reports' subcollection
+              await addDoc(collection(commentRef, "reports"), {
+                authorName: authorName,
+                reporterName: reporterName,
+                reportedBy: auth.currentUser.uid,
+                reason: 'Inappropriate content',  
+                timestamp: new Date(),
+              });
+
+              Alert.alert("Success", "Comment has been reported.");
+            } else {
+              Alert.alert("Error", "Comment not found.");
+            }
+          } catch (error) {
+            console.error("Error reporting comment:", error);
+            Alert.alert("Error", "Could not report the comment.");
+          }
+        },
+      },
+    ],
+    { cancelable: false }
+  );
+};
+
 
   //Render Comments
   const renderCommentItem = ({ item }) => (
@@ -378,6 +537,14 @@ useEffect(() => {
             <Ionicons name="alert-circle-outline" size={20} color="#000" />
           </TouchableOpacity>
         )}
+          <TouchableOpacity onPress={() => handleCommentReact(item.id)}>
+            <Ionicons
+            name={userCommentReacted[item.id] ? 'heart' : 'heart-outline'}
+            size={20}
+            color={userCommentReacted[item.id] && (item.commentReacted || 0) > 0 ? '#d9534f' : '#333'}
+            />
+             <Text style={styles.reactionCountText}>{item.commentReacted || 0}</Text>
+          </TouchableOpacity>
       </View>
     </View>
   );
@@ -561,4 +728,10 @@ const styles = StyleSheet.create({
   modalCancel: { fontSize: 16, color: '#000' },
   modalSaveText: { fontSize: 22, color: '#000' }, 
   modalCancelText: { fontSize: 20, color: '#000'},
+  reactionCountText: {
+    fontSize: 12,
+    color: '#333',
+    marginTop: 2, 
+    textAlign: 'center', 
+  },
 });
