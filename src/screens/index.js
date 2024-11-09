@@ -4,8 +4,8 @@ import { LoginScreen } from './LoginScreen';
 import { SignupScreen } from './SignupScreen';
 import { ProfessionalRegisterScreen } from './ProfessionalRegisterScreen';
 import { UploadCredentialsScreen } from './UploadCredentialsScreen';
+
 import { HomeScreen } from './HomeScreen';
-import { SAScreen } from './SAScreen';
 import { ForumsScreen } from './ForumsScreen';
 import { ViewProfScreen } from './ViewProfScreen';
 import { ViewOrgScreen } from './ViewOrgScreen';
@@ -13,10 +13,15 @@ import { MoodScreen } from './MoodScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { NotificationScreen } from './NotificationScreen';
 import { MenuScreen } from './MenuScreen';
+
+import { SAScreen } from './SAScreen';
 import { SAPreferenceScreen } from './SAPreferenceScreen';
 import { SAResultScreen } from './SAResultScreen';
 import { SAScreen2 } from './SAScreen2';
 import { SAScreen3 } from './SAScreen3';
+
+import { MatchingScreen } from './MatchingScreen';
+
 import { PostDetailsScreen } from './PostDetailsScreen';
 import { ForumPostScreen } from './ForumPostScreen';
 import { OrganizationDetailsScreen } from './OrganizationDetailsScreen';
@@ -42,4 +47,4 @@ export { WelcomeScreen, RegisterAsScreen, LoginScreen,
     ForumPostScreen, OrganizationDetailsScreen, ProfessionalDetailsScreen,
     EditProfileScreen, ProfessionalHomeScreen, ViewRequestScreen,
     ViewRequestHistoryScreen, MoodMeterScreen, MoodScreen2, MoodResultScreen,
-    EditProfessionalProfileScreen, ProfessionalProfileScreen, SeekProfessionalScreen, MoodLogsScreen};
+    EditProfessionalProfileScreen, ProfessionalProfileScreen, SeekProfessionalScreen, MoodLogsScreen, MatchingScreen };

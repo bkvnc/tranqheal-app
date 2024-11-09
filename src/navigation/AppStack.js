@@ -4,7 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { HomeScreen, SAScreen, ForumsScreen, ViewProfScreen, ForumPostScreen, PostDetailsScreen, ViewOrgScreen, MoodScreen,
      ProfileScreen, NotificationScreen, MenuScreen, EditProfileScreen, ProfessionalDetailsScreen, OrganizationDetailsScreen,
      SAPreferenceScreen, SAScreen2, SAScreen3, SAResultScreen, MoodMeterScreen, MoodScreen2, MoodResultScreen,
-     SeekProfessionalScreen, MoodLogsScreen
+     SeekProfessionalScreen, MoodLogsScreen, MatchingScreen
  } from '../screens';
 
 const Stack = createStackNavigator();
@@ -12,7 +12,6 @@ const Stack = createStackNavigator();
 export const AppStack = () => {
     return (
         <Stack.Navigator>
-        
             <Stack.Screen 
                 name="Home" 
                 component={HomeScreen} 
@@ -68,13 +67,11 @@ export const AppStack = () => {
                 component={NotificationScreen} 
                 options={{ headerShown: false }}
             /> 
-
             <Stack.Screen 
                 name="EditProfile" 
                 component={EditProfileScreen}
                 options={{ headerShown: false }}
             />
-
             <Stack.Screen
                 name="ProfessionalDetails"
                 component={ProfessionalDetailsScreen}
@@ -85,12 +82,12 @@ export const AppStack = () => {
                 component={OrganizationDetailsScreen}
                 options={{ headerShown: false }}
             />
-             <Stack.Screen 
+            <Stack.Screen 
                 name="Preferences" 
                 component={SAPreferenceScreen} 
                 options={{ headerShown: false }}
             />
-             <Stack.Screen 
+            <Stack.Screen 
                 name="SelfAssessment2" 
                 component={SAScreen2} 
                 options={{ headerShown: false }} 
@@ -100,9 +97,14 @@ export const AppStack = () => {
                 component={SAScreen3} 
                 options={{ headerShown: false }} 
             />
-             <Stack.Screen 
+            <Stack.Screen 
                 name="SelfAssessmentResult" 
                 component={SAResultScreen} 
+                options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+                name="Matching" 
+                component={MatchingScreen} 
                 options={{ headerShown: false }} 
             />
             <Stack.Screen 
