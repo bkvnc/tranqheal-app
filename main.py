@@ -4,28 +4,25 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from firebase_admin import credentials, firestore, initialize_app
 
-# Load the JSON content from the environment variable
 service_account_info = json.loads(os.getenv("FIREBASE_SERVICE_ACCOUNT"))
 
-# Initialize Firebase credentials with the loaded JSON
 cred = credentials.Certificate(service_account_info)
 initialize_app(cred)
 
-# Initialize Firestore
 db = firestore.client()
 
 app = FastAPI()
 
 # Define Pydantic models for input data
 class UserPreferences(BaseModel):
-    preferredProfAge: str  # Expected format is a string of digits, e.g., "25"
-    preferredProfGender: str  # Options: "male", "female", "other"
-    preferredProfAvailability: str  # Options: "morning", "afternoon", "evening"
+    preferredProfAge: str 
+    preferredProfGender: str  
+    preferredProfAvailability: str 
 
 class SelfAssessmentScores(BaseModel):
-    gad7Interpretation: str  # Options: "Minimal/No", "Mild", "Moderate", "Severe Anxiety"
-    phq9Interpretation: str  # Options: "Minimal/No", "Mild", "Moderate", "Moderately severe", "Severe depression"
-    pssInterpretation: str  # Options: "Low", "Moderate", "Severe Stress"
+    gad7Interpretation: str
+    phq9Interpretation: str  
+    pssInterpretation: str
 
 class AssessmentData(BaseModel):
     preferences: UserPreferences
@@ -45,6 +42,7 @@ def match_professionals(assessment: AssessmentData):
         middle_name = data.get("middleName", "").strip()
         last_name = data.get("lastName", "")
         full_name = f"{first_name} {middle_name + ' ' if middle_name else ''}{last_name}"
+        profile_image = data.get("profileImage", None)
         
         professional_info = {
             "id": doc.id,
@@ -53,7 +51,8 @@ def match_professionals(assessment: AssessmentData):
             "availability": data.get("availability", {}),
             "gender": data.get("gender", "Unknown"),
             "specialization": data.get("specialization", {}),
-            "rating": data.get("rating", 0)
+            "rating": data.get("rating", 0),
+            "profileImage": profile_image
         }
 
         # Calculate match score
