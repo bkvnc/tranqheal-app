@@ -1,31 +1,36 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, Alert, StyleSheet, Image, ScrollView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import moment from 'moment';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
 import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, doc, updateDoc, deleteDoc, setDoc, } from 'firebase/firestore';
-import { auth, firestore } from 'src/config';
+import { auth, Colors, firestore } from 'src/config';
 
 export const PostDetailsScreen = ({ route, navigation }) => {
   const { user, userType } = useContext(AuthenticatedUserContext);
-  const { postId, postTitle, postContent, postTime, forumId } = route.params;
+  const { postId, forumId } = route.params;
+  const [postData, setPostData] = useState(null);
   const [authorName, setAuthorName] = useState('');
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
-  const [reacts, setReacts] = useState(0);
-  const [userReacted, setUserReacted] = useState(false);
-  const [userCommentReacted, setUserCommentReacted] = useState({});
+  const [commentToEdit, setCommentToEdit] = useState(null);
   const [showComments, setShowComments] = useState(false);
+  const [userCommentReacted, setUserCommentReacted] = useState({});
+  const [reacts, setReacts] = useState(0);
+  const [userReacted, setUserReacted] = useState(false); 
+  const [editCommentText, setEditCommentText] = useState('');
+  const [editedTitle, setEditedTitle] = useState('');
+  const [editedContent, setEditedContent] = useState('');
   const [isEditPostModalVisible, setIsEditPostModalVisible] = useState(false); 
   const [isEditCommentModalVisible, setIsEditCommentModalVisible] = useState(false);
   const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
-  const [commentToEdit, setCommentToEdit] = useState(null);
-  const [editCommentText, setEditCommentText] = useState('');
-  const [editedTitle, setEditedTitle] = useState(postTitle);
-  const [editedContent, setEditedContent] = useState(postContent);
-  const [postAuthor, setPostAuthor] = useState('');
   const [blacklistedWords, setBlacklistedWords] = useState([]);
+  const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+
+  
+
+  
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -57,17 +62,7 @@ export const PostDetailsScreen = ({ route, navigation }) => {
       const postSnapshot = await getDoc(postRef);
   
       if (postSnapshot.exists()) {
-        const postData = postSnapshot.data();
-      
-        setEditedTitle(postData.title);
-        setEditedContent(postData.content);
-        setReacts(postData.reacted || 0);
-        setPostAuthor(postData.authorId);
-        
-        // Check if the current user has reacted
-        const reactedBy = postData.reactedBy || [];
-        setUserReacted(reactedBy.includes(user.uid));
-
+        setPostData(postSnapshot.data());
       } else {
         console.error('Post not found.');
         Alert.alert('Error', 'Post not found.');
@@ -510,32 +505,82 @@ const handleReportComment = (commentId) => {
   return (
     <RootLayout navigation={navigation} screenName="Post Details" userType={userType}>
       <View style={styles.container}>
-        <Text style={styles.postTitle}>{postTitle}</Text>
-        <View style={styles.metaContainer}>
-          <Text style={styles.timeText}>{postTime}</Text>
-          <Text style={styles.authorText}>by Anonymous</Text>
-        </View>
-        <Text style={styles.postContent}>{postContent}</Text>
+      <FlatList
+        data={comments}
+        keyExtractor={(item) => item.id}
+        renderItem={renderCommentItem}
+        contentContainerStyle={{ paddingBottom: 70 }} // Space for the input box
+        ListHeaderComponent={
+          <View>
+          <Text style={styles.postTitle}>{postData?.title}</Text>
+          <View style={styles.metaContainer}>
+            <Text style={styles.timeText}>{postData?.dateCreated}</Text>
+            <Text style={styles.authorText}>by Anonymous</Text>
+          </View>
 
-        <View style={styles.reactContainer}>
-          <TouchableOpacity onPress={() => setShowComments(!showComments)} style={styles.iconButton}>
-            <Ionicons name="chatbox-ellipses-outline" size={24} color="#333" />
-            <Text>{comments.length}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleReact} style={styles.iconButton}>
-            <Ionicons name={userReacted ? 'heart' : 'heart-outline'} size={24} color={userReacted ? '#d9534f' : '#333'} />
-            <Text>{reacts}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setIsOptionsModalVisible(true)} style={styles.iconButton}>
-            <Ionicons name="ellipsis-horizontal" size={24} color="#333" />
-          </TouchableOpacity>
-        </View>
+          {/* Post Content */}
+          <View>
+            {postData?.imageUrl ? (
+              <TouchableOpacity onPress={() => setIsImageModalVisible(true)}>
+                <Image source={{ uri: postData.imageUrl }} style={styles.postImage} />
+              </TouchableOpacity>
+            ) : null}
+            <Text style={styles.postContent}>{postData?.content}</Text>
+          </View>
 
+          {/* Image Modal */}
+          <Modal visible={isImageModalVisible} transparent animationType="fade">
+            <View style={styles.imageModalOverlay}>
+              <TouchableOpacity onPress={() => setIsImageModalVisible(false)} style={styles.closeModalButton}>
+                <Ionicons name="close" size={32} color="#fff" />
+              </TouchableOpacity>
+              {postData?.imageUrl && (
+                <Image
+                  source={{ uri: postData.imageUrl }}
+                  style={styles.fullScreenImage} // Fullscreen image style
+                  resizeMode="contain"
+                />
+              )}
+            </View>
+          </Modal>
+
+          {/* Reactions and Comments Toggle */}
+          <View style={styles.reactContainer}>
+            <TouchableOpacity onPress={() => setShowComments(!showComments)} style={styles.iconButton}>
+              <Ionicons name="chatbox-ellipses-outline" size={24} color="#333" />
+              <Text>{comments.length}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleReact} style={styles.iconButton}>
+              <Ionicons name={userReacted ? 'heart' : 'heart-outline'} size={24} color={userReacted ? '#d9534f' : '#333'} />
+              <Text>{reacts}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setIsOptionsModalVisible(true)} style={styles.iconButton}>
+              <Ionicons name="ellipsis-horizontal" size={24} color="#333" />
+            </TouchableOpacity>
+          </View>
+        </View>
+        }
+      />
+        
+      {/* Comment Input Box Fixed at the Bottom */}
+      <View style={styles.commentInputContainer}>
+        <TextInput
+          style={styles.commentInput}
+          placeholder=" Add a comment..."
+          value={newComment}
+          onChangeText={setNewComment}
+        />
+        <TouchableOpacity onPress={handleAddComment} style={styles.sendButton}>
+          <Ionicons name="send-outline" size={24} color="#000" />
+        </TouchableOpacity>
+      </View>
+  
+  
         {/* Options Modal */}
         <Modal visible={isOptionsModalVisible} transparent animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              {postAuthor === user.uid ? ( // Check if the current user is the post author
+              {postData?.authorId === user.uid ? (
                 <>
                   <TouchableOpacity onPress={() => {
                     setEditedTitle(postTitle);
@@ -566,29 +611,7 @@ const handleReportComment = (commentId) => {
             </View>
           </View>
         </Modal>
-
-        {showComments && (
-          <>
-            <FlatList
-              style={styles.commentList}
-              data={comments}
-              keyExtractor={(item) => item.id}
-              renderItem={renderCommentItem}
-            />
-            <View style={styles.commentInputContainer}>
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Add a comment..."
-                value={newComment}
-                onChangeText={setNewComment}
-              />
-              <TouchableOpacity onPress={handleAddComment} style={styles.sendButton}>
-                <Ionicons name="send-outline" size={24} color="#000" />
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
+  
         {/* Edit Post Modal */}
         <Modal visible={isEditPostModalVisible} transparent animationType="slide">
           <View style={styles.modalOverlay}>
@@ -616,7 +639,7 @@ const handleReportComment = (commentId) => {
             </View>
           </View>
         </Modal>
-
+  
         {/* Edit Comment Modal */}
         <Modal visible={isEditCommentModalVisible} transparent animationType="slide">
           <View style={styles.modalOverlay}>
@@ -639,29 +662,47 @@ const handleReportComment = (commentId) => {
               </TouchableOpacity>
             </View>
           </View>
-       </Modal>
+        </Modal>
       </View>
     </RootLayout>
-  );
+  );  
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  postTitle: { fontSize: 24, fontWeight: 'bold' },
-  metaContainer: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 8 },
-  textInput: { borderColor: '#ccc', borderWidth: 1, padding: 8, height: 60, maxHeight: 150, textAlignVertical: 'top' },
-  iconRow: { flexDirection: 'row', gap: 10, marginTop: 5 },
-  timeText: { fontSize: 12, color: '#888' },
-  authorText: { fontSize: 12, color: '#888' },
-  postContent: { fontSize: 16, marginBottom: 16 },
-  reactContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
-  iconButton: { alignItems: 'center' },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  postTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  metaContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 8,
+  },
+  postContent: {
+    fontSize: 16,
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  commentsContainer: {
+    flexGrow: 1,  // Allow FlatList to grow inside ScrollView
+    marginBottom: 60, // Ensure space for input box
+  },
   commentInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#ddd',
     paddingVertical: 8,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    paddingHorizontal: 10,
   },
   commentInput: {
     flex: 1,
@@ -675,21 +716,131 @@ const styles = StyleSheet.create({
   sendButton: {
     padding: 8,
   },
-  commentList: { marginVertical: 16 },
-  commentItem: { borderBottomColor: '#ccc', borderBottomWidth: 1, paddingVertical: 8 },
-  commentAuthor: { fontWeight: 'bold' },
-  commentContent: { marginVertical: 4 },
-  commentDate: { fontSize: 12, color: '#888' },
-  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000 },
-  modalContent: { width: '80%', padding: 20, backgroundColor: '#fff', borderRadius: 10 },
-  modalOption: { fontSize: 18, marginBottom: 20 },
-  modalCancel: { fontSize: 16, color: '#000' },
-  modalSaveText: { fontSize: 22, color: '#000' }, 
-  modalCancelText: { fontSize: 20, color: '#000'},
+  commentsContainer: {
+    flex: 1,
+    marginBottom: 8, 
+  },
+  textInput: { 
+    borderColor: '#ccc', 
+    borderWidth: 1, 
+    padding: 8, 
+    height: 60, 
+    maxHeight: 150, 
+    textAlignVertical: 'top' 
+  },
+  iconRow: { 
+    flexDirection: 'row', 
+    gap: 10, 
+    marginTop: 5 
+  },
+  timeText: { 
+    fontSize: 12, 
+    color: '#888' 
+  },
+  authorText: { 
+    fontSize: 12, 
+    color: '#888' 
+  },
+  postContent: { 
+    fontSize: 16, 
+    marginTop: 10,
+    marginBottom: 10, 
+  },
+  reactContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-around', 
+    marginBottom: 10 ,
+  },
+  iconButton: { 
+    alignItems: 'center' 
+  },
+  commentInput: {
+    flex: 1,
+    padding: 5,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 20,
+    fontSize: 16,
+    marginRight: 8,
+  },
+  sendButton: {
+    padding: 8,
+  },
+  commentItem: { 
+    borderBottomColor: '#ccc', 
+    borderBottomWidth: 1, 
+    paddingVertical: 8 
+  },
+  commentAuthor: { 
+    fontWeight: 'bold' 
+  },
+  commentContent: { 
+    marginVertical: 4 
+  },
+  commentDate: { 
+    fontSize: 12, 
+    color: '#888' 
+  },
+  modalOverlay: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    zIndex: 1000 
+  },
+  modalContent: { 
+    width: '80%', 
+    padding: 20, 
+    backgroundColor: '#fff', 
+    borderRadius: 10 
+  },
+  modalOption: { 
+    fontSize: 18, 
+    marginBottom: 20 
+  },
+  modalCancel: { 
+    fontSize: 16, 
+    color: '#000' 
+  },
+  modalSaveText: { 
+    fontSize: 22, 
+    color: '#000' 
+  }, 
+  modalCancelText: { 
+    fontSize: 20, 
+    color: Colors.white,
+  },
   reactionCountText: {
     fontSize: 12,
     color: '#333',
     marginTop: 2, 
     textAlign: 'center', 
+  },
+  postImage: {
+    width: 270,
+    height: 270,
+    resizeMode: 'contain',
+    alignSelf: 'center',
+  },
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Dark overlay background
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  fullScreenImage: {
+    width: '100%',  // Make the image take the full width of the screen
+    height: '100%', // Make the image take the full height of the screen
+    resizeMode: 'contain', // Keeps the aspect ratio intact when zooming
+  },
+  closeModalButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Optional: adds a background to the icon
+    borderRadius: 25, // Optional: to make the background circular
+    padding: 8, // Optional: adjust padding around the icon
   },
 });
