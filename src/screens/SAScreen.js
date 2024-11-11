@@ -53,7 +53,7 @@ export const SAScreen = ({ navigation }) => {
   };
 
   const handleLogsPress = () => {
-    console.log('Self-assessment logs');
+    navigation.navigate('SelfAssessmentLogs');
   };
 
   return (

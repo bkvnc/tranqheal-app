@@ -15,6 +15,7 @@ import { NotificationScreen } from './NotificationScreen';
 import { MenuScreen } from './MenuScreen';
 
 import { SAScreen } from './SAScreen';
+import { SelfAssessmentLogs } from './SelfAssessmentLogs';
 import { SAPreferenceScreen } from './SAPreferenceScreen';
 import { SAResultScreen } from './SAResultScreen';
 import { SAScreen2 } from './SAScreen2';
@@ -47,4 +48,4 @@ export { WelcomeScreen, RegisterAsScreen, LoginScreen,
     ForumPostScreen, OrganizationDetailsScreen, ProfessionalDetailsScreen,
     EditProfileScreen, ProfessionalHomeScreen, ViewRequestScreen,
     ViewRequestHistoryScreen, MoodMeterScreen, MoodScreen2, MoodResultScreen,
-    EditProfessionalProfileScreen, ProfessionalProfileScreen, SeekProfessionalScreen, MoodLogsScreen, MatchingScreen };
+    EditProfessionalProfileScreen, ProfessionalProfileScreen, SeekProfessionalScreen, MoodLogsScreen, MatchingScreen, SelfAssessmentLogs };

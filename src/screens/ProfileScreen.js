@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { RootLayout } from '../navigation/RootLayout';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { LoadingIndicator } from '../components';
 import { auth, firestore, storage } from '../config';
 import { AuthenticatedUserContext } from '../providers';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -14,23 +15,20 @@ export const ProfileScreen = () => {
   const { userType } = useContext(AuthenticatedUserContext);
   const navigation = useNavigation();
   const [profileData, setProfileData] = useState(null);
-  const [ imageUri, setImageUri ] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Function to handle image picking
   const pickImage = async () => {
-    // Request permission to access media library
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission denied', 'Sorry, we need camera roll permissions to make this work!');
       return;
     }
 
-    // Open image picker
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1], // Keep image square
-      quality: 1,     // Maximum quality
+      aspect: [1, 1],
+      quality: 1,     
     });
 
     if (!result.canceled) {
@@ -57,6 +55,7 @@ export const ProfileScreen = () => {
   };
 
   const fetchProfileData = async () => {
+    setIsLoading(true);
     const userId = auth.currentUser.uid;
     const userRef = doc(firestore, 'users', userId);
 
@@ -70,6 +69,8 @@ export const ProfileScreen = () => {
       }
     } catch(error){
       console.log('Error fetching profile data:', error.message)
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -78,6 +79,10 @@ export const ProfileScreen = () => {
       fetchProfileData();
     }, [])
   );
+
+  if (isLoading) {
+    return <LoadingIndicator />
+  }
 
   return (
     <RootLayout screenName="Profile" navigation={navigation} userType={userType}>
@@ -105,7 +110,7 @@ export const ProfileScreen = () => {
           {/* Username with Hovering Edit Icon */}
           <View style={styles.usernameContainer}>
             <Text style={styles.username}>
-              Username: {profileData ? profileData.username: 'Loading...'}
+              Username: {profileData?.username}
             </Text>
             <TouchableOpacity 
               style={styles.editButton} 
@@ -119,13 +124,11 @@ export const ProfileScreen = () => {
           <View style={styles.divider} />
           <View style={styles.personalDetails}>
             <Text style={styles.detailTitle}>
-              Full Name: {profileData 
-                ? `${profileData.firstName || ''} ${profileData.middleName || ''} ${profileData.lastName || ''}`.trim() || 'N/A'
-                : 'Loading...'}
+              Full Name: {`${profileData?.firstName || ''} ${profileData?.middleName || ''} ${profileData?.lastName || ''}`.trim() || 'N/A'}
             </Text>
-            <Text style={styles.detailTitle}>Age: {profileData ? profileData.age || 'N/A': 'Loading...'}</Text>
-            <Text style={styles.detailTitle}>Gender: {profileData ? profileData.gender || 'N/A': 'Loading...'}</Text>
-            <Text style={styles.detailTitle}>Contact: {profileData ? profileData.mobileNumber || 'N/A': 'Loading...'}</Text>
+            <Text style={styles.detailTitle}>Age: {profileData?.age || 'N/A'}</Text>
+            <Text style={styles.detailTitle}>Gender: {profileData?.gender || 'N/A'}</Text>
+            <Text style={styles.detailTitle}>Contact: {profileData?.mobileNumber || 'N/A'}</Text>
           </View>
 
           {/* Divider Line */}
@@ -133,9 +136,9 @@ export const ProfileScreen = () => {
 
           {/* Contact Details */}
           <View style={styles.contactDetails}>
-            <Text style={styles.detailTitle}>Mobile: {profileData ? profileData.mobileNumber || 'N/A': 'Loading...'}</Text>
-            <Text style={styles.detailTitle}>Email: {profileData ? profileData.email || 'N/A': 'Loading...'}</Text>
-            <Text style={styles.detailTitle}>Facebook: {profileData ? profileData.facebookLink || 'N/A': 'Loading...'}</Text>
+            <Text style={styles.detailTitle}>Mobile: {profileData?.mobileNumber || 'N/A'}</Text>
+            <Text style={styles.detailTitle}>Email: {profileData?.email || 'N/A'}</Text>
+            <Text style={styles.detailTitle}>Facebook: {profileData?.facebookLink || 'N/A'}</Text>
           </View>
         </View>
     </RootLayout>  
@@ -190,7 +193,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 20,
-    position: 'relative', // Relative to position the edit icon
+    position: 'relative', 
   },
   username: {
     fontSize: 24,
