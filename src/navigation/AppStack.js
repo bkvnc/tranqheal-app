@@ -4,7 +4,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { HomeScreen, MenuScreen, NotificationScreen, ProfileScreen, EditProfileScreen,
     ViewProfScreen, ProfessionalDetailsScreen, ViewOrgScreen, OrganizationDetailsScreen,
     SAPreferenceScreen, SAScreen, SAScreen2, SAScreen3, SAResultScreen, MoodScreen,
-    MoodScreen2, MoodResultScreen, MoodLogsScreen, MatchingScreen, SeekProfessionalScreen
+    MoodScreen2, MoodMeterScreen, MoodResultScreen, MoodLogsScreen, MatchingScreen, 
+    SeekProfessionalScreen,
 } from '../screens';
 
 import { ForumStack } from './ForumStack';
