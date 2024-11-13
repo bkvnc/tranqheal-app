@@ -42,9 +42,9 @@ const PostDetailsPage: React.FC = () => {
     const [hasReacted, setHasReacted] = useState<boolean>(false);
     const [anonymous, setAnonymous] = useState<boolean>(false);
     const [creatingComment, setCreatingComment] = useState<boolean>(false); 
-    const [replyContent, setReplyContent] = useState<string>('');
-    const [replyToCommentId, setReplyToCommentId] = useState<string | null>(null);
-    const [showReplyForms, setShowReplyForms] = useState<boolean>(false);
+    // const [replyContent, setReplyContent] = useState<string>('');
+    // const [replyToCommentId, setReplyToCommentId] = useState<string | null>(null);
+    // const [showReplyForms, setShowReplyForms] = useState<boolean>(false);
     
     const { 
         blacklistedWords,
@@ -116,7 +116,34 @@ const PostDetailsPage: React.FC = () => {
         };
     }, [forumId, postId]);
     const toggleHeart = async () => {
+        
         const userId = auth.currentUser?.uid;
+        const user = auth.currentUser;
+
+        let authorName = 'Unknown User';
+    
+            // Retrieve user information based on user type
+            const userRef = doc(db, 'users', user.uid);
+            const orgRef = doc(db, 'organizations', user.uid);
+            const profRef = doc(db, 'professionals', user.uid);
+    
+            const userDoc = await getDoc(userRef);
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                authorName = `${userData.firstName} ${userData.lastName}`; // For users
+            } else {
+                const orgDoc = await getDoc(orgRef);
+                if (orgDoc.exists()) {
+                    const orgData = orgDoc.data();
+                    authorName = orgData.organizationName; // For organizations
+                } else {
+                    const profDoc = await getDoc(profRef);
+                    if (profDoc.exists()) {
+                        const profData = profDoc.data();
+                        authorName = `${profData.firstName} ${profData.lastName}`; // For professionals
+                    }
+                }
+            }
         if (!post || !userId) return;
     
         const newReactions = new Set(post.userReactions || []);
@@ -135,9 +162,32 @@ const PostDetailsPage: React.FC = () => {
             userReactions: Array.from(newReactions),
             reacts: newReactions.size,
         };
-    
-       
         await updateDoc(doc(db, 'forums', forumId, 'posts', postId), updatedPost);
+
+        const postDocRef = doc(db, 'forums', forumId, 'posts', postId,);
+        const reactSnap = await getDoc(postDocRef );
+
+
+        const notificationRef = doc(collection(db, `notifications/${reactSnap.data().authorId}/messages`));
+        await setDoc(notificationRef, {
+            recipientId: reactSnap.data().authorId,
+            recipientType: reactSnap.data().authorType,  
+            message: `${authorName}  reacted on your post.`,
+            type: `react_post`,
+            createdAt: serverTimestamp(), 
+            isRead: false,
+            additionalData: {
+                forumId: forumId,
+            },
+        });
+
+        const notificationDoc = await getDoc(notificationRef);
+            const notificationData = notificationDoc.data();
+
+            if (notificationData && notificationData.createdAt) {
+            const createdAtDate = notificationData.createdAt.toDate();
+            console.log("Notification createdAt:", createdAtDate); // For debugging
+            }
         
         // Update local state
         setPost(updatedPost);
@@ -146,6 +196,32 @@ const PostDetailsPage: React.FC = () => {
 
     const toggleCommentReaction = async (commentId: string) => {
         const userId = auth.currentUser?.uid;
+        const user = auth.currentUser;
+
+        let authorName = 'Unknown User';
+    
+            // Retrieve user information based on user type
+            const userRef = doc(db, 'users', user.uid);
+            const orgRef = doc(db, 'organizations', user.uid);
+            const profRef = doc(db, 'professionals', user.uid);
+    
+            const userDoc = await getDoc(userRef);
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                authorName = `${userData.firstName} ${userData.lastName}`; // For users
+            } else {
+                const orgDoc = await getDoc(orgRef);
+                if (orgDoc.exists()) {
+                    const orgData = orgDoc.data();
+                    authorName = orgData.organizationName; // For organizations
+                } else {
+                    const profDoc = await getDoc(profRef);
+                    if (profDoc.exists()) {
+                        const profData = profDoc.data();
+                        authorName = `${profData.firstName} ${profData.lastName}`; // For professionals
+                    }
+                }
+            }
         if (!userId) return;
     
         const commentIndex = comments.findIndex(comment => comment.id === commentId);
@@ -165,6 +241,31 @@ const PostDetailsPage: React.FC = () => {
             userReactions: Array.from(newReactions),
             reacts: newReactions.size,
         };
+
+        const commentDocRef = doc(db, 'forums', forumId, 'posts', postId, 'comments', commentId);
+        const reactSnap = await getDoc(commentDocRef );
+
+
+        const notificationRef = doc(collection(db, `notifications/${reactSnap.data().authorId}/messages`));
+        await setDoc(notificationRef, {
+            recipientId: reactSnap.data().authorId,
+            recipientType: reactSnap.data().authorType,  
+            message: `${authorName}  reacted on your comment.`,
+            type: `react_comment`,
+            createdAt: serverTimestamp(), 
+            isRead: false,
+            additionalData: {
+                forumId: forumId,
+            },
+        });
+
+        const notificationDoc = await getDoc(notificationRef);
+            const notificationData = notificationDoc.data();
+
+            if (notificationData && notificationData.createdAt) {
+            const createdAtDate = notificationData.createdAt.toDate();
+            console.log("Notification createdAt:", createdAtDate); 
+            }
     
         try {
             await updateDoc(doc(db, 'forums', forumId, 'posts', postId, 'comments', commentId), updatedComment);
@@ -193,34 +294,6 @@ const PostDetailsPage: React.FC = () => {
 
         return () => unsubscribeComments();
     }, [forumId, postId]);
-
-    const handleAddReply = async (e: React.FormEvent, commentId: string) => {
-        e.preventDefault();
-
-        if (replyContent.trim() === '' || !auth.currentUser) return;
-
-        const user = auth.currentUser;
-        const authorName = user.displayName || 'Anonymous';
-
-        try {
-            const replyRef = collection(
-                db, 'forums', forumId, 'posts', postId, 'comments', commentId, 'replies'
-            );
-
-            await addDoc(replyRef, {
-                content: replyContent,
-                dateCreated: serverTimestamp(),
-                author: authorName,
-                authorId: user.uid,
-                commentId: commentId,
-            });
-
-            setReplyContent('');
-            setShowReplyForms(false);
-        } catch (error) {
-            console.error('Failed to add reply:', error);
-        }
-    };
 
     
     
@@ -467,7 +540,7 @@ const PostDetailsPage: React.FC = () => {
                                             {comment.reacts || 0}
                                         </span>
                                     </motion.button>
-                                    <div key={comment.id} className="comment-item">
+                                    {/* <div key={comment.id} className="comment-item">
                                         <button
                                             onClick={() => setReplyToCommentId(comment.id)}
                                             className="text-blue-500"
@@ -475,14 +548,14 @@ const PostDetailsPage: React.FC = () => {
                                             Reply
                                         </button>
 
-                                        {/* Replies */}
+                                        
                                         {comment.replies?.map((reply) => (
                                             <div key={reply.id} className="reply-item ml-4">
                                                 <p>{reply.content} - <span className="text-gray-500">{reply.author}</span></p>
                                             </div>
                                         ))}
 
-                                        {/* Reply Form */}
+                                       
                                         {replyToCommentId === comment.id && (
                                             <form onSubmit={(e) => handleAddReply(e, comment.id)}>
                                                 <input
@@ -495,7 +568,7 @@ const PostDetailsPage: React.FC = () => {
                                                 <button type="submit" className="btn-primary mt-2">Submit Reply</button>
                                             </form>
                                         )}
-                                    </div>
+                                    </div> */}
                                     {comment.authorId === auth.currentUser?.uid && (
                                         <div className="flex space-x-2 mt-2 ">
                                             <button

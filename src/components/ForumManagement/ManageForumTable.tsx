@@ -55,7 +55,7 @@ const ManageForumTable = () => {
         const forumsData = forumsSnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-            dateCreated: doc.data().dateCreated instanceof Date ? doc.data().dateCreated : doc.data().dateCreated?.toDate?.(), 
+            dateCreated: doc.data().dateCreated instanceof Date ? doc.data().dateCreated : new Date(doc.data().dateCreated),
         } as Forum));
         setForums(forumsData);
     };

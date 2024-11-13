@@ -21,16 +21,19 @@ export interface Forum {
 }
 
 
-// src/hooks/types.ts (or wherever the Report type is defined)
-export type ReportBody = 'spam' | 'inappropriate' | 'harassment'; // Example of specific values
+
 
 export interface Report {
   id: string;
-  body: ReportBody; // Make sure this matches how you want to store and use `body`
-  type: string;
-  url?: string;
-  dateCreated: Date;
-  toJSON(): string;
+  authorName: string;
+  contentType: 'Forum' | 'Post' | 'Comment';
+  forumId: string;
+  postId?: string;
+  commentId?: string;
+  reason: string;
+  reportedBy: string;
+  timestamp: Date;
+  reportCount: number;
 }
 
 
