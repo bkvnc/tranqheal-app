@@ -4,10 +4,17 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 const NotificationIndicator = ({ hasUnreadNotifications }) => {
   const pingAnim = useRef(new Animated.Value(0)).current;
+  const animationRef = useRef(null);
 
   useEffect(() => {
+    // Clear any existing animation
+    if (animationRef.current) {
+      animationRef.current.stop();
+    }
+
     if (hasUnreadNotifications) {
-      Animated.loop(
+      // Create and store the animation sequence
+      animationRef.current = Animated.loop(
         Animated.sequence([
           Animated.timing(pingAnim, {
             toValue: 1,
@@ -20,11 +27,23 @@ const NotificationIndicator = ({ hasUnreadNotifications }) => {
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      
+      // Start the animation
+      animationRef.current.start();
     } else {
+      // Reset the animation value when there are no notifications
       pingAnim.setValue(0);
     }
-  }, [hasUnreadNotifications]);
+
+    // Cleanup function to stop animation when component unmounts
+    // or when hasUnreadNotifications changes
+    return () => {
+      if (animationRef.current) {
+        animationRef.current.stop();
+      }
+    };
+  }, [hasUnreadNotifications, pingAnim]);
 
   const pingStyle = {
     transform: [
@@ -37,20 +56,18 @@ const NotificationIndicator = ({ hasUnreadNotifications }) => {
     ],
     opacity: pingAnim.interpolate({
       inputRange: [0, 1],
-      outputRange: [1, 0], // Fades out as it expands
+      outputRange: [1, 0],
     }),
   };
 
   return (
     <View style={styles.indicator}>
-      {hasUnreadNotifications ? (
-        <Ionicons name="notifications" size={35} />
-      ) : (
-        <Ionicons name="notifications-outline" size={35} />
-      )}
+      <Ionicons
+        name={hasUnreadNotifications ? "notifications" : "notifications-outline"}
+        size={35}
+      />
       {hasUnreadNotifications && (
         <View style={styles.notificationCircle}>
-
           <Animated.View style={[styles.pingCircle, pingStyle]} />
         </View>
       )}

@@ -4,9 +4,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../config';
 import NotificationIndicator from '../components/NotificationIndicator';
 import { useState } from 'react';
+import { useNotifications } from '../components/NotificationContext';
 
 export const RootLayout = ({ children, navigation, screenName, userType,  }) => {
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
+  const { hasUnreadNotifications } = useNotifications();
 
   const renderLeftIcon = () => {
     if (screenName === 'Home' || screenName === 'ProfessionalHome') {
@@ -34,8 +35,8 @@ export const RootLayout = ({ children, navigation, screenName, userType,  }) => 
             {renderLeftIcon()}
             <Image source={require('../assets/small-logo.jpg')} style={styles.logo} />
             <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
-            <NotificationIndicator hasUnreadNotifications={hasUnreadNotifications}/>
-            </TouchableOpacity>
+            <NotificationIndicator hasUnreadNotifications={hasUnreadNotifications} />
+          </TouchableOpacity>
         </View>
 
         {/* Main content (children) */}

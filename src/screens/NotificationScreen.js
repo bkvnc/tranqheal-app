@@ -1,20 +1,17 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { RootLayout } from '../navigation/RootLayout';
-import { AuthenticatedUserContext } from '../providers';
+import { useNotifications } from '../components/NotificationContext';
 import { auth, firestore } from '../config/firebase';
-import { doc, query, collection, orderBy, onSnapshot, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
-
+import { doc, query, collection, orderBy, onSnapshot, updateDoc, writeBatch } from 'firebase/firestore';
 
 export const NotificationScreen = () => {
-  const { userType } = useContext(AuthenticatedUserContext);
   const navigation = useNavigation();
+  const { setHasUnreadNotifications } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
-
   const user = auth.currentUser;
 
   useEffect(() => {
@@ -25,21 +22,19 @@ export const NotificationScreen = () => {
         const q = query(notificationsRef, orderBy('createdAt', 'desc'));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-          const userNotifications = snapshot.docs.map((doc) => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              message: data.message,
-              recipientId: data.recipientId,
-              recipientType: data.recipientType,
-              createdAt: data.createdAt ? data.createdAt.toDate() : null,
-              isRead: data.isRead || false,
-              type: data.type,
-            };
-          });
+          const userNotifications = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            message: doc.data().message,
+            recipientId: doc.data().recipientId,
+            recipientType: doc.data().recipientType,
+            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : null,
+            isRead: doc.data().isRead || false,
+            type: doc.data().type,
+          }));
           setNotifications(userNotifications);
+          // Update global notification state
+          setHasUnreadNotifications(userNotifications.some(notification => !notification.isRead));
         });
-
 
         return () => unsubscribe();
       } catch (error) {
@@ -50,13 +45,7 @@ export const NotificationScreen = () => {
     };
 
     fetchNotifications();
-  }, [user]);
-
-  useEffect(() => {
-    setHasUnreadNotifications(
-      notifications.some((notification) => !notification.isRead)
-    );
-  }, [notifications]);
+  }, [user, setHasUnreadNotifications]);
 
   const markNotificationAsRead = async (id) => {
     try {
@@ -69,22 +58,14 @@ export const NotificationScreen = () => {
 
   const handleMarkAsRead = async (id) => {
     try {
-      await markNotificationAsRead(id);  // Your function to update the notification in Firebase
-      setNotifications((prevNotifications) =>
-        prevNotifications.map((notification) =>
-          notification.id === id ? { ...notification, isRead: true } : notification
-        )
-      );
-  
-      // Check if any notifications are still unread
-      const unreadNotifications = notifications.some((notification) => !notification.isRead);
-      setHasUnreadNotifications(unreadNotifications);
+      await markNotificationAsRead(id);
+      // No need to manually update notifications array or hasUnreadNotifications
+      // as the onSnapshot listener will automatically update both
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
   };
-  
-  
+
   const clearNotifications = () => {
     Alert.alert(
       'Clear All Notifications',
@@ -95,7 +76,7 @@ export const NotificationScreen = () => {
           text: 'Clear',
           onPress: async () => {
             try {
-              const batch = writeBatch(firestore); // Firestore batch to delete notifications
+              const batch = writeBatch(firestore);
               notifications.forEach((notification) => {
                 const notificationRef = doc(
                   firestore,
@@ -105,8 +86,7 @@ export const NotificationScreen = () => {
                 batch.delete(notificationRef);
               });
               await batch.commit();
-              setNotifications([]); // Clear notifications
-              setHasUnreadNotifications(false); // Reset unread state
+              // No need to manually update state as onSnapshot will handle it
             } catch (error) {
               console.error("Error clearing notifications:", error);
             }
@@ -115,8 +95,6 @@ export const NotificationScreen = () => {
       ]
     );
   };
-  
-    
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -131,18 +109,19 @@ export const NotificationScreen = () => {
       <Text style={styles.notificationTime}>{formatDate(item.createdAt)}</Text>
       <Text style={styles.notificationDescription}>{item.message}</Text>
       {!item.isRead && (
-        <TouchableOpacity onPress={() => handleMarkAsRead(item.id)} style={styles.markAsReadButton}>
+        <TouchableOpacity 
+          onPress={() => handleMarkAsRead(item.id)} 
+          style={styles.markAsReadButton}
+        >
           <Text style={styles.markAsReadText}>Mark as Read</Text>
         </TouchableOpacity>
       )}
     </TouchableOpacity>
   );
 
-
   return (
-    <RootLayout navigation={navigation} screenName="Notifications" userType={userType}>
+    <RootLayout navigation={navigation} screenName="Notifications">
       <View style={{ flex: 1, padding: 20, backgroundColor: 'white' }}>
-        
         <View style={styles.header}>
           <View style={styles.textContainer}>
             <Text style={styles.ProfileTitle}>Notifications</Text>
@@ -162,7 +141,6 @@ export const NotificationScreen = () => {
       </View>
     </RootLayout>
   );
-
 };
 
 const styles = StyleSheet.create({

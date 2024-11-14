@@ -50,6 +50,8 @@ export const PostDetailsScreen = ({ route, navigation }) => {
     fetchPostDetails();
   }, [auth.currentUser]);
 
+
+ 
   //Fetch Post Details
   const fetchPostDetails = async () => {
     try {
@@ -299,6 +301,29 @@ useEffect(() => {
             reactedBy: [...reactedBy, user.uid],
           });
           setReacts(currentReacts + 1);
+          const reactSnap = await getDoc(postRef );
+
+
+        const notificationRef = doc(collection(db, `notifications/${reactSnap.data().authorId}/messages`));
+        await setDoc(notificationRef, {
+            recipientId: reactSnap.data().authorId,
+            recipientType: reactSnap.data().authorType,  
+            message: `${authorName}  reacted on your post.`,
+            type: `react_post`,
+            createdAt: serverTimestamp(), 
+            isRead: false,
+            additionalData: {
+                forumId: forumId,
+            },
+        });
+
+        const notificationDoc = await getDoc(notificationRef);
+            const notificationData = notificationDoc.data();
+
+            if (notificationData && notificationData.createdAt) {
+            const createdAtDate = notificationData.createdAt.toDate();
+            console.log("Notification createdAt:", createdAtDate); // For debugging
+            }
         }
   
         // Update local state
@@ -333,6 +358,31 @@ useEffect(() => {
           commentReactedBy: updatedReactedBy,
           commentReacted: updatedReactCount,
         });
+
+
+        const reactSnap = await getDoc(commentRef );
+
+
+        const notificationRef = doc(collection(db, `notifications/${reactSnap.data().authorId}/messages`));
+        await setDoc(notificationRef, {
+            recipientId: reactSnap.data().authorId,
+            recipientType: reactSnap.data().authorType,  
+            message: `${authorName}  reacted on your comment.`,
+            type: `react_comment`,
+            createdAt: serverTimestamp(), 
+            isRead: false,
+            additionalData: {
+                forumId: forumId,
+            },
+        });
+
+        const notificationDoc = await getDoc(notificationRef);
+            const notificationData = notificationDoc.data();
+
+            if (notificationData && notificationData.createdAt) {
+            const createdAtDate = notificationData.createdAt.toDate();
+            console.log("Notification createdAt:", createdAtDate); // For debugging
+            }
   
         // Update local state
         setComments((prevComments) =>
@@ -414,8 +464,8 @@ useEffect(() => {
   };
 
   // Report a post
-const handleReportPost = (postId) => {
-  const reporterName = getUserName();
+const handleReportPost = async (postId) => {
+  const reporterName = await getUserName();
   Alert.alert(
     "Report Post",
     "Are you sure you want to report this post?",
@@ -431,10 +481,12 @@ const handleReportPost = (postId) => {
 
             if (postDoc.exists()) {
               // Increment the reportCount field
+              const authorName = postDoc.data().authorName;
               const currentReportCount = postDoc.data().reportCount || 0;
               await updateDoc(postRef, {
                 reportCount: currentReportCount + 1,
               });
+              
 
               // Add a new report document in the 'reports' subcollection
               await addDoc(collection(postRef, "reports"), {
@@ -462,8 +514,9 @@ const handleReportPost = (postId) => {
 
   
  // Report a comment
-const handleReportComment = (commentId) => {
-  const reporterName = getUserName();
+const handleReportComment = async (commentId) => {
+  const reporterName = await getUserName();
+ 
   Alert.alert(
     "Report Comment",
     "Are you sure you want to report this comment?",
