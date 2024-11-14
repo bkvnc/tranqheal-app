@@ -497,6 +497,7 @@ const styles = StyleSheet.create({
   },
   tagOptionText: {
     fontSize: 14,
+    color: '#D3D3D3',
   },
   modalContainer: {
     flex: 1,

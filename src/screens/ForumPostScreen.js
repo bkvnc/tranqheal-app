@@ -34,7 +34,6 @@ export const ForumPostScreen = ({ route, navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);  
   const [authorName, setAuthorName] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [imageUri, setImageUri] = useState(null);
   const [selectedImageUri, setSelectedImageUri] = useState(null);
 
   const predefinedTags = [
@@ -84,10 +83,10 @@ export const ForumPostScreen = ({ route, navigation }) => {
   }, [auth.currentUser]);
 
   const onRefresh = async () => {
-    setRefreshing(true); // Set refreshing state to true
-    await fetchPosts();  // Fetch posts again
+    setRefreshing(true); 
+    await fetchPosts();  
     await fetchForumDetails();
-    setRefreshing(false); // Reset refreshing state
+    setRefreshing(false); 
   };
 
   // Function to fetch posts
@@ -658,7 +657,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     modalContent: {
-        width: '80%',
+        width: '90%',
         backgroundColor: 'white',
         padding: 20,
         borderRadius: 10,
@@ -745,9 +744,9 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   imagePreview: {
-    width: 100,
-    height: 100,
-    marginTop: 10,
+    width: 60,
+    height: 60,
+    marginBottom: 10,
     borderRadius: 10,
   },
   metaContainer: {
