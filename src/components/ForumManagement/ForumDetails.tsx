@@ -36,6 +36,7 @@ const ForumDetailsPage: React.FC = () => {
         forum, posts, error, anonymous, isMember, isAuthor, postContent, postTitle,creatingPost,
         setBlacklistedWords, handleJoinLeaveForum, blacklistedWords,  
         handleSubmitPost, handleDeletePost, handlePostContentChange, setAnonymous, handlePostTitleChange, setError, setLoading,
+        handleImageChange, imagePreview, setSelectedImage,setImagePreview
     } = useForum(forumId);
    
    
@@ -138,33 +139,50 @@ const ForumDetailsPage: React.FC = () => {
                 {posts.length > 0 ? (
                     <ul className="space-y-6">
                         {posts.filter(post => post.status === 'approved').map(post => (
-                                <li key={post.id} className="p-6 bg-white shadow-md rounded-lg border border-gray-200 transition-transform transform hover:scale-105">
-                                    <div className="flex items-start space-x-4">
-                                        <img
-                                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'Anonymous')}&background=random`}
-                                            alt={post.authorName || 'Anonymous'}
-                                            className="w-10 h-10 rounded-full"
-                                        />
-                                        <div className="flex-1">
-                                            <Link to={`/forums/${forumId}/posts/${post.id}`} className="text-black hover:underline">
-                                                {post.title}
-                                            </Link>
-                                            <p className="text-sm text-gray-500 mt-2">
-                                                {post.content}
-                                            </p>
-                                            <p className="text-sm text-gray-500 mt-2">
-                                                By <a href={`/profile/${post.authorId}`} className="text-primary hover:underline">{post.authorName}</a> on {formattedDate(post.dateCreated)}
-                                            </p>
-
-                                            {userStatus.canDeletePosts && (
-                                                <button onClick={() => handleDeletePost(post.id)} className="text-black mt-2 hover:text-red-700 transition">
-                                                    Delete
-                                                </button>
-                                            )}
-                                        </div>
+                            <li key={post.id} className="p-6 bg-white shadow-md rounded-lg border border-gray-200 transition-transform transform hover:scale-105">
+                                <div className="flex items-start space-x-4">
+                                    <img
+                                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'Anonymous')}&background=random`}
+                                        alt={post.authorName || 'Anonymous'}
+                                        className="w-10 h-10 rounded-full"
+                                    />
+                                    <div className="flex-1">
+                                        <Link to={`/forums/${forumId}/posts/${post.id}`} className="text-black hover:underline">
+                                            {post.title}
+                                        </Link>
+                                        <p className="text-sm text-gray-500 mt-2">
+                                            {post.content}
+                                        </p>
+                                        
+                                        {/* Add image display if post has an image */}
+                                        {post.imageUrl && (
+                                            <div className="mt-3">
+                                                <img
+                                                    src={post.imageUrl}
+                                                    alt="Post content"
+                                                    className="rounded-lg max-h-64 object-cover"
+                                                    onClick={() => window.open(post.imageUrl, '_blank')}
+                                                    style={{ cursor: 'pointer' }}
+                                                />
+                                            </div>
+                                        )}
+                                        
+                                        <p className="text-sm text-gray-500 mt-2">
+                                            By <a href={`/profile/${post.authorId}`} className="text-primary hover:underline">{post.authorName}</a> on {formattedDate(post.dateCreated)}
+                                        </p>
+                                        
+                                        {userStatus.canDeletePosts && (
+                                            <button 
+                                                onClick={() => handleDeletePost(post.id)} 
+                                                className="mt-2 text-danger hover:text-white hover:bg-danger hover:bg-opacity-90 px-4 py-2 rounded-md hover:shadow-lg hover:shadow-danger/50 transition"
+                                            >
+                                                Delete
+                                            </button>
+                                        )}
                                     </div>
-                                </li>
-                            ))}
+                                </div>
+                            </li>
+                        ))}
                     </ul>
                 ) : (
                     <p className="text-gray-600">No posts available.</p>
@@ -175,7 +193,7 @@ const ForumDetailsPage: React.FC = () => {
                 <div className="mt-8">
                     <button
                         onClick={() => setShowPostForm(prev => !prev)}
-                        className="px-6 py-2 bg-blue-600 dark:text-white hover:bg-[#9F4FDD] hover:text-white rounded-md hover:bg-blue-700 transition"
+                        className="px-6 py-2 bg-blue-600 text-[#9F4FDD] dark:text-white hover:bg-[#9F4FDD] hover:text-white hover:shadow-lg hover:shadow-[#9F4FDD]/50 rounded-md hover:bg-blue-700 transition"
                     >
                         {showPostForm ? 'Cancel' : 'Add a Post'}
                     </button>
@@ -209,6 +227,44 @@ const ForumDetailsPage: React.FC = () => {
                             className="mt-2 bg-gray-100 p-2 rounded"
                             dangerouslySetInnerHTML={{ __html: highlightText(postContent, blacklistedWords) }}
                         />
+                        
+                        {/* Image upload section */}
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Add an image (optional)
+                            </label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageChange}
+                                className="block w-full text-sm text-gray-500
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-md file:border-0
+                                    file:text-sm file:font-semibold
+                                  file:text-[#9F4FDD] file:bg-[rgb(234,233,235)]
+                                    hover:file:bg-[#9F4FDD] hover:file:text-white hover:file:shadow-lg hover:file:shadow-[#9F4FDD]/50 transition"
+                            />
+                            {imagePreview && (
+                                <div className="mt-2">
+                                    <img
+                                        src={imagePreview}
+                                        alt="Preview"
+                                        className="max-w-xs h-auto rounded-lg shadow-sm"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedImage(null);
+                                            setImagePreview(null);
+                                        }}
+                                        className="mt-2 text-sm text-red-600 hover:text-red-700"
+                                    >
+                                        Remove image
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="flex items-center mt-3">
                             <label className="flex items-center space-x-2">
                                 <input
@@ -222,7 +278,7 @@ const ForumDetailsPage: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={creatingPost}
-                                className="ml-auto px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md"
+                                className="ml-auto px-6 py-2 text-[#9F4FDD] dark:text-white hover:bg-[#9F4FDD] hover:text-white hover:shadow-lg hover:shadow-[#9F4FDD]/50 rounded-md transition"
                             >
                                 {creatingPost ? 'Posting...' : 'Post'}
                             </button>

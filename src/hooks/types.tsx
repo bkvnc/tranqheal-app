@@ -51,11 +51,12 @@ export interface Post {
     content: string;
     author: string; 
     authorId: string; 
-    reacts: number;
+    reacted: number;
     forumId: string;
-    userReactions: string[]; 
+    reactedBy: string[]; 
     authorName: string;
     authorType: string;
+    imageUrl?: string;
 }
 
 
@@ -68,8 +69,8 @@ export interface Comment {
     postId: string;
     commentReactions: string[];
     reports: string[];
-    userReactions?: string[];
-    reacts?: number;
+    reactedBy?: string[];
+    reacted?: number;
     replies?: Comment[]
     
 }

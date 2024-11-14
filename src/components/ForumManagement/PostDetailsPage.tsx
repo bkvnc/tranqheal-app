@@ -74,7 +74,7 @@ const PostDetailsPage: React.FC = () => {
                 const docSnap = await getDoc(docRef);
     
                 if (docSnap.exists()) {
-                    const postData = { id: postId, ...docSnap.data() } as Post; // Cast the fetched data to Post
+                    const postData = { id: postId, ...docSnap.data() } as Post;
                     
                     // Check if post is pending
                     if (postData.status === 'pending') {
@@ -86,7 +86,7 @@ const PostDetailsPage: React.FC = () => {
                     // Check if the current user has reacted
                     const userId = auth.currentUser?.uid;
                     if (userId) {
-                        setHasReacted(postData.userReactions?.includes(userId) || false);
+                        setHasReacted(postData.reactedBy?.includes(userId) || false);
                     }
                 } else {
                     setError('Post not found');
@@ -146,7 +146,7 @@ const PostDetailsPage: React.FC = () => {
             }
         if (!post || !userId) return;
     
-        const newReactions = new Set(post.userReactions || []);
+        const newReactions = new Set(post.reactedBy || []);
        
         
         
@@ -159,10 +159,10 @@ const PostDetailsPage: React.FC = () => {
        
         const updatedPost = {
             ...post,
-            userReactions: Array.from(newReactions),
-            reacts: newReactions.size,
+            reactedBy: Array.from(newReactions),
+            reacted: newReactions.size,
         };
-        await updateDoc(doc(db, 'forums', forumId, 'posts', postId), updatedPost);
+        await setDoc(doc(db, 'forums', forumId, 'posts', postId), updatedPost);
 
         const postDocRef = doc(db, 'forums', forumId, 'posts', postId,);
         const reactSnap = await getDoc(postDocRef );
@@ -228,7 +228,7 @@ const PostDetailsPage: React.FC = () => {
         if (commentIndex === -1) return;
     
         const comment = comments[commentIndex];
-        const newReactions = new Set(comment.userReactions || []);
+        const newReactions = new Set(comment.reactedBy || []);
     
         if (newReactions.has(userId)) {
             newReactions.delete(userId);
@@ -238,8 +238,8 @@ const PostDetailsPage: React.FC = () => {
     
         const updatedComment = {
             ...comment,
-            userReactions: Array.from(newReactions),
-            reacts: newReactions.size,
+            reactedBy: Array.from(newReactions),
+            reacted: newReactions.size,
         };
 
         const commentDocRef = doc(db, 'forums', forumId, 'posts', postId, 'comments', commentId);
@@ -312,12 +312,12 @@ const PostDetailsPage: React.FC = () => {
         }
     
         try {
-            // Set the path to the comments subcollection within the post
+            
             const commentRef = collection(db, 'forums', forumId, 'posts', postId, 'comments');
             
             let authorName = 'Unknown User';
     
-            // Retrieve user information based on user type
+        
             const userRef = doc(db, 'users', user.uid);
             const orgRef = doc(db, 'organizations', user.uid);
             const profRef = doc(db, 'professionals', user.uid);
@@ -325,17 +325,17 @@ const PostDetailsPage: React.FC = () => {
             const userDoc = await getDoc(userRef);
             if (userDoc.exists()) {
                 const userData = userDoc.data();
-                authorName = `${userData.firstName} ${userData.lastName}`; // For users
+                authorName = `${userData.firstName} ${userData.lastName}`; 
             } else {
                 const orgDoc = await getDoc(orgRef);
                 if (orgDoc.exists()) {
                     const orgData = orgDoc.data();
-                    authorName = orgData.organizationName; // For organizations
+                    authorName = orgData.organizationName; 
                 } else {
                     const profDoc = await getDoc(profRef);
                     if (profDoc.exists()) {
                         const profData = profDoc.data();
-                        authorName = `${profData.firstName} ${profData.lastName}`; // For professionals
+                        authorName = `${profData.firstName} ${profData.lastName}`;
                     }
                 }
             }
@@ -454,42 +454,56 @@ const PostDetailsPage: React.FC = () => {
     return (
         <div className="container mx-auto bg-white rounded-lg p-6 shadow-lg dark:bg-boxdark">
             <div className="mb-6">
-                <h1 className="text-4xl font-bold mb-2">{post.content}</h1>
+                <h1 className="text-4xl font-bold mb-2">{post.title}</h1>
                 <p className="text-sm text-gray-500">
                     By <a href={`/profile/${post.authorId}`} className="text-blue-500 hover:underline">{post.authorName}</a> on {dayjs(post.dateCreated.toDate()).format('MMM D, YYYY')}
                 </p>
+                <p className="text-gray-700">{post.content}</p>
             </div>
+
+              {/* Add image display */}
+                {post.imageUrl && (
+                    <div className="mt-4 mb-4">
+                        <img
+                            src={post.imageUrl}
+                            alt="Post content"
+                            className="rounded-lg max-h-96 object-contain w-full cursor-pointer"
+                            onClick={() => window.open(post.imageUrl, '_blank')}
+                        />
+                    </div>
+                )}
+            
 
             {/* Reaction Section */}
             <div className="flex items-center mb-6">
-            <motion.button
-                onClick={toggleHeart}
-                className={`flex items-center px-3 py-2 rounded-md transition-all duration-200 ${hasReacted ? 'text-danger' : 'bg-gray-100 text-gray-400'}`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" className="ionicon" viewBox="0 0 512 512" width={20} height={20}>
-                    <path
-                        d="M352.92 80C288 80 256 144 256 144s-32-64-96.92-64c-52.76 0-94.54 44.14-95.08 96.81-1.1 109.33 86.73 187.08 183 252.42a16 16 0 0018 0c96.26-65.34 184.09-143.09 183-252.42-.54-52.67-42.32-96.81-95.08-96.81z"
-                        fill={hasReacted ? 'currentColor' : 'none'}
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="32"
-                    />
-                </svg>
-                <span className="ml-2 font-semibold">
-                    {post.reacts} {post.reacts === 1 ? 'react' : 'reactions'}
-                </span>
-            </motion.button>
-            
-            <button
-                onClick={() => setShowComments(!showComments)}
-                className=" px-4 py-2 font-semibold rounded-md dark:text-white hover:text-white hover:bg-[#9F4FDD] transition"
-            >
-                {showComments ? 'Hide Comments' : `Show Comments (${comments.length})`}
-            </button>
-        </div>
+                <motion.button
+                    onClick={toggleHeart}
+                    className={`flex items-center px-3 py-2 rounded-md transition-all duration-200 ${hasReacted ? 'text-danger' : 'bg-gray-100 text-gray-400'}`}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="ionicon" viewBox="0 0 512 512" width={20} height={20}>
+                        <path
+                            d="M352.92 80C288 80 256 144 256 144s-32-64-96.92-64c-52.76 0-94.54 44.14-95.08 96.81-1.1 109.33 86.73 187.08 183 252.42a16 16 0 0018 0c96.26-65.34 184.09-143.09 183-252.42-.54-52.67-42.32-96.81-95.08-96.81z"
+                            fill={hasReacted ? 'currentColor' : 'none'}
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="32"
+                        />
+                    </svg>
+                    <span className="ml-2 font-semibold">
+                        {post.reacted} {post.reacted === 1 ? 'react' : 'reactions'}
+                    </span>
+                </motion.button>
+                
+                <button
+                    onClick={() => setShowComments(!showComments)}
+                    className=" px-4 py-2 text-[#9F4FDD] hover:text-white hover:shadow-lg hover:shadow-[#9F4FDD]/50 rounded-md dark:text-white hover:bg-[#9F4FDD] transition"
+                >
+                    {showComments ? 'Hide Comments' : `Show Comments (${comments.length})`}
+                </button>
+            </div>
 
 
           
@@ -501,7 +515,7 @@ const PostDetailsPage: React.FC = () => {
                     <h2 className="text-lg font-semibold  mb-2">Comments</h2>
                     <button
                         onClick={() => setShowCommentForm(!showCommentForm)}
-                        className="mb-4 px-4 py-2 bg-green-500 font-semibold rounded-md dark:text-white hover:text-white hover:bg-[#9F4FDD] transition"
+                        className="mt-4 px-4 py-2 text-[#9F4FDD] hover:text-white hover:shadow-lg hover:shadow-[#9F4FDD]/50 rounded-md dark:text-white hover:bg-[#9F4FDD] transition"
                     >
                         {showCommentForm ? 'Cancel' : 'Write a Comment'}
                     </button>
@@ -521,7 +535,7 @@ const PostDetailsPage: React.FC = () => {
                                     <motion.button
                                         onClick={() => toggleCommentReaction(comment.id)}
                                         className={`flex items-center mt-2 px-2 py-1 rounded-md transition-all duration-200 ${
-                                            comment.userReactions?.includes(auth.currentUser?.uid || '') ? 'text-danger' : 'text-gray-400'
+                                            comment.reactedBy?.includes(auth.currentUser?.uid || '') ? 'text-danger' : 'text-gray-400'
                                         }`}
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
@@ -529,7 +543,7 @@ const PostDetailsPage: React.FC = () => {
                                         <svg xmlns="http://www.w3.org/2000/svg" className="ionicon" viewBox="0 0 512 512" width={16} height={16}>
                                             <path
                                                 d="M352.92 80C288 80 256 144 256 144s-32-64-96.92-64c-52.76 0-94.54 44.14-95.08 96.81-1.1 109.33 86.73 187.08 183 252.42a16 16 0 0018 0c96.26-65.34 184.09-143.09 183-252.42-.54-52.67-42.32-96.81-95.08-96.81z"
-                                                fill={comment.userReactions?.includes(auth.currentUser?.uid || '') ? 'currentColor' : 'none'}
+                                                fill={comment.reactedBy?.includes(auth.currentUser?.uid || '') ? 'currentColor' : 'none'}
                                                 stroke="currentColor"
                                                 strokeLinecap="round"
                                                 strokeLinejoin="round"
@@ -537,7 +551,7 @@ const PostDetailsPage: React.FC = () => {
                                             />
                                         </svg>
                                         <span className="ml-1 text-sm">
-                                            {comment.reacts || 0}
+                                            {comment.reacted || 0}
                                         </span>
                                     </motion.button>
                                     {/* <div key={comment.id} className="comment-item">
@@ -573,13 +587,13 @@ const PostDetailsPage: React.FC = () => {
                                         <div className="flex space-x-2 mt-2 ">
                                             <button
                                                 onClick={() => handleDeleteComment(forumId, postId, comment.id)}
-                                                className="text-red-500 hover:underline"
+                                                className="mt-2 text-danger hover:text-white hover:bg-danger hover:bg-opacity-90 px-4 py-2 rounded-md hover:shadow-lg hover:shadow-danger/50 transition"
                                             >
                                                 Delete
                                             </button>
                                             <button
                                                 onClick={() => handleEditComment(comment.id, comment.content)}
-                                                className="text-blue-500 hover:underline"
+                                                className="mt-2 text-primary hover:text-white hover:bg-primary hover:bg-opacity-90 px-4 py-2 rounded-md hover:shadow-lg hover:shadow-primary/50 transition"
                                             >
                                                 Edit
                                             </button>
@@ -621,7 +635,7 @@ const PostDetailsPage: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={creatingComment}
-                                className="ml-auto px-6 py-2 bg-green-600 hover:bg-[#9F4FDD] hover:text-white dark:text-white rounded-md hover:bg-green-700 transition"
+                                className=" mt-4 ml-auto px-6 py-2 text-[#9F4FDD] hover:text-white hover:shadow-lg hover:shadow-[#9F4FDD]/50 rounded-md dark:text-white hover:bg-[#9F4FDD] transition"
                             >
                                 {creatingComment ? 'Posting...' : 'Post'}
                             </button>   
