@@ -99,7 +99,7 @@ export const ForumPostScreen = ({ route, navigation }) => {
       Alert.alert('Error', 'Could not check membership status.');
     }
     };
-
+    checkBanStatus();
     fetchUserData();
     fetchPosts();
     checkMembership();
