@@ -1,17 +1,22 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, Alert, StyleSheet, Image, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, Alert, StyleSheet, Image, RefreshControl } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import moment from 'moment';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, doc, updateDoc, deleteDoc, setDoc, } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, Timestamp} from 'firebase/firestore';
 import { auth, Colors, firestore } from 'src/config';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import * as ImagePicker from 'expo-image-picker';
+import { LoadingIndicator } from '../components';
 
 export const PostDetailsScreen = ({ route, navigation }) => {
   const { user, userType } = useContext(AuthenticatedUserContext);
   const { postId, forumId } = route.params;
   const [postData, setPostData] = useState(null);
   const [authorName, setAuthorName] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [ loading, setLoading ] = useState(true);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [commentToEdit, setCommentToEdit] = useState(null);
@@ -25,12 +30,18 @@ export const PostDetailsScreen = ({ route, navigation }) => {
   const [isEditPostModalVisible, setIsEditPostModalVisible] = useState(false); 
   const [isEditCommentModalVisible, setIsEditCommentModalVisible] = useState(false);
   const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
-  const [blacklistedWords, setBlacklistedWords] = useState([]);
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
-
+  const [blacklistedWords, setBlacklistedWords] = useState([]);
+  const [editedImageUri, setEditedImageUri] = useState(null);
   
 
-  
+  const onRefresh = async () => {
+    setRefreshing(true); 
+    await fetchPostDetails();  
+    await fetchComments();
+    await fetchBlacklistedWords();
+    setRefreshing(false); 
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -48,13 +59,19 @@ export const PostDetailsScreen = ({ route, navigation }) => {
       } catch (error) {
         console.error('Error fetching user data:', error);
         Alert.alert('Error', 'Could not fetch user data.');
+      } finally {
+        setLoading(false);
       }
     };
   
     fetchUserData();
-    fetchPostDetails();
+    fetchPostDetails();  
+    fetchComments();
+    fetchBlacklistedWords();
   }, [auth.currentUser]);
 
+
+ 
   //Fetch Post Details
   const fetchPostDetails = async () => {
     try {
@@ -62,7 +79,12 @@ export const PostDetailsScreen = ({ route, navigation }) => {
       const postSnapshot = await getDoc(postRef);
   
       if (postSnapshot.exists()) {
-        setPostData(postSnapshot.data());
+        const data = postSnapshot.data();
+        const currentReactCount = data.reacted || 0;
+        setPostData(data);
+        setReacts(currentReactCount);
+        
+        setUserReacted(data.reactedBy.includes(user.uid)); // Check if the user has reacted
       } else {
         console.error('Post not found.');
         Alert.alert('Error', 'Post not found.');
@@ -70,6 +92,33 @@ export const PostDetailsScreen = ({ route, navigation }) => {
     } catch (error) {
       console.error('Error fetching post details:', error);
       Alert.alert('Error', 'Could not fetch post details.');
+    }
+  };
+  
+  //Fecth Comments
+  const fetchComments = async () => {
+    try {
+      const commentsRef = collection(firestore, `forums/${forumId}/posts/${postId}/comments`);
+      const snapshot = await getDocs(commentsRef);
+  
+      if (!snapshot.empty) {
+        const fetchedComments = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            dateCreated: data.dateCreated ? data.dateCreated.toDate() : null,
+            userReacted: data.commentReactedBy && data.commentReactedBy.includes(user.uid), // Check if the user has reacted to this comment
+          };
+        });
+        setComments(fetchedComments);
+      } else {
+        console.log('No comments found for this post.');
+        setComments([]); // Clear the comments if none exist
+      }
+    } catch (error) {
+      console.error("Error fetching comments: ", error.message);
+      Alert.alert('Error', 'Could not fetch comments.');
     }
   };
   
@@ -103,32 +152,6 @@ const handleDeletePost = () => {
   );
 };
 
-//Fecth Comments
-useEffect(() => {
-  const fetchComments = async () => {
-    try {
-      const commentsRef = collection(firestore, `forums/${forumId}/posts/${postId}/comments`);
-      const snapshot = await getDocs(commentsRef);
-
-      if (!snapshot.empty) {
-        const fetchedComments = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          dateCreated: doc.data().dateCreated ? doc.data().dateCreated.toDate() : null,
-        }));
-        setComments(fetchedComments);
-      } else {
-        console.log('No comments found for this post.');
-        setComments([]); // Clear the comments if none exist
-      }
-    } catch (error) {
-      console.error("Error fetching comments: ", error.message); // Log the exact error message
-      Alert.alert('Error', 'Could not fetch comments.');
-    }
-  };
-
-  fetchComments();
-}, [postId]);
 
   // Helper function to create a flexible regex pattern that detects repeated letters
   const createFlexibleRegex = (word) => {
@@ -149,9 +172,8 @@ useEffect(() => {
   };
 
   //Fetch blacklisted words
-  useEffect(() => {
-    const fetchBlacklistedWords = async () => {
-      try {
+  const fetchBlacklistedWords = async () => {
+    try {
         const blacklistedWordsRef = collection(firestore, 'blacklistedWords');
         const snapshot = await getDocs(blacklistedWordsRef);
         setBlacklistedWords(snapshot.docs.map(doc => doc.data().word.toLowerCase()));
@@ -160,9 +182,6 @@ useEffect(() => {
       }
     };
   
-    fetchBlacklistedWords();
-  }, []);
-
   //Edit Post Handle
   const handleSavePostEdits = async () => {
     // Check for blacklisted words in title and content
@@ -177,23 +196,50 @@ useEffect(() => {
       return;
     }
   
+    let imageUrl = postData?.imageUrl; // Keep the existing image URL unless a new one is uploaded
+  
+    if (editedImageUri) { // Only upload if a new image has been selected
+      try {
+        const response = await fetch(editedImageUri);
+        const blob = await response.blob();
+  
+        const storage = getStorage(); 
+        const imageRef = ref(storage, `forums/posts/${forumId}/postImage_${postId}.png`);
+        await uploadBytes(imageRef, blob);
+  
+        // Get the download URL for the uploaded image
+        imageUrl = await getDownloadURL(imageRef);
+        console.log("Image uploaded, download URL:", imageUrl);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        Alert.alert('Error', 'Failed to upload the image. Please try again.');
+        return;
+      }
+    }
+  
     try {
+      // Reference to the post document in Firestore
       const postRef = doc(firestore, `forums/${forumId}/posts`, postId);
+  
+      // Update the post with the new title, content, and image URL 
       await updateDoc(postRef, {
         title: editedTitle,
         content: editedContent,
+        imageUrl: imageUrl, 
       });
-      
+  
       // Update local state to reflect changes
       setEditedTitle(editedTitle);
       setEditedContent(editedContent);
       setIsEditPostModalVisible(false);
+  
       Alert.alert('Success', 'Post updated successfully.');
     } catch (error) {
       console.error('Error updating post:', error);
       Alert.alert('Error', 'Could not update the post.');
     }
   };
+  
 
   //Handle Comment
   const handleAddComment = async () => {
@@ -213,15 +259,16 @@ useEffect(() => {
     // Proceed to add the comment if no blacklisted words are found
     const newCommentObj = {
       content: newComment,
-      dateCreated: new Date(),
+      dateCreated: Timestamp.now(),
       author: authorName,
       authorId: user.uid,
     };
   
     try {
-      const db = getFirestore();
-      const docRef = await addDoc(collection(db, `forums/${forumId}/posts/${postId}/comments`), newCommentObj);
-  
+      const docRef = await addDoc(
+        collection(firestore, `forums/${forumId}/posts/${postId}/comments`), 
+        newCommentObj
+      );
       // Add the new comment to the local state
       setComments([{ ...newCommentObj, id: docRef.id }, ...comments]);
       setNewComment(''); // Clear the input field
@@ -232,8 +279,8 @@ useEffect(() => {
     }
   };
 
-   //Edit Comment Handle
-   const handleEditComment = async () => {
+  //Edit Comment Handle
+  const handleEditComment = async () => {
     if (!editCommentText.trim() || !commentToEdit) {
       Alert.alert('Error', 'Please enter some text to update the comment.');
       return;
@@ -248,8 +295,7 @@ useEffect(() => {
     }
   
     try {
-      const db = getFirestore();
-      const commentRef = doc(db, `forums/${forumId}/posts/${postId}/comments`, commentToEdit.id);
+      const commentRef = doc(firestore, `forums/${forumId}/posts/${postId}/comments`, commentToEdit.id);
       await updateDoc(commentRef, { content: editCommentText });
   
       // Update local state to reflect changes
@@ -268,43 +314,51 @@ useEffect(() => {
   //Handle React Post
   const handleReact = async () => {
     try {
-      const db = getFirestore();
-      const postRef = doc(db, `forums/${forumId}/posts`, postId);
+      // Immediately update UI state
+      const hasUserReacted = userReacted;
+      const newReactCount = hasUserReacted ? reacts - 1 : reacts + 1;
+  
+      // Toggle reaction state and update local count
+      setUserReacted(!hasUserReacted);
+      setReacts(newReactCount);
+  
+      // Update Firestore asynchronously
+      const postRef = doc(firestore, `forums/${forumId}/posts`, postId);
+  
+      // Read current data from Firestore to determine the right update
       const postDoc = await getDoc(postRef);
   
       if (postDoc.exists()) {
         const postData = postDoc.data();
-        const currentReacts = postData.reacted || 0;
         const reactedBy = postData.reactedBy || [];
   
-        // Check if the user has already reacted to this post
-        const hasUserReacted = reactedBy.includes(user.uid);
-  
+        // Determine if user is adding or removing a reaction
+        let updatedReactedBy;
         if (hasUserReacted) {
-          // Remove reaction and user ID from reactedBy array
-          await updateDoc(postRef, {
-            reacted: currentReacts - 1,
-            reactedBy: reactedBy.filter(id => id !== user.uid),
-          });
-          setReacts(currentReacts - 1);
+          // If the user has already reacted, remove their reaction
+          updatedReactedBy = reactedBy.filter(id => id !== user.uid);
         } else {
-          // Add reaction and user ID to reactedBy array
-          await updateDoc(postRef, {
-            reacted: currentReacts + 1,
-            reactedBy: [...reactedBy, user.uid],
-          });
-          setReacts(currentReacts + 1);
+          // Otherwise, add their reaction
+          updatedReactedBy = [...reactedBy, user.uid];
         }
   
-        // Update local state
-        setUserReacted(!hasUserReacted);
+        // Update Firestore with the new reaction count and the updated reactedBy list
+        await updateDoc(postRef, {
+          reacted: newReactCount,
+          reactedBy: updatedReactedBy,
+        });
       }
     } catch (error) {
       console.error("Error updating reaction: ", error);
-      Alert.alert('Error', 'Could not update reaction.');
+      Alert.alert("Error", "Could not update reaction.");
+  
+      // Optional: Revert UI update if Firestore update fails
+      setUserReacted(userReacted);
+      setReacts(userReacted ? reacts + 1 : reacts - 1);
     }
   };
-
+  
+  
   // Function to handle reaction on a specific comment
   const handleCommentReact = async (commentId) => {
     try {
@@ -315,7 +369,6 @@ useEffect(() => {
         const commentData = commentSnapshot.data();
         const isReacted = (commentData.commentReactedBy || []).includes(user.uid);
   
-        // Toggle reaction in Firebase
         const updatedReactedBy = isReacted
           ? commentData.commentReactedBy.filter((uid) => uid !== user.uid)
           : [...(commentData.commentReactedBy || []), user.uid];
@@ -346,6 +399,7 @@ useEffect(() => {
           ...prevReactions,
           [commentId]: !isReacted,
         }));
+        await fetchComments(); // Refresh comments after the update
       }
     } catch (error) {
       console.error('Error reacting to comment:', error);
@@ -354,26 +408,38 @@ useEffect(() => {
   };
   
   //Delete Comment Handler
-  const handleDeleteComment = async (commentId) => {
-    try {
-      const db = getFirestore();
-      const commentRef = doc(db, `forums/${forumId}/posts/${postId}/comments`, commentId);
-      const commentDoc = await getDoc(commentRef);
+const handleDeleteComment = async (commentId) => {
+  Alert.alert(
+    "Delete Comment",
+    "Are you sure you want to delete this comment?",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "OK",
+        onPress: async () => {
+          try {
+            const commentRef = doc(firestore, `forums/${forumId}/posts/${postId}/comments`, commentId);
+            const commentDoc = await getDoc(commentRef);
 
-      if (commentDoc.exists() && commentDoc.data().authorId === user.uid) {
-        await deleteDoc(commentRef);
-        setComments(comments.filter(comment => comment.id !== commentId));
-      } else {
-        Alert.alert('Error', 'You do not have permission to delete this comment.');
-      }
-    } catch (error) {
-      console.error("Error deleting comment:", error);
-      Alert.alert('Error', 'Could not delete comment.');
-    }
-  };
+            if (commentDoc.exists() && commentDoc.data().authorId === user.uid) {
+              await deleteDoc(commentRef);
+              setComments(comments.filter(comment => comment.id !== commentId));
+            } else {
+              Alert.alert('Error', 'You do not have permission to delete this comment.');
+            }
+          } catch (error) {
+            console.error("Error deleting comment:", error);
+            Alert.alert('Error', 'Could not delete comment.');
+          }
+        },
+      },
+    ] 
+  ); 
+};
 
   // Report a post
-const handleReportPost = (postId) => {
+const handleReportPost = async (postId) => {
+  const reporterName = await getUserName();
   Alert.alert(
     "Report Post",
     "Are you sure you want to report this post?",
@@ -389,15 +455,19 @@ const handleReportPost = (postId) => {
 
             if (postDoc.exists()) {
               // Increment the reportCount field
+              const authorName = postDoc.data().authorName;
               const currentReportCount = postDoc.data().reportCount || 0;
               await updateDoc(postRef, {
                 reportCount: currentReportCount + 1,
               });
+              
 
               // Add a new report document in the 'reports' subcollection
               await addDoc(collection(postRef, "reports"), {
-                reportedBy: user.uid,
-                reason: "Inappropriate content",  
+                authorName: authorName,
+                reporterName: reporterName,
+                reportedBy: auth.currentUser.uid,
+                reason: 'Inappropriate content',  
                 timestamp: new Date(),
               });
 
@@ -415,10 +485,11 @@ const handleReportPost = (postId) => {
     { cancelable: false }
   );
 };
-
-  
+ 
  // Report a comment
-const handleReportComment = (commentId) => {
+const handleReportComment = async (commentId) => {
+  const reporterName = await getUserName();
+ 
   Alert.alert(
     "Report Comment",
     "Are you sure you want to report this comment?",
@@ -441,8 +512,10 @@ const handleReportComment = (commentId) => {
 
               // Add a new report document in the 'reports' subcollection
               await addDoc(collection(commentRef, "reports"), {
-                reportedBy: user.uid,
-                reason: "Inappropriate content",  
+                authorName: authorName,
+                reporterName: reporterName,
+                reportedBy: auth.currentUser.uid,
+                reason: 'Inappropriate content',  
                 timestamp: new Date(),
               });
 
@@ -461,11 +534,10 @@ const handleReportComment = (commentId) => {
   );
 };
 
-
-  //Render Comments
-  const renderCommentItem = ({ item }) => (
+//Render Comments
+const renderCommentItem = ({ item }) => (
     <View style={styles.commentItem}>
-      <Text style={styles.commentAuthor}> Anonymous</Text>
+      <Text style={styles.commentAuthor}> {item.authorName}</Text>
       <Text style={styles.commentContent}>{item.content}</Text>
       <Text style={styles.commentDate}>
         {item.dateCreated ? moment(item.dateCreated).fromNow() : 'Unknown date'}
@@ -492,89 +564,122 @@ const handleReportComment = (commentId) => {
         )}
           <TouchableOpacity onPress={() => handleCommentReact(item.id)}>
             <Ionicons
-            name={userCommentReacted[item.id] ? 'heart' : 'heart-outline'}
-            size={20}
-            color={userCommentReacted[item.id] && (item.commentReacted || 0) > 0 ? '#d9534f' : '#333'}
+              name={item.userReacted ? "heart" : "heart-outline"} 
+              size={20}
+              color={item.userReacted ? 'red' : '#333333'} 
             />
-             <Text style={styles.reactionCountText}>{item.commentReacted || 0}</Text>
+            <Text style={styles.reactionCountText}>{item.commentReacted || 0}</Text>
           </TouchableOpacity>
       </View>
     </View>
-  );
-  
-  return (
+);
+
+//Pick image
+const pickImage = async () => {
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert('Permission denied', 'We need camera roll permissions to attach images.');
+    return;
+  }
+
+  let result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 1,
+  });
+
+  if (!result.canceled) {
+    const selectedImage = result.assets[0].uri;
+    setEditedImageUri(selectedImage); // Store the selected image URI
+  }
+};
+
+if (loading) {
+  return <LoadingIndicator />;
+}
+
+ return (
     <RootLayout navigation={navigation} screenName="Post Details" userType={userType}>
       <View style={styles.container}>
+      {/* Post Header and Comments */}
       <FlatList
-        data={comments}
+        data={showComments ? comments : []} 
         keyExtractor={(item) => item.id}
-        renderItem={renderCommentItem}
+        renderItem={renderCommentItem} 
         contentContainerStyle={{ paddingBottom: 70 }} // Space for the input box
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         ListHeaderComponent={
           <View>
-          <Text style={styles.postTitle}>{postData?.title}</Text>
-          <View style={styles.metaContainer}>
-            <Text style={styles.timeText}>{postData?.dateCreated}</Text>
-            <Text style={styles.authorText}>by Anonymous</Text>
-          </View>
+            {/* Post Content */}
+            <Text style={styles.postTitle}>{postData?.title}</Text>
+            <View style={styles.metaContainer}>
+              <Text style={styles.timeText}>
+                {new Date(postData?.dateCreated.toDate()).toLocaleString('en-US', {hour12: true})}
+              </Text>
+              <Text style={styles.authorText}>{postData?.authorName}</Text>
+            </View>
 
-          {/* Post Content */}
-          <View>
+            {/* Post Image */}
             {postData?.imageUrl ? (
               <TouchableOpacity onPress={() => setIsImageModalVisible(true)}>
                 <Image source={{ uri: postData.imageUrl }} style={styles.postImage} />
               </TouchableOpacity>
             ) : null}
+            
             <Text style={styles.postContent}>{postData?.content}</Text>
-          </View>
 
-          {/* Image Modal */}
-          <Modal visible={isImageModalVisible} transparent animationType="fade">
-            <View style={styles.imageModalOverlay}>
-              <TouchableOpacity onPress={() => setIsImageModalVisible(false)} style={styles.closeModalButton}>
-                <Ionicons name="close" size={32} color="#fff" />
+            {/* Reaction and Comment Icons */}
+            <View style={styles.reactContainer}>
+              <TouchableOpacity onPress={() => setShowComments(!showComments)} style={styles.iconButton}>
+                <Ionicons name="chatbox-ellipses-outline" size={24} color="#333" />
+                <Text>{comments.length}</Text>
               </TouchableOpacity>
-              {postData?.imageUrl && (
-                <Image
-                  source={{ uri: postData.imageUrl }}
-                  style={styles.fullScreenImage} // Fullscreen image style
-                  resizeMode="contain"
-                />
-              )}
+              <TouchableOpacity onPress={handleReact} style={styles.iconButton}>
+                <Ionicons name={userReacted ? 'heart' : 'heart-outline'} size={24} color={userReacted ? 'red' : '#333'} />
+                <Text>{reacts}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setIsOptionsModalVisible(true)} style={styles.iconButton}>
+                <Ionicons name="ellipsis-horizontal" size={24} color="#333" />
+              </TouchableOpacity>
             </View>
-          </Modal>
-
-          {/* Reactions and Comments Toggle */}
-          <View style={styles.reactContainer}>
-            <TouchableOpacity onPress={() => setShowComments(!showComments)} style={styles.iconButton}>
-              <Ionicons name="chatbox-ellipses-outline" size={24} color="#333" />
-              <Text>{comments.length}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleReact} style={styles.iconButton}>
-              <Ionicons name={userReacted ? 'heart' : 'heart-outline'} size={24} color={userReacted ? '#d9534f' : '#333'} />
-              <Text>{reacts}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setIsOptionsModalVisible(true)} style={styles.iconButton}>
-              <Ionicons name="ellipsis-horizontal" size={24} color="#333" />
-            </TouchableOpacity>
           </View>
-        </View>
         }
       />
-        
-      {/* Comment Input Box Fixed at the Bottom */}
-      <View style={styles.commentInputContainer}>
-        <TextInput
-          style={styles.commentInput}
-          placeholder=" Add a comment..."
-          value={newComment}
-          onChangeText={setNewComment}
-        />
-        <TouchableOpacity onPress={handleAddComment} style={styles.sendButton}>
-          <Ionicons name="send-outline" size={24} color="#000" />
-        </TouchableOpacity>
-      </View>
-  
+      
+        { showComments && (
+            <View style={styles.commentInputContainer}>
+              {/* Comment Input Box */}
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Add a comment..."
+                value={newComment}
+                onChangeText={setNewComment}
+              />
+              <TouchableOpacity onPress={handleAddComment} style={styles.sendButton}>
+                <Ionicons name="send-outline" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+          )
+        }
+
+        {/* Image Modal */}
+        <Modal visible={isImageModalVisible} transparent animationType="fade">
+              <View style={styles.imageModalOverlay}>
+                <TouchableOpacity onPress={() => setIsImageModalVisible(false)} style={styles.closeModalButton}>
+                  <Ionicons name="close" size={32} color="#fff" />
+                </TouchableOpacity>
+                {postData?.imageUrl && (
+                  <Image
+                    source={{ uri: postData.imageUrl }}
+                    style={styles.fullScreenImage} // Fullscreen image style
+                    resizeMode="contain"
+                  />
+                )}
+              </View>
+            </Modal>
   
         {/* Options Modal */}
         <Modal visible={isOptionsModalVisible} transparent animationType="slide">
@@ -583,8 +688,8 @@ const handleReportComment = (commentId) => {
               {postData?.authorId === user.uid ? (
                 <>
                   <TouchableOpacity onPress={() => {
-                    setEditedTitle(postTitle);
-                    setEditedContent(postContent);
+                    setEditedTitle(postData.title);
+                    setEditedContent(postData.content);
                     setIsEditPostModalVisible(true);
                     setIsOptionsModalVisible(false);
                   }}>
@@ -623,19 +728,32 @@ const handleReportComment = (commentId) => {
                 onChangeText={setEditedTitle}
               />
               <TextInput
-                style={[styles.textInput, { height: 100 }]} // Adjust height for content input
+                style={[styles.textInput, { height: 100 }]} 
                 placeholder="Post Content"
                 value={editedContent}
                 onChangeText={setEditedContent}
                 multiline
                 textAlignVertical="top"
               />
-              <TouchableOpacity onPress={handleSavePostEdits}>
-                <Text style={styles.modalSaveText}>Save</Text>
+              
+              <TouchableOpacity onPress={pickImage} style={styles.attachIcon}>
+                <Ionicons name="image-outline" size={24} color="#2F2F2F" />
+                <Text style={styles.attachText}>Attach Image</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setIsEditPostModalVisible(false)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
+
+                {/* Display Selected Image */}
+                {editedImageUri && (
+                  <Image source={{ uri: editedImageUri }} style={styles.imagePreview} />
+                )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity onPress={() => setIsEditPostModalVisible(false)} style={styles.cancelButton}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSavePostEdits} style={styles.saveButton}>
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
@@ -650,22 +768,24 @@ const handleReportComment = (commentId) => {
                 value={editCommentText}
                 onChangeText={setEditCommentText}
               />
-              <TouchableOpacity onPress={handleEditComment}>
-                <Text style={styles.modalSaveText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => {
-                setIsEditCommentModalVisible(false);
-                setCommentToEdit(null);
-                setEditCommentText('');
-              }}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity onPress={() => {
+                  setIsEditCommentModalVisible(false);
+                  setCommentToEdit(null);
+                  setEditCommentText('');
+                }} style={styles.cancelButton}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleEditComment} style={styles.saveButton}>
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
       </View>
     </RootLayout>
-  );  
+ );  
 };
 
 const styles = StyleSheet.create({
@@ -688,8 +808,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   commentsContainer: {
-    flexGrow: 1,  // Allow FlatList to grow inside ScrollView
-    marginBottom: 60, // Ensure space for input box
+    flexGrow: 1,  
+    marginBottom: 60, 
   },
   commentInputContainer: {
     flexDirection: 'row',
@@ -786,13 +906,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center', 
     backgroundColor: 'rgba(0,0,0,0.5)', 
-    zIndex: 1000 
+    zIndex: 1000, 
   },
   modalContent: { 
-    width: '80%', 
+    width: '90%', 
     padding: 20, 
     backgroundColor: '#fff', 
-    borderRadius: 10 
+    borderRadius: 10,
   },
   modalOption: { 
     fontSize: 18, 
@@ -802,13 +922,28 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     color: '#000' 
   },
-  modalSaveText: { 
-    fontSize: 22, 
-    color: '#000' 
-  }, 
-  modalCancelText: { 
-    fontSize: 20, 
-    color: Colors.white,
+  modalButtons:{
+    flexDirection :'row' ,
+    justifyContent :'space-between',
+    marginTop: 20,
+  },
+  cancelButton:{
+    paddingVertical :8 ,
+    paddingHorizontal :20 ,
+    backgroundColor :'#ccc' ,
+    borderRadius :5 ,
+  },
+  cancelButtonText:{
+      color :'#000' ,
+  },
+  saveButton:{
+      paddingVertical :8 ,
+      paddingHorizontal :20 ,
+      backgroundColor :'#7f4dff' ,
+      borderRadius :5 ,
+  },
+  saveButtonText:{
+      color :'#fff' ,
   },
   reactionCountText: {
     fontSize: 12,
@@ -821,6 +956,22 @@ const styles = StyleSheet.create({
     height: 270,
     resizeMode: 'contain',
     alignSelf: 'center',
+  },
+  attachIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    marginTop: 10,
+  },
+  attachText: {
+    marginLeft: 5,
+    fontSize: 16,
+    color: '#000',
+  },
+  imagePreview: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
   },
   imageModalOverlay: {
     flex: 1,
