@@ -17,11 +17,14 @@ import { AuthenticatedUserContext } from '../providers';
 import { RootLayout } from '../navigation/RootLayout';
 import { getDocs, getFirestore, collection, addDoc,doc, getDoc, Timestamp } from 'firebase/firestore';
 import { auth, firestore } from 'src/config';
+import { LoadingIndicator } from '../components';
 
 
 export const ForumsScreen = ({ navigation }) => {
   const { user, userType } = useContext(AuthenticatedUserContext); 
   const [authorName, setAuthorName] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [ loading, setLoading ] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [forums, setForums] = useState([]);
@@ -29,8 +32,8 @@ export const ForumsScreen = ({ navigation }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [forumTitle, setForumTitle] = useState('');
   const [forumContent, setForumContent] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
   const [blacklistedWords, setBlacklistedWords] = useState([]);
+  const [showAllTags, setShowAllTags] = useState(false);
 
   // Predefined tags
   const predefinedTags = ['Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'];
@@ -47,9 +50,19 @@ export const ForumsScreen = ({ navigation }) => {
   const fetchUserDataAndForums = async () => {
     try {
       if (user) {
+        // Fetch user profile from Firestore
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setAuthorName(`${userData.firstName} ${userData.lastName}`);
+        } else {
+          console.warn('No such document!');
+        }
+  
         // Fetch forums as before
-        const db = getFirestore();
-        const postsRef = collection(db, 'forums');
+        const postsRef = collection(firestore, 'forums');
         const snapshot = await getDocs(postsRef);
         const fetchedForums = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -61,9 +74,11 @@ export const ForumsScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error fetching data:', error);
       Alert.alert('Error', 'Could not fetch data.');
+    } finally {
+      setLoading(false);
     }
   };
-
+  
   // Refresh function
   const onRefresh = async () => {
     setRefreshing(true);
@@ -77,36 +92,25 @@ export const ForumsScreen = ({ navigation }) => {
   }, []);
 
    // Search function to filter forums by title or tags
-   const searchFilterFunction = (text) => {
-    setSearchQuery(text); // Update search query
-  
-    let newData = forums; // Start with all forums
-  
-    // Filter by search text, if any
-    if (text) {
+   const searchFilterFunction = () => {
+    let newData = forums;
+
+    if (searchQuery) {
       newData = newData.filter((forum) => {
         const forumTitle = forum.title ? forum.title.toUpperCase() : '';
         const forumTags = forum.tags ? forum.tags.map(tag => tag.toUpperCase()) : [];
-        const searchText = text.toUpperCase();
-  
-        // Check if title or tags contain the search text
+        const searchText = searchQuery.toUpperCase();
         return forumTitle.includes(searchText) || forumTags.some(tag => tag.includes(searchText));
       });
     }
-  
-    // Always filter by selected tags if any are selected
+
     if (selectedTags.length > 0) {
       newData = newData.filter((forum) =>
-        forum.tags && selectedTags.every(selectedTag => forum.tags.includes(selectedTag)) // Only include forums with all selected tags
+        forum.tags && selectedTags.every(selectedTag => forum.tags.includes(selectedTag))
       );
     }
-  
-    // Exclude forums without tags when tags are selected (optional)
-    if (selectedTags.length > 0) {
-      newData = newData.filter((forum) => forum.tags && forum.tags.length > 0); // Forums without tags should be excluded
-    }
-  
-    setFilteredForums(newData); // Update filtered forums
+
+    setFilteredForums(newData);
   };
   
   // Handle tag selection
@@ -116,17 +120,11 @@ export const ForumsScreen = ({ navigation }) => {
     } else {
       setSelectedTags([...selectedTags, tag]);
     }
-  
-    // If you're in the search section, call the search filter function
-    if (isSearching) {
-      searchFilterFunction(searchQuery); // Apply search logic, even if search is empty
-    } else {
-      // If no search, just filter by tags
-      let filtered = forums.filter(forum => 
-        forum.tags && selectedTags.every(selectedTag => forum.tags.includes(selectedTag))
-      );
-      setFilteredForums(filtered); // Update filtered forums with only tag-based filtering
-    }
+  };
+
+  //Clear tags
+  const clearFilterTags = () => {
+    setSelectedTags([]);
   };
 
   // Function to fetch blacklisted words from Firebase
@@ -187,8 +185,7 @@ export const ForumsScreen = ({ navigation }) => {
     };
 
     try {
-      const db = getFirestore();
-      const docRef = await addDoc(collection(db, 'forums'), newForum);
+      const docRef = await addDoc(collection(firestore, 'forums'), newForum);
       setForums([...forums, { id: docRef.id, ...newForum }]);
       setFilteredForums([...filteredForums, { id: docRef.id, ...newForum }]);
       setForumTitle('');
@@ -204,30 +201,36 @@ export const ForumsScreen = ({ navigation }) => {
   // Render forum item
   const renderForumItem = ({ item }) => {
     const maxTagsToShow = 2;
-  
-    // Convert the Firestore Timestamp to a JavaScript Date object and then format it
+    // Format the forum creation date
     const formattedDate = item.dateCreated ? new Date(item.dateCreated.seconds * 1000).toLocaleDateString() : '';
   
     return (
-      <View style={styles.forumContainer}>
+      <View style={styles.forumContainer} key={item.id}>
         <Text style={styles.forumTitle}>{item.title}</Text>
   
-         {/* Meta Information (Date and Tags) */}
+        {/* Meta Information (Date and Tags) */}
         <View style={styles.metaContainer}>
           {/* Date above tags */}
           <Text style={styles.forumDate}>{formattedDate}</Text>
-
-          {/* Display Tags below Date */}
+  
+          {/* Display Tags */}
           <View style={styles.tagContainer}>
-              {item.tags && item.tags.slice(0, maxTagsToShow).map((tag, index) => (
+            {item.tags &&
+              (showAllTags ? item.tags : item.tags.slice(0, maxTagsToShow)).map((tag, index) => (
                 <Text key={index} style={styles.tag}>{tag}</Text>
               ))}
-              {item.tags && item.tags.length > maxTagsToShow && (
-                <Text style={styles.moreTags}>+{item.tags.length - maxTagsToShow}</Text>
-              )}
+  
+            {/* Toggle Button for More Tags */}
+            {item.tags && item.tags.length > maxTagsToShow && (
+              <TouchableOpacity onPress={() => setShowAllTags(!showAllTags)}>
+                <Text style={styles.moreTags}>
+                  {showAllTags ? 'Show less' : `+${item.tags.length - maxTagsToShow}`}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
-      
+  
         <TouchableOpacity
           style={styles.visitButton}
           onPress={() => navigation.navigate('ForumDetails', {
@@ -242,118 +245,130 @@ export const ForumsScreen = ({ navigation }) => {
       </View>
     );
   };
+
+  if (loading) {
+    return <LoadingIndicator />;
+  }
   
   return (
     <RootLayout navigation={navigation} screenName="Forums" userType={userType}>
-       <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+      <ScrollView
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.textContainer}>
-            <Text style={styles.greeting}>Forums</Text>
-            <Text style={styles.subText}>Connect, Discuss, and Support</Text>
+          {/* Header and Search Bar */}
+          <View style={styles.header}>
+            <View style={styles.textContainer}>
+              <Text style={styles.greeting}>Forums</Text>
+              <Text style={styles.subText}>Connect, Discuss, and Support</Text>
+            </View>
+            <View style={styles.iconContainer}>
+              <TouchableOpacity style={styles.addForumButton} onPress={() => setIsModalVisible(true)}>
+                <Ionicons name="add-circle-outline" size={24} color="white" />
+                <Text style={styles.addForumButtonText}>Create Forum</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setIsSearching(!isSearching)} style={{ marginLeft: 8 }}>
+                <Ionicons name="search-outline" size={32} color="black" />
+              </TouchableOpacity>
+            </View>
           </View>
-
-          <View style={styles.iconContainer}>
-            <TouchableOpacity style={styles.addForumButton} onPress={() => setIsModalVisible(true)}>
-              <Ionicons name="add-circle-outline" size={24} color="white" />
-              <Text style={styles.addForumButtonText}>Create Forum</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setIsSearching(!isSearching)} style={{ marginLeft: 8 }}>
-              <Ionicons name="search-outline" size={32} color="black" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Search Bar */}
-        {isSearching && (
-          <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search forums..."
-              value={searchQuery}
-              onChangeText={(text) => {
-                searchFilterFunction(text); // Call search function
-              }}
-            />
-
-              {/* Tag List for Filtering */}
+  
+          {/* Search Bar and Tag Filter */}
+          {isSearching && (
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search forums..."
+                value={searchQuery}
+                onChangeText={(text) => setSearchQuery(text)}
+              />
               <View style={styles.predefinedTagsContainer}>
-              {predefinedTags.map((tag, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[styles.tagOption, selectedTags.includes(tag) && styles.selectedTagOption]}
-                  onPress={() => toggleTag(tag)} // Toggle selection
-                >
-                  <Text style={styles.tagOptionText}>{tag}</Text>
+                {predefinedTags.map((tag, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[styles.tagOption, selectedTags.includes(tag) ? styles.selectedTagOption : null]}
+                    onPress={() => toggleTag(tag)}
+                  >
+                    <Text style={[styles.tagOptionText, selectedTags.includes(tag) ? { color: '#fff' } : { color: '#333' }]}>
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.searchActionsContainer}>
+                <TouchableOpacity style={styles.searchButton} onPress={searchFilterFunction}>
+                  <Text style={styles.searchButtonText}>Search</Text>
                 </TouchableOpacity>
-              ))}
+                <TouchableOpacity style={styles.clearButton} onPress={clearFilterTags}>
+                  <Text style={styles.clearButtonText}>Clear</Text>
+                </TouchableOpacity>
             </View>
+            </View>
+          )}
+  
+          {/* Display Filtered Forums */}
+          <View style={styles.forumsList}>
+          {filteredForums.length === 0 ? (
+            <Text></Text>
+          ) : (
+            filteredForums.map((forum) => renderForumItem({ item: forum, key: forum.id }))
+          )}
           </View>
-              )}
-
-        {/* Forum List */}
-        <ScrollView style={styles.forumsList}>
-          {filteredForums.map((forum) => (
-            <View key={forum.id}>{renderForumItem({ item: forum })}</View> // Add key prop
-          ))}
-        </ScrollView>
-
-        {/* Modal for Adding New Forum */}
-        <Modal visible={isModalVisible} animationType="slide">
-          <KeyboardAvoidingView behavior="padding" style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create New Forum</Text>
-            </View>
-
-            {/* Forum title and content inputs */}
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Forum Title"
-              value={forumTitle}
-              onChangeText={(text) => setForumTitle(text)}
-            />
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Forum Content"
-              value={forumContent}
-              onChangeText={(text) => setForumContent(text)}
-              multiline
-            />
-
-            {/* Tag Selection */}
-            <Text style={styles.tagSelectionTitle}>Select Tags</Text>
-            <View style={styles.predefinedTagsContainer}>
-              {predefinedTags.map((tag, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.predefinedTag,
-                    selectedTags.includes(tag) ? styles.selectedTag : styles.unselectedTag,
-                  ]}
-                  onPress={() => toggleTag(tag)}
-                >
-                  <Text style={styles.tagText}>{tag}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Buttons in a row */}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.createForumButton} onPress={createForum}>
-                <Text style={styles.createForumButtonText}>Create Forum</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setIsModalVisible(false)}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </KeyboardAvoidingView>
-        </Modal>
         </View>
       </ScrollView>
+  
+      {/* Modal for Creating a Forum */}
+      <Modal
+        visible={isModalVisible}
+        animationType="slide"
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Create New Forum</Text>
+            <TouchableOpacity onPress={() => setIsModalVisible(false)}>
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={styles.modalInput}
+            placeholder="Forum Title"
+            value={forumTitle}
+            onChangeText={(text) => setForumTitle(text)}
+          />
+          <TextInput
+            style={styles.modalInput}
+            placeholder="Forum Content"
+            value={forumContent}
+            onChangeText={(text) => setForumContent(text)}
+            multiline
+          />
+          <Text style={styles.tagSelectionTitle}>Select Tags:</Text>
+          <View style={styles.predefinedTagsContainer}>
+            {predefinedTags.map((tag, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.predefinedTag,
+                  selectedTags.includes(tag) ? styles.selectedTag : styles.unselectedTag,
+                ]}
+                onPress={() => toggleTag(tag)}
+              >
+                <Text style={[styles.tagOptionText, selectedTags.includes(tag) ? { color: '#fff' } : { color: '#333' }]}>
+                  {tag}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.createForumButton} onPress={createForum}>
+              <Text style={styles.createForumButtonText}>Create Forum</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setIsModalVisible(false)}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </RootLayout>
   );
 };
@@ -409,6 +424,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
   },
+  searchActionsContainer: {
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: 10,
+  },
+  searchButton: {
+    flex: 1, 
+    backgroundColor: '#7129F2',
+    padding: 10,
+    borderRadius: 5,
+    marginRight: 5, 
+    alignItems: 'center', 
+  },
+  clearButton: {
+    flex: 1, 
+    backgroundColor: '#D3D3D34D',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center', 
+  },
+  searchButtonText: {
+    color: 'white',
+  },
+  clearButtonText: {
+    color: '#333',
+  },  
   forumsList: {
     marginTop: 20,
   },
@@ -433,12 +474,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6c757d',
     marginBottom: 4,
+    marginRight: 8,
   },
   tagContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
   },
   tag: {
     backgroundColor: '#B9A2F1',
@@ -448,6 +490,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     fontSize: 12,
     marginHorizontal: 3,
+    marginBottom: 3,
   },
   moreTags: {
     backgroundColor: '#B9A2F1',
@@ -458,6 +501,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginHorizontal: 3,
     fontWeight: 'bold',
+    marginLeft: 4,
   },
   visitButton: {
     marginTop: 10,
@@ -497,7 +541,7 @@ const styles = StyleSheet.create({
   },
   tagOptionText: {
     fontSize: 14,
-    color: '#D3D3D3',
+    color: '#333',
   },
   modalContainer: {
     flex: 1,

@@ -4,16 +4,19 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import moment from 'moment';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc} from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, Timestamp} from 'firebase/firestore';
 import { auth, Colors, firestore } from 'src/config';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
+import { LoadingIndicator } from '../components';
 
 export const PostDetailsScreen = ({ route, navigation }) => {
   const { user, userType } = useContext(AuthenticatedUserContext);
   const { postId, forumId } = route.params;
   const [postData, setPostData] = useState(null);
   const [authorName, setAuthorName] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [ loading, setLoading ] = useState(true);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [commentToEdit, setCommentToEdit] = useState(null);
@@ -29,7 +32,6 @@ export const PostDetailsScreen = ({ route, navigation }) => {
   const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const [blacklistedWords, setBlacklistedWords] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
   const [editedImageUri, setEditedImageUri] = useState(null);
   
 
@@ -57,6 +59,8 @@ export const PostDetailsScreen = ({ route, navigation }) => {
       } catch (error) {
         console.error('Error fetching user data:', error);
         Alert.alert('Error', 'Could not fetch user data.');
+      } finally {
+        setLoading(false);
       }
     };
   
@@ -74,8 +78,11 @@ export const PostDetailsScreen = ({ route, navigation }) => {
   
       if (postSnapshot.exists()) {
         const data = postSnapshot.data();
+        const currentReactCount = data.reacted || 0;
         setPostData(data);
-        setUserReacted(data.reactedBy && data.reactedBy.includes(user.uid)); // Check if the user has reacted
+        setReacts(currentReactCount);
+        
+        setUserReacted(data.reactedBy.includes(user.uid)); // Check if the user has reacted
       } else {
         console.error('Post not found.');
         Alert.alert('Error', 'Post not found.');
@@ -98,6 +105,7 @@ export const PostDetailsScreen = ({ route, navigation }) => {
           return {
             id: doc.id,
             ...data,
+            dateCreated: data.dateCreated ? data.dateCreated.toDate() : null,
             userReacted: data.commentReactedBy && data.commentReactedBy.includes(user.uid), // Check if the user has reacted to this comment
           };
         });
@@ -249,7 +257,7 @@ const handleDeletePost = () => {
     // Proceed to add the comment if no blacklisted words are found
     const newCommentObj = {
       content: newComment,
-      dateCreated: new Date(),
+      dateCreated: Timestamp.now(),
       author: authorName,
       authorId: user.uid,
     };
@@ -285,8 +293,7 @@ const handleDeletePost = () => {
     }
   
     try {
-      const db = getFirestore();
-      const commentRef = doc(db, `forums/${forumId}/posts/${postId}/comments`, commentToEdit.id);
+      const commentRef = doc(firestore, `forums/${forumId}/posts/${postId}/comments`, commentToEdit.id);
       await updateDoc(commentRef, { content: editCommentText });
   
       // Update local state to reflect changes
@@ -305,38 +312,50 @@ const handleDeletePost = () => {
   //Handle React Post
   const handleReact = async () => {
     try {
-      const db = getFirestore();
-      const postRef = doc(db, `forums/${forumId}/posts`, postId);
+      // Immediately update UI state
+      const hasUserReacted = userReacted;
+      const newReactCount = hasUserReacted ? reacts - 1 : reacts + 1;
+  
+      // Toggle reaction state and update local count
+      setUserReacted(!hasUserReacted);
+      setReacts(newReactCount);
+  
+      // Update Firestore asynchronously
+      const postRef = doc(firestore, `forums/${forumId}/posts`, postId);
+  
+      // Read current data from Firestore to determine the right update
       const postDoc = await getDoc(postRef);
   
       if (postDoc.exists()) {
         const postData = postDoc.data();
-        const currentReacts = postData.reacted || 0;
         const reactedBy = postData.reactedBy || [];
   
-        const hasUserReacted = reactedBy.includes(user.uid);
+        // Determine if user is adding or removing a reaction
+        let updatedReactedBy;
+        if (hasUserReacted) {
+          // If the user has already reacted, remove their reaction
+          updatedReactedBy = reactedBy.filter(id => id !== user.uid);
+        } else {
+          // Otherwise, add their reaction
+          updatedReactedBy = [...reactedBy, user.uid];
+        }
   
-        // Determine the updated values for Firestore and local state
-        const newReactCount = hasUserReacted ? currentReacts - 1 : currentReacts + 1;
-        const updatedReactedBy = hasUserReacted
-          ? reactedBy.filter(id => id !== user.uid) // Remove user ID
-          : [...reactedBy, user.uid]; // Add user ID
-  
-        // Update Firestore document
+        // Update Firestore with the new reaction count and the updated reactedBy list
         await updateDoc(postRef, {
           reacted: newReactCount,
           reactedBy: updatedReactedBy,
         });
-  
-        // Update local state
-        setReacts(newReactCount); // Update count immediately in UI
-        setUserReacted(!hasUserReacted); // Toggle reaction state
       }
     } catch (error) {
       console.error("Error updating reaction: ", error);
-      Alert.alert('Error', 'Could not update reaction.');
+      Alert.alert("Error", "Could not update reaction.");
+  
+      // Optional: Revert UI update if Firestore update fails
+      setUserReacted(userReacted);
+      setReacts(userReacted ? reacts + 1 : reacts - 1);
     }
   };
+  
   
   // Function to handle reaction on a specific comment
   const handleCommentReact = async (commentId) => {
@@ -396,8 +415,7 @@ const handleDeleteComment = async (commentId) => {
         text: "OK",
         onPress: async () => {
           try {
-            const db = getFirestore();
-            const commentRef = doc(db, `forums/${forumId}/posts/${postId}/comments`, commentId);
+            const commentRef = doc(firestore, `forums/${forumId}/posts/${postId}/comments`, commentId);
             const commentDoc = await getDoc(commentRef);
 
             if (commentDoc.exists() && commentDoc.data().authorId === user.uid) {
@@ -507,7 +525,7 @@ const handleReportComment = (commentId) => {
 //Render Comments
 const renderCommentItem = ({ item }) => (
     <View style={styles.commentItem}>
-      <Text style={styles.commentAuthor}> Anonymous</Text>
+      <Text style={styles.commentAuthor}> {item.authorName}</Text>
       <Text style={styles.commentContent}>{item.content}</Text>
       <Text style={styles.commentDate}>
         {item.dateCreated ? moment(item.dateCreated).fromNow() : 'Unknown date'}
@@ -565,6 +583,10 @@ const pickImage = async () => {
   }
 };
 
+if (loading) {
+  return <LoadingIndicator />;
+}
+
  return (
     <RootLayout navigation={navigation} screenName="Post Details" userType={userType}>
       <View style={styles.container}>
@@ -582,8 +604,10 @@ const pickImage = async () => {
             {/* Post Content */}
             <Text style={styles.postTitle}>{postData?.title}</Text>
             <View style={styles.metaContainer}>
-              <Text style={styles.timeText}>{postData?.dateCreated}</Text>
-              <Text style={styles.authorText}>by Anonymous</Text>
+              <Text style={styles.timeText}>
+                {new Date(postData?.dateCreated.toDate()).toLocaleString('en-US', {hour12: true})}
+              </Text>
+              <Text style={styles.authorText}>{postData?.authorName}</Text>
             </View>
 
             {/* Post Image */}
@@ -701,7 +725,7 @@ const pickImage = async () => {
               />
               
               <TouchableOpacity onPress={pickImage} style={styles.attachIcon}>
-                <Ionicons name="image-outline" size={24} color="#000" />
+                <Ionicons name="image-outline" size={24} color="#2F2F2F" />
                 <Text style={styles.attachText}>Attach Image</Text>
               </TouchableOpacity>
 

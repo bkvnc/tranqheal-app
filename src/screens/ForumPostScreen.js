@@ -14,13 +14,16 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc, increment} from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc, increment } from 'firebase/firestore';
 import { auth, firestore, storage } from 'src/config';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
+import { LoadingIndicator } from '../components';
 
 export const ForumPostScreen = ({ route, navigation }) => {
-  const { forumId, forumTitle,forumContent,forumAuthorId } = route.params;
+  const { forumId } = route.params;
+  const [refreshing, setRefreshing] = useState(false);
+  const [ loading, setLoading ] = useState(true);
   const [isCreator, setIsCreator] = useState(false);
   const [isMember, setIsMember] = useState(false);
   const [posts, setPosts] = useState([]);
@@ -28,13 +31,15 @@ export const ForumPostScreen = ({ route, navigation }) => {
   const [modalType, setModalType] = useState('add');
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
-  const [editedTitle, setEditedTitle] = useState(forumTitle);
+  const [editedTitle, setEditedTitle] = useState(null);
   const [editedTags, setEditedTags] = useState([]);
-  const [editedContent, setEditedContent] = useState(forumContent);
+  const [editedContent, setEditedContent] = useState(null);
   const { userType } = useContext(AuthenticatedUserContext);  
   const [authorName, setAuthorName] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [authorType, setAuthorType] = useState(null);
   const [selectedImageUri, setSelectedImageUri] = useState(null);
+  const [forumData, setForumData] = useState(null);
+  const [ hasImage, setHasImage ] = useState(false);
 
   const predefinedTags = [
     'Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'
@@ -46,26 +51,36 @@ export const ForumPostScreen = ({ route, navigation }) => {
       try {
         if (auth.currentUser) {
           const userRef = doc(firestore, 'users', auth.currentUser.uid);
+          const profRef = doc(firestore, 'professionals', auth.currentUser.uid);
+          
+      
           const userSnapshot = await getDoc(userRef);
 
           if (userSnapshot.exists()) {
             const userData = userSnapshot.data();
-          
             setAuthorName(`${userData.firstName} ${userData.lastName}`);
-            setIsCreator(auth.currentUser.uid === forumAuthorId); // Check if user is creator
+            setAuthorType(userData.userType);
+          }else{
+            const profSnapshot = await getDoc(profRef);
+            if (profSnapshot.exists()) {
+              const profData = profSnapshot.data();
+              setAuthorName(`${profData.firstName} ${profData.lastName}`);
+              setAuthorType(profData.userType);
+          }
           }
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
         Alert.alert('Error', 'Could not fetch user data.');
+      } finally {
+        setLoading(false);
       }
     };
     
     // Placeholder membership check
     const checkMembership = async () => {
     try {
-      const db = getFirestore();
-      const membershipRef = collection(db, 'memberships'); // assuming there is membership collection
+      const membershipRef = collection(firestore, 'memberships'); // assuming there is membership collection
       const q = query(membershipRef, where('forumId', '==', forumId), where('userId', '==', auth.currentUser.uid));
       const snapshot = await getDocs(q);
       
@@ -92,8 +107,7 @@ export const ForumPostScreen = ({ route, navigation }) => {
   // Function to fetch posts
   const fetchPosts = async () => {
     try {
-        const db = getFirestore();
-        const postsRef = collection(db, `forums/${forumId}/posts`);
+        const postsRef = collection(firestore, `forums/${forumId}/posts`);
         const q = query(postsRef, where('status', '==', 'approved'));
 
         const snapshot = await getDocs(q);
@@ -115,9 +129,9 @@ export const ForumPostScreen = ({ route, navigation }) => {
       const forumSnapshot = await getDoc(forumRef);
 
       if (forumSnapshot.exists()) {
-        const forumData = forumSnapshot.data();
-        setEditedContent(forumData.content);
-        setEditedTags(forumData.tags || []);
+        const data = forumSnapshot.data();
+        setForumData(data);
+        setIsCreator(data.authorId === auth.currentUser.uid);
       }
     }   catch (error) {
       console.error('Error fetching forum details:', error);
@@ -177,6 +191,9 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
       const snapshot = await getDocs(blacklistedWordsRef);
       const blacklistedWords = snapshot.docs.map(doc => doc.data().word.toLowerCase());
 
+      setEditedTitle(forumData?.title);
+      setEditedContent(forumData?.content);
+
       const editedTitleLower = editedTitle.toLowerCase();
       const editedContentLower = editedContent.toLowerCase();
 
@@ -219,7 +236,8 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
     if (!result.canceled) {
       const selectedImage = result.assets[0].uri;
       console.log("Selected Image URI:", selectedImage);
-      setSelectedImageUri(selectedImage); // Store URI without uploading
+      setSelectedImageUri(selectedImage);
+      setHasImage(true);
     }
   };
   
@@ -241,7 +259,7 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
       <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
       <Text style={styles.postContent} numberOfLines={2}>{item.content}</Text>
       <View style={styles.metaContainer}>
-        <Text style={styles.authorText}>by Anonymous {item.author}</Text>   
+        <Text style={styles.authorText}>by {item.authorName}</Text>   
         {item.hasImage && (
           <View style={styles.imageLabelContainer}>
             <Ionicons name="image-outline" size={20} color="#7f4dff" />
@@ -283,12 +301,14 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
         const newPost = {
           title: newPostTitle,
           content: newPostContent,
-          dateCreated: new Date().toLocaleString(),
+          dateCreated: new Date(),
           authorId: auth.currentUser.uid,
+          authorName: authorName,
+          authorType: authorType,
           forumId,
           status: 'pending',
           imageUrl: imageUrl,
-          hasImage: !imageUrl,
+          hasImage: hasImage,
           reacted: 0,
           reactedBy: [],
         };
@@ -325,8 +345,7 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
       text: 'OK',
       onPress: async () => {
         try {
-          const db = getFirestore();
-          const membershipRef = collection(db, 'memberships');
+          const membershipRef = collection(firestore, 'memberships');
           const q = query(membershipRef, where('forumId', '==', forumId), where('userId', '==', auth.currentUser.uid));
           const snapshot = await getDocs(q);
 
@@ -408,13 +427,17 @@ const handleReportForum = async () => {
   );
 };
 
+if (loading) {
+  return <LoadingIndicator />;
+}
+
 return (
-  <RootLayout navigation={navigation} screenName={forumTitle} userType={userType} >
+  <RootLayout navigation={navigation} screenName={"ForumPost"} userType={userType} >
     <View style={styles.container}
     >
       {/* Forum Title with Edit Icon */}
       <View style={styles.titleContainer}>
-        <Text style={styles.forumTitle}>{forumTitle}</Text>
+        <Text style={styles.forumTitle}>{forumData?.title}</Text>
         
         {isCreator ? (
             <TouchableOpacity onPress={() => { setModalType("edit"); setModalVisible(true); }} style={styles.editIconContainer}>
@@ -426,9 +449,9 @@ return (
             </TouchableOpacity>
           )}
       </View>
-
+      <Text style={styles.forumAuthor}>by {forumData?.authorName}</Text>
       <Text style={styles.forumContent}>
-        {editedContent}
+        {forumData?.content}
       </Text>
 
       {/* Conditionally render Join, Add Post, and either Delete or Leave buttons */}
@@ -503,7 +526,7 @@ return (
 
                 {/* Image Attachment Button */}
                 <TouchableOpacity onPress={pickImage} style={styles.attachIcon}>
-                    <Ionicons name="image-outline" size={24} color="#7f4dff" />
+                    <Ionicons name="image-outline" size={24} color="#2F2F2F" />
                     <Text style={styles.attachText}>Attach Image</Text>
                 </TouchableOpacity>
 
@@ -580,8 +603,10 @@ const styles = StyleSheet.create({
     forumTitle: {
         fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 20,
         flex: 1,
+    },
+    forumAuthor: {
+      fontSize: 16, 
     },
     forumContent: {
       fontSize: 16,  
@@ -592,7 +617,6 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center', // Aligns the title and icon vertically
       justifyContent: 'space-between', // Ensures even spacing
-      marginBottom: 10,
     },
     editIconContainer: {
       padding: 10,
@@ -752,6 +776,7 @@ const styles = StyleSheet.create({
   metaContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 5,
   },
   imageLabelText: {
@@ -761,7 +786,11 @@ const styles = StyleSheet.create({
   },
   imageLabelContainer: {
     flexDirection: 'row',
-    alignItems: 'right',
-    marginLeft: 75,
+    alignItems: 'center',
+    marginLeft: 10,
+    justifyContent: 'flex-end',
+  },
+  authorText: {
+    flex: 1,
   },
 });
