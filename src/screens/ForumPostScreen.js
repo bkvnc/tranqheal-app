@@ -14,7 +14,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc, increment} from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc, increment, setDoc, serverTimestamp} from 'firebase/firestore';
 import { auth, firestore, storage } from 'src/config';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,6 +23,8 @@ export const ForumPostScreen = ({ route, navigation }) => {
   const { forumId, forumTitle,forumContent,forumAuthorId } = route.params;
   const [isCreator, setIsCreator] = useState(false);
   const [isMember, setIsMember] = useState(false);
+  const [isBanned, setIsBanned] = useState(false);
+  const [banReason, setBanReason] = useState('');
   const [posts, setPosts] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState('add');
@@ -40,7 +42,28 @@ export const ForumPostScreen = ({ route, navigation }) => {
   const predefinedTags = [
     'Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'
   ];
+  //im now in the forumpostscreeen
   
+  const checkBanStatus = async () => {
+    try {
+      if (!auth.currentUser) return;
+
+      const bannedUsersRef = collection(firestore, `forums/${forumId}/bannedUsers`);
+      const q = query(bannedUsersRef, where('userId', '==', auth.currentUser.uid));
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const banData = snapshot.docs[0].data();
+        setIsBanned(true);
+        setBanReason(banData.reason || 'No reason provided');
+      } else {
+        setIsBanned(false);
+        setBanReason('');
+      }
+    } catch (error) {
+      console.error('Error checking ban status:', error);
+    }
+  };
   // Fetch user data, forum details, posts, and membership status on mount
   useEffect(() => { 
     const fetchUserData = async () => {
@@ -76,7 +99,7 @@ export const ForumPostScreen = ({ route, navigation }) => {
       Alert.alert('Error', 'Could not check membership status.');
     }
     };
-
+    checkBanStatus();
     fetchUserData();
     fetchPosts();
     checkMembership();
@@ -144,6 +167,10 @@ export const ForumPostScreen = ({ route, navigation }) => {
         userId: auth.currentUser.uid, 
         joinedAt: new Date(),
       });
+
+
+
+      
   
       setIsMember(true); // Update UI state to reflect joined status
       Alert.alert('Success', 'You have joined the forum!');
@@ -255,6 +282,11 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
 
   // Add new post handler
   const handleAddPost = async () => {
+    if (isBanned) {
+      Alert.alert('Action Blocked', `You are banned from this forum due to: ${banReason}`);
+      return;
+    }
+
     if (newPostTitle && newPostContent) {
       try {
         const blacklistedWordsRef = collection(firestore, 'blacklistedWords');
@@ -286,6 +318,8 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
           content: newPostContent,
           dateCreated: new Date().toLocaleString(),
           authorId: auth.currentUser.uid,
+          authorType: userType,
+          authorName: authorName,
           forumId,
           status: 'pending',
           imageUrl: imageUrl,
@@ -295,8 +329,41 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
         };
   
         const forumRef = doc(firestore, 'forums', forumId);
-        const postsRef = collection(forumRef, 'posts');
-        await addDoc(postsRef, newPost);
+          const postsRef = collection(forumRef, 'posts');
+
+          // Create the new post first and retrieve the document reference
+          const postDocRef = await addDoc(postsRef, newPost);
+
+          const postSnap = await getDoc(forumRef);
+
+          // Now that the post has been added, we can safely use the ID
+          const newPostId = postDocRef.id; // The new post's ID
+
+          // Create the notification reference
+          const notificationRef = doc(collection(firestore, `notifications/${postSnap.data().authorId}/messages`));
+
+          // Set the notification document with the new post ID
+          await setDoc(notificationRef, {
+            recipientId: auth.currentUser.uid,
+            recipientType: postSnap.data().authorType,  
+            message: `${authorName} has submitted a new post for review.`,
+            type: `post_review`,
+            createdAt: serverTimestamp(), 
+            isRead: false,
+            additionalData: {
+              postId: newPostId,  // Use the correct postId here
+              forumId: forumId,
+            },
+          });
+
+          // Fetch and log the notification to check the createdAt field
+          const notificationDoc = await getDoc(notificationRef);
+          const notificationData = notificationDoc.data();
+
+          if (notificationData && notificationData.createdAt) {
+            const createdAtDate = notificationData.createdAt.toDate();
+            console.log("Notification createdAt:", createdAtDate); // For debugging
+          }
   
         // Clear form inputs
         setNewPostTitle('');
@@ -317,6 +384,11 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
   
  // Leave forum handler
  const handleLeaveForum = async () => {
+  if (isBanned) {
+    Alert.alert('Action Blocked', `You are banned from this forum due to: ${banReason}`);
+    return;
+  }
+
   Alert.alert('Leave Forum', 'Are you sure you want to leave this forum?', [
     {
       text: 'Cancel',
@@ -371,8 +443,47 @@ const handleDeleteForum = async () => {
   ]);
 };
 
+const getUserName = async () => {
+  const currentUserId = auth.currentUser?.uid;
+
+  if (!currentUserId) return null;
+
+  // Function to fetch document from a collection
+  const fetchUserData = async (collectionName) => {
+    const docRef = doc(firestore, collectionName, currentUserId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? docSnap.data() : null;
+  };
+
+  // Try each collection in order
+  const collections = ['users', 'organizations', 'admins', 'professionals'];
+  for (const collection of collections) {
+    const userData = await fetchUserData(collection);
+    if (userData) {
+      // Extract the name based on the collection's field structure
+      switch (collection) {
+        case 'users':
+        case 'professionals':
+          return `${userData.firstName} ${userData.lastName}`;
+        case 'organizations':
+          return userData.organizationName;
+        case 'admins':
+          return `${userData.firstName} ${userData.lastName}`;
+        default:
+          return null;
+      }
+    }
+  }
+
+  // If not found in any collection
+  return null;
+};
+
+
+
 //Report Forum
 const handleReportForum = async () => {
+  const reporterName = await getUserName();
   Alert.alert(
     'Report Forum',
     'Are you sure you want to report this forum?',
@@ -385,19 +496,34 @@ const handleReportForum = async () => {
         text: 'OK',
         onPress: async () => {
           try {
-            // Increment the report count
+            // Fetch the forum document to get the authorName
             const forumRef = doc(firestore, 'forums', forumId);
-            await updateDoc(forumRef, { reportCount: increment(1) });
-
-            // Add report details to the "reports" subcollection
-            const reportsRef = collection(forumRef, 'reports');
-            await addDoc(reportsRef, {
-              reportedBy: auth.currentUser.uid,
-              reason: 'Inappropriate content', 
-              timestamp: new Date(),
-            });
-
-            Alert.alert('Success', 'Report Submitted.');
+            const forumDoc = await getDoc(forumRef);
+          
+            if (forumDoc.exists()) {
+              // Extract the author's name from the forum document
+              const authorName = forumDoc.data().authorName;
+              const authorType = forumDoc.data().authorType;
+          
+              // Increment the report count in the forum
+              await updateDoc(forumRef, { reportCount: increment(1) });
+          
+              // Add a new report
+              const reportsRef = collection(forumRef, 'reports');
+              await addDoc(reportsRef, {
+                authorName: authorName,  
+                authorType: authorType,
+                reporterName: reporterName,
+                reportedBy: auth.currentUser.uid,
+                reason: 'Inappropriate content',
+                timestamp: new Date(),
+              });
+          
+              Alert.alert('Success', 'Report Submitted.');
+            } else {
+              console.error('Forum not found');
+              Alert.alert('Error', 'Forum not found.');
+            }
           } catch (error) {
             console.error('Error reporting forum:', error);
             Alert.alert('Error', 'Could not submit the report. Please try again.');
