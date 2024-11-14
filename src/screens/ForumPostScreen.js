@@ -504,6 +504,7 @@ const handleReportForum = async () => {
               // Extract the author's name from the forum document
               const authorName = forumDoc.data().authorName;
               const authorType = forumDoc.data().authorType;
+              const authorId = forumDoc.data().authorId;
           
               // Increment the report count in the forum
               await updateDoc(forumRef, { reportCount: increment(1) });
@@ -511,6 +512,7 @@ const handleReportForum = async () => {
               // Add a new report
               const reportsRef = collection(forumRef, 'reports');
               await addDoc(reportsRef, {
+                authorId: authorId,
                 authorName: authorName,  
                 authorType: authorType,
                 reporterName: reporterName,
