@@ -70,6 +70,8 @@ export const PostDetailsScreen = ({ route, navigation }) => {
     fetchBlacklistedWords();
   }, [auth.currentUser]);
 
+
+ 
   //Fetch Post Details
   const fetchPostDetails = async () => {
     try {
@@ -380,6 +382,7 @@ const handleDeletePost = () => {
           commentReacted: updatedReactCount,
         });
   
+        // Update local state
         setComments((prevComments) =>
           prevComments.map((comment) =>
             comment.id === commentId
@@ -435,7 +438,8 @@ const handleDeleteComment = async (commentId) => {
 };
 
   // Report a post
-const handleReportPost = (postId) => {
+const handleReportPost = async (postId) => {
+  const reporterName = await getUserName();
   Alert.alert(
     "Report Post",
     "Are you sure you want to report this post?",
@@ -451,15 +455,19 @@ const handleReportPost = (postId) => {
 
             if (postDoc.exists()) {
               // Increment the reportCount field
+              const authorName = postDoc.data().authorName;
               const currentReportCount = postDoc.data().reportCount || 0;
               await updateDoc(postRef, {
                 reportCount: currentReportCount + 1,
               });
+              
 
               // Add a new report document in the 'reports' subcollection
               await addDoc(collection(postRef, "reports"), {
-                reportedBy: user.uid,
-                reason: "Inappropriate content",  
+                authorName: authorName,
+                reporterName: reporterName,
+                reportedBy: auth.currentUser.uid,
+                reason: 'Inappropriate content',  
                 timestamp: new Date(),
               });
 
@@ -479,7 +487,9 @@ const handleReportPost = (postId) => {
 };
  
  // Report a comment
-const handleReportComment = (commentId) => {
+const handleReportComment = async (commentId) => {
+  const reporterName = await getUserName();
+ 
   Alert.alert(
     "Report Comment",
     "Are you sure you want to report this comment?",
@@ -502,8 +512,10 @@ const handleReportComment = (commentId) => {
 
               // Add a new report document in the 'reports' subcollection
               await addDoc(collection(commentRef, "reports"), {
-                reportedBy: user.uid,
-                reason: "Inappropriate content",  
+                authorName: authorName,
+                reporterName: reporterName,
+                reportedBy: auth.currentUser.uid,
+                reason: 'Inappropriate content',  
                 timestamp: new Date(),
               });
 
