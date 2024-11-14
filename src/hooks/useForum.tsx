@@ -24,6 +24,7 @@ import { containsBlacklistedWords } from '../components/utils/validationUtils';
 import { Forum, Post, UserData } from './types';
 import { toast } from 'react-toastify'; 
 import {getAuth} from 'firebase/auth';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const useForum = (forumId: string) => {
     const [forum, setForum] = useState<Forum | null>(null);
@@ -42,6 +43,8 @@ const useForum = (forumId: string) => {
     const [postTitle, setPostTitle] = useState<string>('');
     const [authorName, setAuthorName] = useState<string>('');
     const [authorType, setAuthorType] = useState<string>('');
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
   
 
     const fetchForumById = async (forumId: string) => {
@@ -64,7 +67,6 @@ const useForum = (forumId: string) => {
                 console.log("User UID:", user.uid);
                 console.log("User email:", user.email);
     
-               
                 const orgDocRef = doc(db, 'organizations', user.uid);
                 const adminDocRef = doc(db, 'admins', user.uid);
     
@@ -84,7 +86,6 @@ const useForum = (forumId: string) => {
     
                 console.log("userType:", userType);
     
-                
                 if (userType === 'organization') {
                     const postsCollectionRef = collection(db, 'forums', forumId, 'posts');
                     
@@ -95,14 +96,18 @@ const useForum = (forumId: string) => {
             
                     const querySnapshot = await getDocs(postsQuery);
                     
-                    return querySnapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data(),
-                        dateCreated: doc.data().dateCreated instanceof Date 
-                            ? doc.data().dateCreated 
-                            : doc.data().dateCreated?.toDate(),
-                        forumId: forumId
-                    })) as Post[];
+                    return querySnapshot.docs.map(doc => {
+                        const data = doc.data();
+                        
+                        return {
+                            id: doc.id,
+                            ...data,
+                            dateCreated: data.dateCreated instanceof Date
+                                ? data.dateCreated
+                                : data.dateCreated?.toDate?.() ?? data.dateCreated, // use toDate() only if it’s a Firestore Timestamp
+                            forumId: forumId
+                        };
+                    }) as Post[];
                 } else {
                     console.error("Access denied: Only organizations can fetch posts.");
                 }
@@ -247,11 +252,24 @@ const useForum = (forumId: string) => {
         const highlighted = highlightBlacklistedWords(content, blacklistedWords);
         setHighlightedContent(highlighted);
     };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setSelectedImage(file);
+            
+            // Create preview URL
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
     
 
     const handleSubmitPost = async (e: React.FormEvent) => {
         e.preventDefault();
-        const currentDate = new Date();
         
         if (!auth.currentUser) {
             toast.error('Please log in to create a post.');
@@ -283,7 +301,6 @@ const useForum = (forumId: string) => {
             }
     
             // Get user data
-            
             const userDoc = await getDoc(doc(db, 'users', user.uid));
             const organizationDoc = await getDoc(doc(db, 'organizations', user.uid));
             const professionalDoc = await getDoc(doc(db, 'professionals', user.uid));
@@ -296,16 +313,24 @@ const useForum = (forumId: string) => {
             let authorType = '';
             
             if (userData) {
-                authorName = `${userData.firstName} ${userData.lastName}`; // Regular user name
-                authorType = userData.userType; // Store userType for the regular user
+                authorName = `${userData.firstName} ${userData.lastName}`;
+                authorType = userData.userType;
             } else if (orgData) {
-                authorName = orgData.organizationName; // Organization name
-                authorType = 'organization'; // Set type as organization
+                authorName = orgData.organizationName;
+                authorType = 'organization';
             } else if (profData) {
-                authorName = `${profData.firstName} ${profData.lastName}`; // Professional name
-                authorType = 'professional'; // Set type as professional
+                authorName = `${profData.firstName} ${profData.lastName}`;
+                authorType = 'professional';
             }
-            
+    
+           
+            let imageUrl = null;
+            if (selectedImage) {
+                const storage = getStorage();
+                const imageRef = storageRef(storage, `forums/posts/${forum.id}/${Date.now()}_${selectedImage.name}`);
+                await uploadBytes(imageRef, selectedImage);
+                imageUrl = await getDownloadURL(imageRef);
+            }
         
             const newPost = {
                 content: postContent,
@@ -314,15 +339,14 @@ const useForum = (forumId: string) => {
                 forumId: forum.id,
                 status: 'pending',
                 title: postTitle,
-                authorName: anonymous ? 'Anonymous' : authorName, 
-                authorType: authorType, 
+                authorName: anonymous ? 'Anonymous' : authorName,
+                authorType: authorType,
+                imageUrl: imageUrl, // Add the image URL to the post data
             };
     
-            
             const postsRef = collection(doc(db, 'forums', forum.id), 'posts');
             const newPostRef = await addDoc(postsRef, newPost);
     
-            
             await updateDoc(newPostRef, {
                 postId: newPostRef.id 
             });
@@ -334,36 +358,33 @@ const useForum = (forumId: string) => {
     
             const forumRef = doc(db, 'forums', forum.id);
             const postSnap = await getDoc(forumRef);
-
     
             const notificationRef = doc(collection(db, `notifications/${postSnap.data().authorId}/messages`));
             await setDoc(notificationRef, {
                 recipientId: postSnap.data().authorId,
-                recipientType: postSnap.data().authorType,  
+                recipientType: postSnap.data().authorType,
                 message: `${authorName} has submitted a new post for review.`,
                 type: `post_review`,
-                createdAt: serverTimestamp(), 
+                createdAt: serverTimestamp(),
                 isRead: false,
                 additionalData: {
                     postId: newPostRef.id,
                     forumId: forumId,
                 },
             });
-
+    
             const notificationDoc = await getDoc(notificationRef);
-                const notificationData = notificationDoc.data();
-
-                if (notificationData && notificationData.createdAt) {
+            const notificationData = notificationDoc.data();
+    
+            if (notificationData && notificationData.createdAt) {
                 const createdAtDate = notificationData.createdAt.toDate();
-                console.log("Notification createdAt:", createdAtDate); // For debugging
-                }
-
-            
-            
-            console.log(`Notification created for post ${newPostRef.id}`);
+                console.log("Notification createdAt:", createdAtDate);
+            }
     
             setPostContent('');
             setPostTitle('');
+            setSelectedImage(null);
+            setImagePreview(null);
             toast.success('Post submitted for review successfully.');
             
         } catch (error: any) {
@@ -436,7 +457,11 @@ const useForum = (forumId: string) => {
         setError,
         blacklistedWords,
         setBlacklistedWords,
-        handleDeletePost, // Ensure handleDeletePost is included
+        handleDeletePost, 
+        setImagePreview,
+        handleImageChange,
+        imagePreview,
+        setSelectedImage,
     };
 };
 

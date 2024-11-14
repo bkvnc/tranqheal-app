@@ -6,7 +6,7 @@ const TotalPostsCard = () => {
   const [postCount, setPostCount] = useState<number>(0);
 
   const fetchPostsCount = async () => {
-    const postsCollectionRef = collection(db, 'forums',  'posts');
+    const postsCollectionRef = collection(db, 'forums',);
     const postsSnapshot = await getDocs(postsCollectionRef);
     setPostCount(postsSnapshot.size);
   };

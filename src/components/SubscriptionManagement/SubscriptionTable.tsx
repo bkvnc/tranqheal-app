@@ -9,7 +9,7 @@ const SubscriptionTable = () => {
     useEffect(() => {
         const fetchSubscriptions = async () => {
             try {
-                const querySnapshot = await getDocs(collection(db, 'subscriptions')); // Change 'subscriptions' to your collection name
+                const querySnapshot = await getDocs(collection(db, 'subscriptions'));
                 const subs = [];
                 querySnapshot.forEach((doc) => {
                     subs.push({ id: doc.id, ...doc.data() });
@@ -61,7 +61,7 @@ const SubscriptionTable = () => {
                                         <p className="text-sm">{subscription.contactEmail}</p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <p className="text-black dark:text-white">{subscription.plan}</p>
+                                        <p className="text-black dark:text-white">{subscription.planName}</p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <p className="text-black dark:text-white">{new Date(subscription.startDate).toLocaleDateString()}</p>
@@ -70,7 +70,7 @@ const SubscriptionTable = () => {
                                         <p className="text-black dark:text-white">{new Date(subscription.endDate).toLocaleDateString()}</p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <p className={`inline-flex rounded-full ${subscription.status === 'Active' ? 'bg-success' : 'bg-danger'} bg-opacity-10 py-1 px-3 text-sm font-medium text-danger`}>
+                                        <p className={`inline-flex rounded-full ${subscription.status === 'active' ? 'bg-success' : 'bg-danger'} bg-opacity-10 py-1 px-3 text-sm font-medium text-${subscription.status === 'active' ? 'success' : 'danger'}`}>
                                             {subscription.status}
                                         </p>
                                     </td>

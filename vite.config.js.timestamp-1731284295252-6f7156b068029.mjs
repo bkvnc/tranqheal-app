@@ -1,0 +1,22 @@
+// vite.config.js
+import { defineConfig } from "file:///C:/Users/miahj/caps_web/node_modules/vite/dist/node/index.js";
+import react from "file:///C:/Users/miahj/caps_web/node_modules/@vitejs/plugin-react/dist/index.mjs";
+var vite_config_default = defineConfig({
+  base: "./",
+  plugins: [react()],
+  build: {
+    outDir: "dist",
+    sourcemap: true,
+    target: "esnext"
+    // Ensures Wasm support
+  },
+  server: {
+    historyApiFallback: true
+  },
+  assetsInclude: ["**/*.wasm"]
+  // Ensures Vite includes Wasm files
+});
+export {
+  vite_config_default as default
+};
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAic291cmNlcyI6IFsidml0ZS5jb25maWcuanMiXSwKICAic291cmNlc0NvbnRlbnQiOiBbImNvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9kaXJuYW1lID0gXCJDOlxcXFxVc2Vyc1xcXFxtaWFoalxcXFxjYXBzX3dlYlwiO2NvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9maWxlbmFtZSA9IFwiQzpcXFxcVXNlcnNcXFxcbWlhaGpcXFxcY2Fwc193ZWJcXFxcdml0ZS5jb25maWcuanNcIjtjb25zdCBfX3ZpdGVfaW5qZWN0ZWRfb3JpZ2luYWxfaW1wb3J0X21ldGFfdXJsID0gXCJmaWxlOi8vL0M6L1VzZXJzL21pYWhqL2NhcHNfd2ViL3ZpdGUuY29uZmlnLmpzXCI7aW1wb3J0IHsgZGVmaW5lQ29uZmlnIH0gZnJvbSAndml0ZSc7XHJcbmltcG9ydCByZWFjdCBmcm9tICdAdml0ZWpzL3BsdWdpbi1yZWFjdCc7XHJcblxyXG5leHBvcnQgZGVmYXVsdCBkZWZpbmVDb25maWcoe1xyXG4gIGJhc2U6ICcuLycsXHJcbiAgcGx1Z2luczogW3JlYWN0KCldLFxyXG4gIGJ1aWxkOiB7XHJcbiAgICBvdXREaXI6ICdkaXN0JyxcclxuICAgIHNvdXJjZW1hcDogdHJ1ZSxcclxuICAgIHRhcmdldDogJ2VzbmV4dCcsICAvLyBFbnN1cmVzIFdhc20gc3VwcG9ydFxyXG4gIH0sXHJcbiAgc2VydmVyOiB7XHJcbiAgICBoaXN0b3J5QXBpRmFsbGJhY2s6IHRydWUsXHJcbiAgfSxcclxuICBhc3NldHNJbmNsdWRlOiBbJyoqLyoud2FzbSddLCAgLy8gRW5zdXJlcyBWaXRlIGluY2x1ZGVzIFdhc20gZmlsZXNcclxufSk7XHJcbiJdLAogICJtYXBwaW5ncyI6ICI7QUFBK1AsU0FBUyxvQkFBb0I7QUFDNVIsT0FBTyxXQUFXO0FBRWxCLElBQU8sc0JBQVEsYUFBYTtBQUFBLEVBQzFCLE1BQU07QUFBQSxFQUNOLFNBQVMsQ0FBQyxNQUFNLENBQUM7QUFBQSxFQUNqQixPQUFPO0FBQUEsSUFDTCxRQUFRO0FBQUEsSUFDUixXQUFXO0FBQUEsSUFDWCxRQUFRO0FBQUE7QUFBQSxFQUNWO0FBQUEsRUFDQSxRQUFRO0FBQUEsSUFDTixvQkFBb0I7QUFBQSxFQUN0QjtBQUFBLEVBQ0EsZUFBZSxDQUFDLFdBQVc7QUFBQTtBQUM3QixDQUFDOyIsCiAgIm5hbWVzIjogW10KfQo=

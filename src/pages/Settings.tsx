@@ -93,10 +93,7 @@ const Settings = () => {
     // Validate Address
     if (!userData.address) {
       newErrors.address = "Address is required.";
-    } else if (/\d/.test(userData.address)) {
-      newErrors.address = "Address cannot contain numbers.";
-    }
-
+    } 
     // Validate Time
     if (!userData.timeStart) {
       newErrors.timeStart = "Start time is required.";

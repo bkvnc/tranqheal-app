@@ -101,6 +101,7 @@ const MyForumTable: React.FC = () => {
                 authorId: user.uid, // Store authorId here
                 authorName: userData?.organizationName || 'Anonymous',
                 authorType: userData?.userType || 'user',
+                reports: [],
             });
 
             

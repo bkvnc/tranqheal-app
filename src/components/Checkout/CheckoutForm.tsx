@@ -6,7 +6,7 @@ import type { SourceCreateParams } from '../../hooks/types';
 import { isValidEmail, isContentNotEmpty, isContentLengthValid } from '../utils/validationUtils';
 import {sendNotification} from '../../hooks/useNotification';
 import {auth, db} from '../../config/firebase';
-import { setDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { setDoc, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { NotificationTypes, NotificationType } from '../../hooks/notificationTypes';
 
 interface CheckoutFormProps {
@@ -18,6 +18,7 @@ interface CheckoutFormProps {
 const CheckoutForm: FC<CheckoutFormProps> = ({ plan, onSuccess, onError }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [organizationName, setOrganizationName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'gcash'>('card');
   const [formData, setFormData] = useState({
     cardNumber: '',
@@ -160,7 +161,7 @@ const CheckoutForm: FC<CheckoutFormProps> = ({ plan, onSuccess, onError }) => {
     if (result.attributes.status === 'succeeded') {
       
       onSuccess(result.id);
-      navigate('/subscription/success');
+      navigate('http://localhost:5173/subscription/success');
       await saveSubscription(result.id, plan);
     } else { 
       onError('Payment failed. Please try again.');
@@ -173,11 +174,26 @@ const CheckoutForm: FC<CheckoutFormProps> = ({ plan, onSuccess, onError }) => {
       console.error("User not authenticated");
       return;
   }
+
+  const orgDocRef = doc(db, 'organizations', user.uid);
+  const orgDoc = await getDoc(orgDocRef);
+
+  if (orgDoc.exists()) {
+    const orgData = orgDoc.data();
+    const organizationName = orgData.organizationName;
+
+    setOrganizationName(organizationName);
+    console.log("Organization name:", organizationName);
+  } else {
+    console.error("Organization document not found");
+  }
   console.log("Authenticated user:", user);
 
     const subscriptionData = {
         paymentIntentId,
         userId: user.uid,
+        paymentMethodId: paymentMethod,
+        organizationName: organizationName, 
         planId: plan.id,
         planName: plan.name,
         price: plan.price,
@@ -187,6 +203,7 @@ const CheckoutForm: FC<CheckoutFormProps> = ({ plan, onSuccess, onError }) => {
     };
   try{
       await setDoc(doc(db, 'subscriptions', user.uid), subscriptionData);
+      await updateDoc(orgDocRef, { subscriptionId: user.uid, subscriptionStatus: 'Subscribed' });
       
       const message = `You are now subscribed to ${plan.name}!` as NotificationType;
       await sendNotification(user.uid, NotificationTypes.SUB_SUCCESS as NotificationType, message);
@@ -202,34 +219,37 @@ function getExpiryDate(durationInDays: number) {
     return expiryDate;
 }
 
-  const handleRedirectPayment = async () => {
-    if (paymentMethod === 'gcash' ) {
-      const sourceParams: SourceCreateParams = {
-        type: paymentMethod,
-        amount: plan.price * 100,
-        currency: 'PHP',
-        redirect: {
-          success: 'http://localhost:5173/subscription/success',
-          failed: 'http://localhost:5173/subscription/failed'
-        },
-        billing: {
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone
-        }
-      };
-  
-      
-      const source = await PaymongoService.createSource(sourceParams);
-      if (source && source.attributes.redirect.checkout_url) {
-        window.location.href = source.attributes.redirect.checkout_url;
-      } else {
-        onError('Payment failed. Unable to create source.');
+const handleRedirectPayment = async () => {
+  if (paymentMethod === 'gcash') {
+    const sourceParams: SourceCreateParams = {
+      type: paymentMethod,
+      amount: plan.price * 100,
+      currency: 'PHP',
+      redirect: {
+        success: 'http://localhost:5173/subscription/success',
+        failed: 'http://localhost:5173/subscription/failed'
+      },
+      billing: {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone
       }
+    };
+
+    const source = await PaymongoService.createSource(sourceParams);
+    if (source && source.attributes.redirect.checkout_url) {
+      await saveSubscription(source.id, plan);
+      window.location.href = source.attributes.redirect.checkout_url;
+
+     
+
     } else {
-      onError('Invalid payment method selected.');
+      onError('Payment failed. Unable to create source.');
     }
-  };
+  } else {
+    onError('Invalid payment method selected.');
+  }
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -17,7 +17,30 @@ export interface Forum {
     authorId: string;
     members: string[];
     reports: number | null;
+    reportCount: number | null;
 }
+
+
+
+
+export interface Report {
+  id: string;
+  authorName: string;
+  contentType: 'Forum' | 'Post' | 'Comment';
+  forumId: string;
+  postId?: string;
+  commentId?: string;
+  reason: string;
+  reportedBy: string;
+  timestamp: Date;
+  reportCount: number;
+}
+
+
+export interface ForumReport extends Report {}
+export interface PostReport extends Report {}
+export interface CommentReport extends Report {}
+
 
 export interface Post {
     id: string;
@@ -28,11 +51,12 @@ export interface Post {
     content: string;
     author: string; 
     authorId: string; 
-    reacts: number;
+    reacted: number;
     forumId: string;
-    userReactions: string[]; 
+    reactedBy: string[]; 
     authorName: string;
     authorType: string;
+    imageUrl?: string;
 }
 
 
@@ -43,8 +67,12 @@ export interface Comment {
     author: string;
     authorId: string;
     postId: string;
-    userReactions: string[];
-    reports: number;
+    commentReactions: string[];
+    reports: string[];
+    reactedBy?: string[];
+    reacted?: number;
+    replies?: Comment[]
+    
 }
 
 

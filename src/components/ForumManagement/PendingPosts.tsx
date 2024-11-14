@@ -7,7 +7,7 @@ import { Post } from '../../hooks/types';
 import { getAuth } from 'firebase/auth';
 import { ToastContainer, toast } from 'react-toastify'; // Import ToastContainer and toast
 import 'react-toastify/dist/ReactToastify.css';
-import sendNotifications from '../../service/notificationService';
+
 
 const PendingPosts = () => {
     const [posts, setPosts] = useState<Post[]>([]);
@@ -15,7 +15,7 @@ const PendingPosts = () => {
     const [loading, setLoading] = useState(false);
     const pendingsPerPage = 5;
     const [searchTerm, setSearchTerm] = useState<string>("");
-    const [error, setError] = useState<string | null>(null);
+    
 
     useEffect(() => {
         const checkOrganizationAndFetchPosts = async () => {
@@ -40,7 +40,6 @@ const PendingPosts = () => {
     
             if (!user) {
                 console.error("User is not authenticated");
-                setError("User is not authenticated");
                 setLoading(false);
                 return; 
             }
@@ -91,7 +90,6 @@ const PendingPosts = () => {
     
         if (!user) {
             console.error("User is not authenticated");
-            setError("User is not authenticated");
             setLoading(false);
             return; 
         }
@@ -114,6 +112,7 @@ const PendingPosts = () => {
             await updateDoc(postRef, updateData);
             console.log(`Post status updated to ${newStatus}`);
 
+            
         
     
             const notificationRef = doc(collection(db, `notifications/${postSnap.data().authorId}/messages`));
@@ -171,6 +170,7 @@ const PendingPosts = () => {
         (post.authorName?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
         (post.title?.toLowerCase().includes(searchTerm.toLowerCase()) || '')
     );
+    if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
 
     const indexOfLastPending = currentPage * pendingsPerPage;
     const indexOfFirstPending = indexOfLastPending - pendingsPerPage;

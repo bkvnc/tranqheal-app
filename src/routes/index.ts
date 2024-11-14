@@ -62,6 +62,10 @@ const ViewPendingPosts = lazy(() => import('../pages/CustomPages/ForumManagement
 
 
 
+const  BannedSuspendedUsers = lazy(() => import('../pages/CustomPages/BannedSuspendedUsers'));
+
+
+
 const coreRoutes = [
   {
     path: '/calls',
@@ -128,6 +132,11 @@ const coreRoutes = [
     path: '/users',
     title: '/users',
     component: ViewAllUsers,
+  },
+  {
+    path:'/banned-suspended-users',
+    title:'Banned Suspended Users',
+    component:BannedSuspendedUsers
   },
   {
     path: '/checkout/:planId',
