@@ -72,7 +72,7 @@ export const ProfessionalHomeScreen = ({ navigation }) => {
             <Image source={require('../assets/orgspic.jpg')} style={styles.todoImage} />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Forums')} style={styles.todoItem}>
+          <TouchableOpacity onPress={() => navigation.navigate('ForumMain')} style={styles.todoItem}>
             <View style={styles.circle}>
               <Ionicons name="chatbox-outline" size={24} color="white" />
             </View>
@@ -118,11 +118,11 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   greeting: {
-    fontSize: 24, // Adjusted for better scalability
+    fontSize: 24,
     fontWeight: 'bold',
   },
   subText: {
-    fontSize: 16, // Adjusted for better scalability
+    fontSize: 16,
     color: '#6c757d',
     marginTop: 5,
     flexShrink: 1,
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   profileImage: {
     width: 165,
     height: 165,
-    borderRadius: 40, // Circular image
+    borderRadius: 40,
   },
   todoContainer: {
     flex: 1,
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   },
   todoText: {
     marginLeft: 15,
-    fontSize: 16, // Adjusted for better scalability
+    fontSize: 16,
   },
   circle: {
     width: 40,
@@ -167,6 +167,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 8,
-    marginLeft: 'auto', // Align to the right
+    marginLeft: 'auto',
   },
 });

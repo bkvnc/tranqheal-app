@@ -9,12 +9,15 @@ import {
   FlatList,
   Alert,
   RefreshControl,
+  Image
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
 import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc, increment, setDoc, serverTimestamp} from 'firebase/firestore';
-import { auth, firestore } from 'src/config';
+import { auth, firestore, storage } from 'src/config';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import * as ImagePicker from 'expo-image-picker';
 
 export const ForumPostScreen = ({ route, navigation }) => {
   const { forumId, forumTitle,forumContent,forumAuthorId } = route.params;
@@ -33,7 +36,8 @@ export const ForumPostScreen = ({ route, navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);  
   const [authorName, setAuthorName] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-
+  const [imageUri, setImageUri] = useState(null);
+  const [selectedImageUri, setSelectedImageUri] = useState(null);
 
   const predefinedTags = [
     'Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'
@@ -225,6 +229,57 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
     }
   };
 
+  // Function to handle image picking and uploading
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission denied', 'Sorry, we need camera roll permissions to make this work!');
+      return;
+    }
+  
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+  
+    if (!result.canceled) {
+      const selectedImage = result.assets[0].uri;
+      console.log("Selected Image URI:", selectedImage);
+      setSelectedImageUri(selectedImage); // Store URI without uploading
+    }
+  };
+  
+  const renderPostItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.postContainer}
+      onPress={() => {
+        if (isMember || isCreator) {
+          navigation.navigate('PostDetails', {
+            postId: item.id,
+            postAuthor: item.author,
+            forumId: forumId,
+          });
+        } else {
+          Alert.alert('Membership Required', 'You must join this forum to view posts.');
+        }
+      }}
+    >
+      <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
+      <Text style={styles.postContent} numberOfLines={2}>{item.content}</Text>
+      <View style={styles.metaContainer}>
+        <Text style={styles.authorText}>by Anonymous {item.author}</Text>   
+        {item.hasImage && (
+          <View style={styles.imageLabelContainer}>
+            <Ionicons name="image-outline" size={20} color="#7f4dff" />
+            <Text style={styles.imageLabelText}>Image Attached</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+
   // Add new post handler
   const handleAddPost = async () => {
     if (isBanned) {
@@ -237,16 +292,27 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
         const blacklistedWordsRef = collection(firestore, 'blacklistedWords');
         const snapshot = await getDocs(blacklistedWordsRef);
         const blacklistedWords = snapshot.docs.map(doc => doc.data().word.toLowerCase());
-
+  
         const postTitleLower = newPostTitle.toLowerCase();
         const postContentLower = newPostContent.toLowerCase();
-
+  
         if (containsBlacklistedWord(postTitleLower, blacklistedWords) || 
             containsBlacklistedWord(postContentLower, blacklistedWords)) {
           Alert.alert('Error', 'Your post contains blacklisted words. Please remove them and try again.');
           return;
         }
-
+  
+        let imageUrl = null;
+        if (selectedImageUri) { // Only upload if an image has been selected
+          const response = await fetch(selectedImageUri);
+          const blob = await response.blob();
+  
+          const imageRef = ref(storage, `forums/posts/${forumId}/postImage.png`);
+          await uploadBytes(imageRef, blob);
+          imageUrl = await getDownloadURL(imageRef);
+          console.log("Image uploaded, download URL:", imageUrl);
+        }
+  
         const newPost = {
           title: newPostTitle,
           content: newPostContent,
@@ -256,8 +322,12 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
           authorName: authorName,
           forumId,
           status: 'pending',
+          imageUrl: imageUrl,
+          hasImage: !imageUrl,
+          reacted: 0,
+          reactedBy: [],
         };
-
+  
         const forumRef = doc(firestore, 'forums', forumId);
           const postsRef = collection(forumRef, 'posts');
 
@@ -294,11 +364,13 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
             const createdAtDate = notificationData.createdAt.toDate();
             console.log("Notification createdAt:", createdAtDate); // For debugging
           }
-
+  
+        // Clear form inputs
         setNewPostTitle('');
         setNewPostContent('');
+        setSelectedImageUri(null); // Clear selected image URI
         setModalVisible(false);
-        fetchPosts();  // Fetch updated posts
+        fetchPosts();
         Alert.alert('Post Pending Approval', 'Your post has been submitted successfully and is currently pending approval.');
       } catch (error) {
         console.error('Error adding post:', error);
@@ -308,36 +380,8 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
       Alert.alert('Error', 'Please fill in both the title and content fields.');
     }
   };
-
-  const renderPostItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.postContainer}
-      onPress={() => {
-        if (isMember || isCreator) {
-          navigation.navigate('PostDetails', {
-            postId: item.id,
-            postTitle: item.title,
-            postContent: item.content,
-            postAuthor: item.author,
-            postTime: item.time,
-            forumId: forumId,
-           
-          });
-        } else {
-          Alert.alert('Membership Required', 'You must join this forum to view posts.');
-        }
-      }}
-    >
-      <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
-      <Text style={styles.postContent} numberOfLines={2}>{item.content}</Text>
-      <View style={styles.metaContainer}>
-        <Text style={styles.timeText}>{item.time}</Text>
-        <Text style={styles.authorText}>by Anonymous {item.author}</Text>
-        
-      </View>
-    </TouchableOpacity>
-  );
-
+  
+  
  // Leave forum handler
  const handleLeaveForum = async () => {
   if (isBanned) {
@@ -583,6 +627,17 @@ return (
                   onChangeText={setNewPostContent}
                   multiline
                 />
+
+                {/* Image Attachment Button */}
+                <TouchableOpacity onPress={pickImage} style={styles.attachIcon}>
+                    <Ionicons name="image-outline" size={24} color="#7f4dff" />
+                    <Text style={styles.attachText}>Attach Image</Text>
+                </TouchableOpacity>
+
+                  {selectedImageUri && (
+                    <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
+                  )}
+
                 <View style={styles.modalButtons}>
                   <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
                     <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -672,7 +727,7 @@ const styles = StyleSheet.create({
     },
     editIcon: {
         // size is set directly in the component (size={24}),
-        // so no need to add size styling here
+        
     },
     joinButton: {
         flexDirection: 'row',
@@ -804,5 +859,36 @@ const styles = StyleSheet.create({
   },
   tagButtonText: {
     color: '#333',
+  },
+  attachIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  attachText: {
+    marginLeft: 5,
+    fontSize: 16,
+    color: '#000',
+  },
+  imagePreview: {
+    width: 100,
+    height: 100,
+    marginTop: 10,
+    borderRadius: 10,
+  },
+  metaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  imageLabelText: {
+    marginLeft: 5,
+    fontSize: 14,
+    color: '#7f4dff',
+  },
+  imageLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'right',
+    marginLeft: 75,
   },
 });

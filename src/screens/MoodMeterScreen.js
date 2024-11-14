@@ -4,6 +4,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, interpo
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { LoadingIndicator } from '../components';
+import { colorPalette, moodData } from '../utils/moodConstants';
 
 const { width, height } = Dimensions.get('window');
 const GRID_SIZE = 10;
@@ -12,44 +13,6 @@ const GAP_SIZE = 1;
 const MAGNIFICATION_FACTOR = 1.5;
 const REPULSION_FACTOR = 1.2;
 const GRID_WIDTH = GRID_SIZE * (DOT_SIZE + GAP_SIZE) - GAP_SIZE;
-
-const colorPalette = {
-  highEnergyLowPleasant: { base: '#CC3300', highlight: '#FF6347' },
-  highEnergyHighPleasant: { base: '#CC9900', highlight: '#FFD700' },
-  lowEnergyLowPleasant: { base: '#006699', highlight: '#4682B4' },
-  lowEnergyHighPleasant: { base: '#006600', highlight: '#32CD32' }
-};
-
-const moodData = {
-  highEnergyLowPleasant: [
-    'Enraged', 'Panicked', 'Stressed', 'Jittery', 'Shocked',
-    'Livid', 'Furious', 'Frustrated', 'Tensed', 'Stunned',
-    'Fuming', 'Frightened', 'Angry', 'Nervous', 'Restless',
-    'Anxious', 'Apprehensive', 'Worried', 'Irritated', 'Annoyed',
-    'Repulsed', 'Troubled', 'Concerned', 'Uneasy', 'Peeved'
-  ],
-  highEnergyHighPleasant: [
-    'Surprised', 'Upbeat', 'Festive', 'Exhilarated', 'Estatic',
-    'Hyper', 'Cheerful', 'Motivated', 'Inspired', 'Elated',
-    'Energized', 'Lively', 'Excited', 'Optimistic', 'Enthusiastic',
-    'Pleased', 'Focused', 'Happy', 'Proud', 'Thrilled', 
-    'Pleasant', 'Joyful', 'Hopeful', 'Playful', 'Blissful'
-  ],
-  lowEnergyLowPleasant: [
-    'Disgusted', 'Glum', 'Disappointed', 'Down', 'Apathetic',
-    'Pessimistic', 'Morose', 'Discouraged', 'Sad', 'Bored',
-    'Allenated', 'Miserable', 'Lonely', 'Disheartened', 'Tired',
-    'Despondent', 'Depressed', 'Sullen', 'Exhausted', 'Fatigued',
-    'Despairing', 'Hopeless', 'Desolate', 'Spent', 'Drained'
-  ],
-  lowEnergyHighPleasant: [
-    'At ease', 'Easygoing', 'Content', 'Loving', 'Fulfilled',
-    'Calm', 'Secure', 'Satisfied', 'Grateful', 'Touched',
-    'Relaxed', 'Chill', 'Restful', 'Blessed', 'Balanced',
-    'Mellow', 'Thoughtful', 'Peaceful', 'Comfortable', 'Carefree',
-    'Sleepy', 'Complacent', 'Tranquil', 'Dozy', 'Serene'
-  ]
-};
 
 const MoodDot = ({ x, y, colorInfo, panX, panY, moodIndex, isInteracting }) => {
   const animatedScale = useSharedValue(1);
@@ -314,23 +277,23 @@ const styles = StyleSheet.create({
    left:'-5%',
    justifyContent:'space-between',
    height:'22%',
-},
- bottomLabelContainer: {
-   position:'absolute',
+  },
+  bottomLabelContainer: {
+    position:'absolute',
    flexDirection:'row',
    justifyContent:'space-between',
    bottom:'29%',
    width:'77%',
  },
-energyLabel:{
+  energyLabel:{
    fontSize:14,
    fontWeight:'bold',
    transform:[{rotate:'-90deg'}],
-},
-pleasantnessLabel:{
+  },
+  pleasantnessLabel:{
    fontSize:14,
    fontWeight:'bold',
-},
+  },
   moodDot: {
     position: 'absolute',
     shadowColor: '#fff',

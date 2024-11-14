@@ -26,10 +26,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#CBC3E3', // Background color or gradient
+    backgroundColor: '#CBC3E3',
   },
   logo: {
-    width: 250,  // Adjust width and height based on logo dimensions
+    width: 250, 
     height: 250,
     marginBottom: 100,
   },

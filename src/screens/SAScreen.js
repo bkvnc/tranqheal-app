@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { RootLayout } from '../navigation/RootLayout';
 import { Colors, firestore, auth } from '../config';
 import { AuthenticatedUserContext } from '../providers';
@@ -51,9 +52,18 @@ export const SAScreen = ({ navigation }) => {
     }
   };
 
+  const handleLogsPress = () => {
+    navigation.navigate('SelfAssessmentLogs');
+  };
+
   return (
     <RootLayout screenName={'SelfAssessment'} navigation={navigation} userType={userType}>
       <View style={styles.container}>
+        {/* Top Right Logs Button */}
+        <TouchableOpacity style={styles.logsButton} onPress={handleLogsPress}>
+          <Ionicons name="time-outline" size={32} color={Colors.black} />
+        </TouchableOpacity>
+
         {/* Top Left Greeting */}
         <Text style={styles.title}>Self Assessment</Text>
         
@@ -87,11 +97,17 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: 'space-between',  
   },
+  logsButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    padding: 10,
+    zIndex: 1,
+  },
   title: {
     fontSize: 35,  
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: 20,
+    textAlign: 'left',
   },
   middleContainer: {
     justifyContent: 'center',  

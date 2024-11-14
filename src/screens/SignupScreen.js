@@ -7,6 +7,7 @@ import { View, TextInput, Logo, Button, FormErrorMessage } from '../components';
 import { Images, Colors, auth, firestore } from '../config';
 import { useTogglePasswordVisibility } from '../hooks';
 import { signupValidationSchema, createUserInFirestore } from '../utils';
+import { sendEmailVerification } from 'firebase/auth';
 
 export const SignupScreen = ({ navigation, route }) => {
   const [errorState, setErrorState] = useState('');
@@ -28,12 +29,13 @@ export const SignupScreen = ({ navigation, route }) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const userId = userCredential.user.uid;
+      const user = userCredential.user;
+
+      await sendEmailVerification(user);
 
       const collectionName = userType === 'professional' ? 'professionals' : 'users';      
-
       const userDoc = await createUserInFirestore(userId, username, email, collectionName, userType);
       const userStatus = userDoc && userDoc.status ? userDoc.status : 'Unverified';
-
 
       if (userType === 'professional') {
         if (organizationId) {
@@ -44,7 +46,8 @@ export const SignupScreen = ({ navigation, route }) => {
           navigation.navigate('Login');
         }
       } else {
-        console.log('User signed up successfully!');
+        console.log('User signed up successfully! Please verify your email.');
+        setErrorState('Please check your email for verification.');
         navigation.navigate('Login');
       }
     } catch (error) {

@@ -44,10 +44,11 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
         <Text style={styles.orgAddress}>Address: {organization.address}</Text>
         <Text style={styles.orgHours}>Hours Available: {organization.hoursAvailable}</Text>
         
-        {/* Apply Organization Button */}
-        <TouchableOpacity style={styles.applyButton} onPress={handleApplyOrganization}>
-          <Text style={styles.applyButtonText}>Apply Organization</Text>
-        </TouchableOpacity>
+        {userType === 'professional' && (
+          <TouchableOpacity style={styles.applyButton} onPress={handleApplyOrganization}>
+            <Text style={styles.applyButtonText}>Apply Organization</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </RootLayout>
   );

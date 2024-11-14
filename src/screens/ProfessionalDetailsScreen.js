@@ -6,7 +6,7 @@ import { AuthenticatedUserContext } from '../providers';
 
 export const ProfessionalDetailsScreen = ({ route, navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
-    const { professional } = route.params; // Get the professional data passed during navigation
+    const { professional } = route.params;
 
     const renderStars = (rating) => {
       const stars = [];

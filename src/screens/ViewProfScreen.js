@@ -148,7 +148,7 @@ export const ViewProfScreen = ({ navigation }) => {
                   { label: 'Clinical Psychologist', value: 'Clinical Psychologist' },
                   { label: 'Counselor', value: 'Counselor' },
                 ]}
-                placeholder={{ label: 'Select Specialty', value: null }}
+                placeholder={{ label: 'Select Specialty', value: ''}}
                 style={pickerSelectStyles}
               />
 
@@ -161,7 +161,7 @@ export const ViewProfScreen = ({ navigation }) => {
                   { label: 'Male', value: 'Male' },
                   { label: 'Female', value: 'Female' },
                 ]}
-                placeholder={{ label: 'Select Gender', value: null }}
+                placeholder={{ label: 'Select Gender', value: '' }}
                 style={pickerSelectStyles}
                 value={selectedGender}
               />
@@ -188,12 +188,12 @@ export const ViewProfScreen = ({ navigation }) => {
               <RNPickerSelect
                 onValueChange={(value) => setSelectedTimeAvailable(value)}
                 items={[
-                  { label: 'All', value: null },
+                  { label: 'All', value: '' },
                   { label: 'Morning', value: 'morning' },
                   { label: 'Afternoon', value: 'afternoon' },
                   { label: 'Evening', value: 'evening' },
                 ]}
-                placeholder={{ label: 'Select Time Available', value: null }}
+                placeholder={{ label: 'Select Time Available', value: '' }}
                 style={pickerSelectStyles}
                 value={selectedTimeAvailable}
               />
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   
   buttonContainer: {
     flexDirection: 'column',
-    alignItems: 'center', // Center align buttons horizontally
+    alignItems: 'center', 
     justifyContent: 'center',
     marginTop: 20,
   },
@@ -328,8 +328,8 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 100,
     alignItems: 'center',
-    marginVertical: 5, // Space between buttons
-    width: '80%', // Adjust width to fit the modal
+    marginVertical: 5,
+    width: '80%', 
   },
   buttonText: {
     color: 'white',

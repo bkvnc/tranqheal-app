@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import RadioGroup from 'react-native-radio-buttons-group';   //https://www.npmjs.com/package/react-native-radio-buttons-group
+import RadioGroup from 'react-native-radio-buttons-group';
 import { RootLayout } from '../navigation/RootLayout';
 import { Colors } from '../config';
 import { AuthenticatedUserContext } from '../providers';
