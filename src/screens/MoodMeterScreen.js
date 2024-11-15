@@ -155,7 +155,7 @@ export const MoodMeterScreen = ({ navigation }) => {
         </View>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: selectedColor || Colors.purple }]}
-          onPress={() => navigation.navigate('Mood2', { selectedMood })}
+          onPress={() => navigation.navigate('MoodResult', { selectedMood })}
         >
           <Text style={styles.buttonText}>Next</Text>
         </TouchableOpacity>
