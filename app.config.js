@@ -36,6 +36,7 @@ export default {
     android: {
       permissions: ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
       package: "com.tranqheal.app",
-    }
+    },
+    "newArchEnabled": true
   },
 };
