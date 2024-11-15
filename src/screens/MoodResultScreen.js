@@ -10,7 +10,7 @@ export const MoodResultScreen = ({ navigation }) => {
        
         {/* Message Box */}
         <View style={styles.messageBox}>
-          <Text style={styles.messageText}>Based on your input, you feel...</Text>
+          <Text style={styles.messageText}>Based on your input, we recommend...</Text>
         </View>
 
         {/* Mood Emoji */}
@@ -22,8 +22,8 @@ export const MoodResultScreen = ({ navigation }) => {
         </View>
 
         {/* Buttons */}
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('SeekProfessional')} >
-          <Text style={styles.buttonText}>Seek Professional</Text>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('')} >
+          <Text style={styles.buttonText}>Placeholder</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Home')}>
