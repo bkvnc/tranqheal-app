@@ -251,7 +251,13 @@ const UserTable = () => {
           </button>
         ) : (
           <>
-            <SuspendUserButton forumId={report.forumId} reportId={report.id} adminId={user?.uid || ''} />
+            <SuspendUserButton
+             forumId={report.forumId}
+             postId={report.postId || ''}
+             commentId={report.commentId || ''}
+             reportId={report.id}
+             adminId={user?.uid || ''}
+             onSuspend={() => handleBanUser(report.id)}/>
             <BanUserButton 
               forumId={report.forumId}
               postId={report.postId || ''}
@@ -278,7 +284,7 @@ const UserTable = () => {
       <h1 className="text-2xl font-semibold mb-5">Reports</h1>
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-200 dark:bg-gray-700">
+          <tr className="bg-gray-2 text-left dark:bg-meta-4">
             <th>Author</th>
             <th>Reported By</th>
             <th>Reason</th>
