@@ -38,6 +38,7 @@ export const ForumsScreen = ({ navigation }) => {
   // Predefined tags
   const predefinedTags = ['Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'];
   const [selectedTags, setSelectedTags] = useState([]);
+  
 
   useEffect(() => {
     if (user) {
