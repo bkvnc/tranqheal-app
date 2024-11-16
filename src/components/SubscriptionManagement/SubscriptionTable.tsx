@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../../config/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 const SubscriptionTable = () => {
+    const [currentPage, setCurrentPage] = useState(1);
+    const [subscriptionsPerPage] = useState(5);
     const [subscriptions, setSubscriptions] = useState([]);
-
 
     useEffect(() => {
         const fetchSubscriptions = async () => {
@@ -22,6 +23,26 @@ const SubscriptionTable = () => {
 
         fetchSubscriptions();
     }, []);
+
+    // Function to handle deleting a subscription
+    const handleDelete = async (subscriptionId: string) => {
+        const confirmed = window.confirm('Are you sure you want to delete this subscription?');
+        if (confirmed) {
+            try {
+                await deleteDoc(doc(db, 'subscriptions', subscriptionId)); // Delete from Firestore
+                setSubscriptions(subscriptions.filter((sub) => sub.id !== subscriptionId)); // Remove from state
+                alert('Subscription deleted successfully!');
+            } catch (error) {
+                console.error('Error deleting subscription:', error);
+                alert('Failed to delete the subscription.');
+            }
+        }
+    };
+
+    const indexOfLastSubscription = currentPage * subscriptionsPerPage;
+    const indexOfFirstSubscription = indexOfLastSubscription - subscriptionsPerPage;
+    const currentSubscriptions = subscriptions.slice(indexOfFirstSubscription, indexOfLastSubscription);
+    const totalPages = Math.ceil(subscriptions.length / subscriptionsPerPage);
 
     return (
         <>
@@ -54,7 +75,7 @@ const SubscriptionTable = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {subscriptions.map((subscription) => (
+                            {currentSubscriptions.map((subscription) => (
                                 <tr key={subscription.id}>
                                     <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
                                         <h5 className="font-medium text-black dark:text-white">{subscription.organizationName}</h5>
@@ -76,8 +97,13 @@ const SubscriptionTable = () => {
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <div className="flex items-center space-x-3.5">
-                                            <button className="hover:text-primary">Edit</button>
-                                            <button className="hover:text-primary">Delete</button>
+                                            {/* <button className="hover:text-primary">Edit</button> */}
+                                            <button 
+                                                className="text-danger hover:text-white hover:bg-danger hover:shadow-lg hover:shadow-danger/50 rounded-md py-1 px-3  transition flex items-center" 
+                                                onClick={() => handleDelete(subscription.id)} // Delete button
+                                            >
+                                                Delete
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -85,9 +111,24 @@ const SubscriptionTable = () => {
                         </tbody>
                     </table>
                     {/* PAGINATION */}
-                    <div className="flex justify-center mt-4">
-                        <button className="bg-blue-500 text-black py-2 px-4 rounded mr-2 dark:text-white">Previous</button>
-                        <button className="bg-blue-500 text-black py-2 px-4 rounded dark:text-white">Next</button>
+                    <div className="flex justify-between mt-4">
+                        <button
+                            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                            className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+                        >
+                            Previous
+                        </button>
+                        <div className="flex items-center">
+                            <span>Page {currentPage} of {totalPages}</span>
+                        </div>
+                        <button
+                            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                            className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             </div>

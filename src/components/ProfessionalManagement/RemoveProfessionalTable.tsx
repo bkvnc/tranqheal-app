@@ -1,38 +1,34 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { db, auth } from "../../config/firebase";
-import { collection, getDocs, doc, query, where, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, query, where, getDoc, deleteDoc } from "firebase/firestore";
 import dayjs from 'dayjs';
-import { Professional, Application, Organization } from "../../hooks/types";
-
-
+import { Professional, Organization } from "../../hooks/types";
 
 const RemoveProfessionalTable = () => {
     const [professionals, setProfessionals] = useState<Professional[]>([]);
-    const [Organizations, setOrganizations] = useState<Organization[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [currentPage, setCurrentPage] = useState(1);
     const professionalsPerPage = 5;
     const [searchTerm, setSearchTerm] = useState<string>("");
 
-
     useEffect(() => {
         const fetchVerifiedProfessionals = async () => {
             const currentUser = auth.currentUser;
             if (!currentUser) return;
-    
+
             try {
                 const organizationsCollection = collection(db, "organizations");
                 const organizationSnapshot = await getDocs(organizationsCollection);
-                
+
                 const verifiedProfessionals: Professional[] = [];
-    
+
                 for (const orgDoc of organizationSnapshot.docs) {
                     const professionalsCollectionRef = collection(db,  `organizations/${currentUser.uid}/professionals`);
                     const verifiedProfessionalsQuery = query(professionalsCollectionRef, where('status', '==', 'Verified'));
-    
+
                     const professionalsSnapshot = await getDocs(verifiedProfessionalsQuery);
-    
+
                     professionalsSnapshot.forEach(doc => {
                         if (!verifiedProfessionals.find(pro => pro.id === doc.id)) { 
                             verifiedProfessionals.push({
@@ -42,20 +38,38 @@ const RemoveProfessionalTable = () => {
                         }
                     });
                 }
-    
+
                 setProfessionals(verifiedProfessionals);
                 console.log("Verified Professionals:", verifiedProfessionals);
-    
+
             } catch (error) {
                 console.error("Error fetching verified professionals: ", error);
             } finally {
                 setLoading(false);
             }
         };
-    
+
         fetchVerifiedProfessionals();
     }, []);
-    
+
+    const handleDelete = async (id: string) => {
+        try {
+            const currentUser = auth.currentUser;
+            if (!currentUser) return;
+
+            // Delete the professional document
+            const professionalDocRef = doc(db, `organizations/${currentUser.uid}/professionals`, id);
+            await deleteDoc(professionalDocRef);
+
+            // Remove the deleted professional from the local state
+            setProfessionals(prevProfessionals => 
+                prevProfessionals.filter(professional => professional.id !== id)
+            );
+            console.log("Professional deleted successfully");
+        } catch (error) {
+            console.error("Error deleting professional: ", error);
+        }
+    };
 
     const filteredProfessionals = professionals.filter(professional =>
         professional.firstName?.toLowerCase().includes(searchTerm.toLowerCase() || '') ||
@@ -63,13 +77,11 @@ const RemoveProfessionalTable = () => {
     );
 
     const indexOfLastProfessional = currentPage * professionalsPerPage;
-    const indexOfFirstProfessional = indexOfLastProfessional- professionalsPerPage;
+    const indexOfFirstProfessional = indexOfLastProfessional - professionalsPerPage;
     const currentProfessionals = filteredProfessionals.slice(indexOfFirstProfessional, indexOfLastProfessional);
     const totalPages = Math.ceil(filteredProfessionals.length / professionalsPerPage);
 
     if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
-
-    
 
     return (
         <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
@@ -79,6 +91,8 @@ const RemoveProfessionalTable = () => {
                         type="text"
                         placeholder="Search responder by name or email"
                         className="mb-3 w-100 rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                     />
                     <Link
                         to="#"
@@ -107,7 +121,7 @@ const RemoveProfessionalTable = () => {
                             currentProfessionals.map(professional => (
                             <tr key={professional.id}>
                                 <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                {professional.firstName ? `${professional.firstName} ${professional.lastName}'s` : 'N/A'}
+                                {professional.firstName ? `${professional.firstName} ${professional.lastName}` : 'N/A'}
                                 </td>
                                 <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                     {professional.createdAt?.toDate ? dayjs(professional.createdAt.toDate()).format("YYYY-MM-DD HH:mm") : "N/A"}
@@ -118,11 +132,22 @@ const RemoveProfessionalTable = () => {
                                 <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                     {professional.dateApproved?.toDate ? dayjs(professional.dateApproved.toDate()).format("YYYY-MM-DD HH:mm") : "N/A"}
                                 </td>
-                                <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">{professional.status}</td>
                                 <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                    
-                                    <button className="hover:text-primary">Edit</button>
-                                    <button className="hover:text-primary">Delete</button>
+                                        <p className={`inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium 
+                                            ${ 
+                                                professional.status === 'Unverified' ? 'bg-warning text-warning' : 
+                                                professional.status === 'Verified' ? 'bg-success text-success' : ''}`}>
+                                            {professional.status}
+                                        </p>
+                                    </td>
+                                <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                                    {/* <button className="hover:text-primary">Edit</button> */}
+                                    <button 
+                                        className="ml-2 py-1 px-3 dark:text-white rounded-md hover:bg-danger hover:text-white  hover:shadow-lg hover:shadow-danger/50"
+                                        onClick={() => handleDelete(professional.id)}
+                                    >
+                                        Delete
+                                    </button>
                                 </td>
                             </tr>
                             ))

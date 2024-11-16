@@ -5,14 +5,18 @@ import { collection, getDocs } from 'firebase/firestore';
 // Define the interface for forum data
 interface Forum {
   id: string;
-  title: string; // Ensure you're using 'title' consistently
+  title: string;
   totalMembers: number;
   totalPosts: number;
-  growthRate: number; // Use growthRate in calculations and rendering
+  growthRate: number;
+  dateCreated: { seconds: number };  // Assuming createdAt is stored in Firestore as a timestamp
 }
 
 const TopForumsTable = () => {
   const [forums, setForums] = useState<Forum[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [ForumsPerPage] = useState(5);
 
   useEffect(() => {
     const fetchForums = async () => {
@@ -22,16 +26,18 @@ const TopForumsTable = () => {
           const data = doc.data();
           return {
             id: doc.id,
-            title: data.title, // Ensure your Firestore has this field
-            totalMembers: data.totalMembers || 0, // Default to 0 if not defined
-            totalPosts: data.totalPosts || 0, // Default to 0 if not defined
-            growthRate: calculateGrowthRate(data), // A function to calculate growth rate if necessary
+            title: data.title,
+            totalMembers: data.totalMembers || 0,
+            totalPosts: data.totalPosts || 0,
+            dateCreated: data.dateCreated, // Assuming createdAt is stored as a timestamp
+            growthRate: calculateGrowthRate(data), // Calculate growth rate based on available data
           };
         });
 
         // Sort forums by member count and post count
         fetchedForums.sort((a, b) => b.totalMembers - a.totalMembers || b.totalPosts - a.totalPosts);
         setForums(fetchedForums);
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching forums:', error);
       }
@@ -41,10 +47,28 @@ const TopForumsTable = () => {
   }, []);
 
   const calculateGrowthRate = (data: any): number => {
-    return data.previousCount && data.currentCount
-      ? ((data.currentCount - data.previousCount) / data.previousCount) * 100
-      : 0;
+    const currentCount = data.totalMembers || 0;
+    const dateCreated = data.dateCreated?.seconds ? data.dateCreated.seconds : 0; // Assuming the timestamp is in seconds
+    const currentTime = Math.floor(Date.now() / 1000); // Get current time in seconds
+
+    // Calculate the time difference in days
+    const timeDifference = (currentTime - dateCreated) / (60 * 60 * 24); // Convert to days
+
+    if (timeDifference > 0) {
+      // Use the time difference to estimate growth
+      return (currentCount / timeDifference) * 100; // Growth rate per day (can be adjusted as needed)
+    }
+
+    return 0;
   };
+
+  const indexOfLastForum = currentPage * ForumsPerPage;
+  const indexOfFirstForum = indexOfLastForum - ForumsPerPage;
+  const currentForums = forums.slice(indexOfFirstForum, indexOfLastForum);
+  const totalPages = Math.ceil(forums.length / ForumsPerPage);
+  
+  if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
+
 
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
@@ -68,10 +92,10 @@ const TopForumsTable = () => {
           </div>
         </div>
 
-        {forums.map((forum) => (
+        {currentForums.map((forum) => (
           <div key={forum.id} className="grid grid-cols-3 border-b border-stroke dark:border-strokedark sm:grid-cols-4">
             <div className="flex items-center gap-3 p-2.5 xl:p-5">
-              <p className="hidden text-black dark:text-white sm:block">{forum.title}</p> {/* Use 'title' instead of 'name' */}
+              <p className="hidden text-black dark:text-white sm:block">{forum.title}</p>
             </div>
 
             <div className="flex items-center justify-center p-2.5 xl:p-5">
@@ -83,15 +107,30 @@ const TopForumsTable = () => {
             </div>
 
             <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-              <p className="text-meta-5">{forum.growthRate.toFixed(1)}%</p> {/* Use 'growthRate' */}
+              <p className="text-meta-5">{forum.growthRate.toFixed(1)}%</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="flex justify-center mt-4">
-        <button className="bg-blue-500 text-black py-2 px-4 rounded mr-2 dark:text-white">Previous</button>
-        <button className="bg-blue-500 text-black py-2 px-4 rounded dark:text-white">Next</button>
+      <div className="flex justify-between mt-4">
+        <button
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <div className="flex items-center">
+          <span>Page {currentPage} of {totalPages}</span>
+        </div>
+        <button
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+        >
+          Next
+        </button>
       </div>
     </div>
   );

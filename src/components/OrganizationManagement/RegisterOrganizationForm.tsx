@@ -1,7 +1,8 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
 import { getAuth, createUserWithEmailAndPassword, UserCredential } from 'firebase/auth';
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import Alert from '../../pages/UiElements/Alerts';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const auth = getAuth();
 const db = getFirestore();
@@ -51,9 +52,8 @@ const Register: React.FC = () => {
         userType: 'organization',
     });
 
-    const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
-    
+
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prevData => ({
@@ -64,34 +64,35 @@ const Register: React.FC = () => {
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setAlert(null);
         setLoading(true);
-        
+
+        // Validation checks
         if (formData.password !== formData.confirmPassword) {
-            setAlert({ type: 'error', message: "Passwords don't match" });
+            toast.error("Passwords don't match");
             setLoading(false);
             return;
         }
 
         if (formData.password.length < 6) {
-            setAlert({ type: 'error', message: 'Password should be at least 6 characters long' });
+            toast.error('Password should be at least 6 characters long');
             setLoading(false);
             return;
         }
 
         if (formData.userType === 'organization' && !formData.organizationName) {
-            setAlert({ type: 'error', message: 'Organization name is required' });
+            toast.error('Organization name is required');
             setLoading(false);
             return;
         }
 
         if (formData.userType === 'admin' && !formData.adminName) {
-            setAlert({ type: 'error', message: 'Admin name is required' });
+            toast.error('Admin name is required');
             setLoading(false);
             return;
         }
 
         try {
+            // Create a new user in Firebase Authentication
             const userCredential: UserCredential = await createUserWithEmailAndPassword(
                 auth,
                 formData.email,
@@ -99,6 +100,7 @@ const Register: React.FC = () => {
             );
             const user = userCredential.user;
 
+            // User data to be stored in Firestore
             const userData: UserData = {
                 email: formData.email,
                 userType: formData.userType,
@@ -113,26 +115,35 @@ const Register: React.FC = () => {
                 userData.adminName = formData.adminName;
             }
 
+            // Determine the collection name based on user type
             const collectionName: 'organizations' | 'admins' =
                 formData.userType === 'organization' ? 'organizations' : 'admins';
-            
+
+            // Save the user data to Firestore
             await setDoc(doc(db, collectionName, user.uid), userData);
 
-            setAlert({ type: 'success', message: 'Registration successful. You can now log in.' });
+            // Show success toast
+            toast.success('Registration successful! You can now log in.');
         } catch (error: any) {
             let errorMessage = 'An unknown error occurred';
+
+            // Handle different error cases
             switch (error.code) {
-              case 'auth/email-already-in-use':
-                errorMessage = 'The email address is already in use.';
-                break;
-              case 'auth/invalid-email':
-                errorMessage = 'Invalid email address.';
-                break;
-              case 'auth/weak-password':
-                errorMessage = 'Password should be at least 6 characters.';
-                break;
+                case 'auth/email-already-in-use':
+                    errorMessage = 'The email address is already in use. Please use a different email.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'The email address is invalid. Please provide a valid email.';
+                    break;
+                case 'auth/weak-password':
+                    errorMessage = 'Password should be at least 6 characters long.';
+                    break;
+                default:
+                    errorMessage = error.message || 'An error occurred during registration.';
+                    break;
             }
-            setAlert({ type: 'error', message: errorMessage });
+
+            toast.error(errorMessage);
         }
 
         setLoading(false);
@@ -140,7 +151,7 @@ const Register: React.FC = () => {
 
     return (
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-            {alert && <Alert type={alert.type} message={alert.message} />}
+            <ToastContainer />
             <div className="border-b border-stroke py-4 px-6.5 dark:border-strokedark">
                 <h1 className="font-medium text-black dark:text-white">Registration Form</h1>
             </div>
@@ -214,28 +225,30 @@ const Register: React.FC = () => {
                             onChange={handleChange}
                             className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-strokedark dark:bg-form-input dark:focus:border-primary"
                             required
+                            minLength={6}
                         />
                     </div>
-                    <div className="mb-5.5">
-                        <label className="mb-2.5 block text-black dark:text-white">Re-type Password</label>
+                    <div className="mb-4.5">
+                        <label className="mb-2.5 block text-black dark:text-white">Confirm Password</label>
                         <input
                             type="password"
                             name="confirmPassword"
-                            placeholder="Re-enter password"
+                            placeholder="Confirm password"
                             value={formData.confirmPassword}
                             onChange={handleChange}
                             className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-strokedark dark:bg-form-input dark:focus:border-primary"
                             required
                         />
                     </div>
-                    <button
-                        type="submit"
-                        className={`flex w-full justify-center rounded bg-[#9F4FDD] p-3 font-medium text-gray ${loading ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                        disabled={loading}
-                    >
-                        {loading ? 'Registering...' : `Register ${formData.userType === 'organization' ? 'Organization' : 'Admin'}`}
-                    </button>
+                    <div className="flex justify-center gap-4">
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="inline-block w-full rounded bg-[#9F4FDD] hover:shadow-lg hover:shadow-[#9F4FDD]/50  py-3 px-5 text-center text-base font-semibold text-white transition hover:bg-opacity-90"
+                        >
+                            {loading ? 'Processing...' : 'Register'}
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

@@ -15,6 +15,8 @@ interface SuspendedUser {
 }
 
 const SuspendedUsers: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [suspendedPerPage] = useState(5);
   const [suspendedUsers, setSuspendedUsers] = useState<SuspendedUser[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +77,14 @@ const SuspendedUsers: React.FC = () => {
     };
   }, []);
 
-  if (isLoading) return <div>Loading...</div>;
+  const indexOfLastSuspended = currentPage * suspendedPerPage;
+  const indexOfFirstSuspended = indexOfLastSuspended - suspendedPerPage;
+  const currentBan = suspendedUsers.slice(indexOfFirstSuspended,indexOfLastSuspended);
+  const totalPages = Math.ceil(suspendedUsers.length / suspendedPerPage);
+
+  if (isLoading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
+
+
   if (error) return <div>{error}</div>;
 
   return (
@@ -95,7 +104,7 @@ const SuspendedUsers: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {suspendedUsers.map((user) => (
+            {currentBan.map((user) => (
               <tr key={user.id}>
                 <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">{user.authorName}</td>
                 <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">{user.reason}</td>
@@ -109,6 +118,25 @@ const SuspendedUsers: React.FC = () => {
             ))}
           </tbody>
         </table>
+        <div className="flex justify-between mt-4">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <div className="flex items-center">
+            <span>Page {currentPage} of {totalPages}</span>
+          </div>
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

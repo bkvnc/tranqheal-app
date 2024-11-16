@@ -159,7 +159,7 @@ const BlacklistedWordsTable = () => {
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                     <div className="flex items-center space-x-3.5">
                                             <button className="dark:text-white rounded-md hover:bg-success hover:text-white  hover:shadow-lg hover:shadow-success/50 py-1 px-3 " onClick={() => handleEdit(item)}>Edit</button>
-                                            <button className="dark:text-white rounded-md hover:bg-danger hover:text-white  hover:shadow-lg hover:shadow-danger/50 py-1 px-3" onClick={() => deleteWord(item.id)}>Delete</button>
+                                            <button className="dark:text-white text-danger rounded-md hover:bg-danger hover:text-white  hover:shadow-lg hover:shadow-danger/50 py-1 px-3" onClick={() => deleteWord(item.id)}>Delete</button>
                                         </div>
                                     </td>
                                 </tr>

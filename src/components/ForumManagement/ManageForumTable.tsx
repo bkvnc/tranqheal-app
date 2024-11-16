@@ -126,9 +126,6 @@ const ManageForumTable = () => {
                             <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
                                 Reports
                             </th>
-                            <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
-                                Status
-                            </th>
                             <th className="py-4 px-4 font-medium text-black dark:text-white">
                                 Actions
                             </th>
@@ -162,14 +159,7 @@ const ManageForumTable = () => {
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <p className="text-black dark:text-white">{forum.reports}</p>
                                     </td>
-                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <p className={`inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium 
-                                            ${forum.status === 'inactive' ? 'bg-danger text-danger' : 
-                                            forum.status === 'pending' ? 'bg-warning text-warning' : 
-                                            forum.status === 'active' ? 'bg-success text-success' : ''}`}>
-                                            {forum.status}
-                                        </p>
-                                    </td>
+                                   
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <button className="mr-2 text-sm dark:text-white">
                                             <NavLink to={`/forums/${forum.id}`} className="flex items-center justify-center hover:shadow-lg hover:bg-success hover:text-white rounded-md py-1 px-5">
