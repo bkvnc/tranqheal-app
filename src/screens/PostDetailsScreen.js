@@ -437,6 +437,43 @@ const handleDeleteComment = async (commentId) => {
   ); 
 };
 
+const getUserName = async () => {
+  const currentUserId = auth.currentUser?.uid;
+
+  if (!currentUserId) return null;
+
+  // Function to fetch document from a collection
+  const fetchUserData = async (collectionName) => {
+    const docRef = doc(firestore, collectionName, currentUserId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? docSnap.data() : null;
+  };
+
+  // Try each collection in order
+  const collections = ['users', 'organizations', 'admins', 'professionals'];
+  for (const collection of collections) {
+    const userData = await fetchUserData(collection);
+    if (userData) {
+      // Extract the name based on the collection's field structure
+      switch (collection) {
+        case 'users':
+        case 'professionals':
+          return `${userData.firstName} ${userData.lastName}`;
+        case 'organizations':
+          return userData.organizationName;
+        case 'admins':
+          return `${userData.firstName} ${userData.lastName}`;
+        default:
+          return null;
+      }
+    }
+  }
+
+  // If not found in any collection
+  return null;
+};
+
+
   // Report a post
 const handleReportPost = async (postId) => {
   const reporterName = await getUserName();
@@ -455,7 +492,9 @@ const handleReportPost = async (postId) => {
 
             if (postDoc.exists()) {
               // Increment the reportCount field
+              const authorType = postDoc.data().authorType;
               const authorName = postDoc.data().authorName;
+              const authorId = postDoc.data().authorId;
               const currentReportCount = postDoc.data().reportCount || 0;
               await updateDoc(postRef, {
                 reportCount: currentReportCount + 1,
@@ -465,6 +504,8 @@ const handleReportPost = async (postId) => {
               // Add a new report document in the 'reports' subcollection
               await addDoc(collection(postRef, "reports"), {
                 authorName: authorName,
+                authorType: authorType,
+                authorId: authorId,
                 reporterName: reporterName,
                 reportedBy: auth.currentUser.uid,
                 reason: 'Inappropriate content',  
@@ -505,14 +546,17 @@ const handleReportComment = async (commentId) => {
 
             if (commentDoc.exists()) {
               // Increment the reportCount field
+              const authorName = commentDoc.data().authorName;
+              const authorId = commentDoc.data().authorId;
+
               const currentReportCount = commentDoc.data().reportCount || 0;
               await updateDoc(commentRef, {
                 reportCount: currentReportCount + 1,
               });
 
-              // Add a new report document in the 'reports' subcollection
               await addDoc(collection(commentRef, "reports"), {
                 authorName: authorName,
+                authorId: authorId,
                 reporterName: reporterName,
                 reportedBy: auth.currentUser.uid,
                 reason: 'Inappropriate content',  
