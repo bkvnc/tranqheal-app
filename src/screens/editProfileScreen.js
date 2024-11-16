@@ -1,18 +1,22 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useContext, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import RNPickerSelect from 'react-native-picker-select';
+import { LoadingIndicator } from 'src/components';
+import { AuthenticatedUserContext } from 'src/providers';
 import { RootLayout } from '../navigation/RootLayout';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, firestore } from '../config';
 
 export const EditProfileScreen = ({ navigation }) => {
-  const [firstName, setFirstName] = React.useState('');
-  const [middleName, setMiddleName] = React.useState('');
-  const [lastName, setLastName] = React.useState('');
-  const [age, setAge] = React.useState('');
-  const [gender, setGender] = React.useState('');
-  const [mobileNumber, setMobileNumber] = React.useState('');
-  const [facebookLink, setFacebookLink] = React.useState('');
+  const { userType} = useContext(AuthenticatedUserContext);
+  const [isLoading, setIsLoading] = useState(true);
+  const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [facebookLink, setFacebookLink] = useState('');
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -33,6 +37,7 @@ export const EditProfileScreen = ({ navigation }) => {
         setMobileNumber(data.mobileNumber || '');
         setFacebookLink(data.facebookLink || '');
       }
+      setIsLoading(false);
     };
 
     fetchProfileData();
@@ -66,12 +71,16 @@ export const EditProfileScreen = ({ navigation }) => {
     }
   };
 
+  if(isLoading) {
+    return <LoadingIndicator />
+  }
+
   return (
-    <RootLayout navigation={navigation} screenName="EditProfileScreen">
+    <RootLayout navigation={navigation} screenName="EditProfileScreen" userType={userType}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // Different behavior for iOS and Android
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} // Adjust offset as needed for iOS
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
         <View style={{ flex: 1, backgroundColor: 'white' }}>
           <ScrollView style={{ flex: 1, padding: 10 }}>
@@ -138,7 +147,7 @@ export const EditProfileScreen = ({ navigation }) => {
                   placeholder={{ label: 'Select Gender', value: null }}
                   style={{
                     inputIOS: styles.pickerText,
-                    inputAndroid: styles.pickerText, // Same style for Android
+                    inputAndroid: styles.pickerText,
                   }}
                 />
               </View>
