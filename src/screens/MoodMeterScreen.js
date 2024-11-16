@@ -1,240 +1,166 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useContext } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, interpolateColor } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
 import { PanGestureHandler } from 'react-native-gesture-handler';
-import { LinearGradient } from 'expo-linear-gradient';
+import { AuthenticatedUserContext } from '../providers';
+import { RootLayout } from 'src/navigation/RootLayout';
 import { LoadingIndicator } from '../components';
 import { colorPalette, moodData } from '../utils/moodConstants';
+import { Colors } from '../config';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const GRID_SIZE = 10;
-const DOT_SIZE = Math.min(width, height) / (GRID_SIZE * 1.2);
+const DOT_SIZE = width / (GRID_SIZE * 1.3);
 const GAP_SIZE = 1;
-const MAGNIFICATION_FACTOR = 1.5;
-const GRID_WIDTH = GRID_SIZE * (DOT_SIZE + GAP_SIZE) - GAP_SIZE;
+const MAGNIFICATION_FACTOR = 1.2;
 
-const MoodDot = ({ x, y, colorInfo, panX, panY, moodIndex, isInteracting }) => {
+const MoodDot = React.memo(({ x, y, color, isSelected }) => {
   const animatedScale = useSharedValue(1);
-  const animatedTranslateX = useSharedValue(0);
-  const animatedTranslateY = useSharedValue(0);
   const animatedOpacity = useSharedValue(0);
-  const animatedZIndex = useSharedValue(0);
-  const animatedColorProgress = useSharedValue(0);
 
   useEffect(() => {
     animatedOpacity.value = withTiming(1, { duration: 300 });
-  }, [animatedOpacity]);
+  }, []);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const dotCenterX = x * (DOT_SIZE + GAP_SIZE) + DOT_SIZE / 2;
-    const dotCenterY = y * (DOT_SIZE + GAP_SIZE) + DOT_SIZE / 2;
-    const dx = dotCenterX - panX.value;
-    const dy = dotCenterY - panY.value;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+  const animatedStyle = useAnimatedStyle(() => ({
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
+    backgroundColor: color,
+    opacity: animatedOpacity.value,
+    transform: [{ scale: withTiming(isSelected ? MAGNIFICATION_FACTOR : 1, { duration: 80 }) }],
+    position: 'absolute',
+    left: x * (DOT_SIZE + GAP_SIZE),
+    top: y * (DOT_SIZE + GAP_SIZE),
+  }));
 
-    let scaleFactor;
-    let repulsionDistance;
-
-    if (isInteracting.value && distance < DOT_SIZE / 2) {
-      scaleFactor = MAGNIFICATION_FACTOR;
-      repulsionDistance = 0;
-      animatedColorProgress.value = withTiming(1, { duration: 150 });
-    } else {
-      scaleFactor = 1;
-      repulsionDistance = 0;
-      animatedColorProgress.value = withTiming(0, { duration: 150 });
-    }
-
-    const angle = Math.atan2(dy, dx);
-    const translateX = Math.cos(angle) * repulsionDistance;
-    const translateY = Math.sin(angle) * repulsionDistance;
-
-    animatedScale.value = withTiming(scaleFactor, { duration: 150, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
-    animatedTranslateX.value = withTiming(translateX, { duration: 150, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
-    animatedTranslateY.value = withTiming(translateY, { duration: 150, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
-    animatedZIndex.value = isInteracting.value && distance < DOT_SIZE ? 10 : 0;
-
-    return {
-      width: DOT_SIZE,
-      height: DOT_SIZE,
-      opacity: animatedOpacity.value,
-      left: x * (DOT_SIZE + GAP_SIZE),
-      top: y * (DOT_SIZE + GAP_SIZE),
-      zIndex: animatedZIndex.value,
-      transformOrigin: 'center',
-      borderRadius: DOT_SIZE / 2,
-      overflow: 'hidden',
-      transform: [
-        { translateX: animatedTranslateX.value },
-        { translateY: animatedTranslateY.value },
-        { scale: animatedScale.value }
-      ],
-    };
-  });
-
-  const animatedColor = useAnimatedStyle(() => {
-    const backgroundColor = interpolateColor(
-      animatedColorProgress.value,
-      [0, 1],
-      [colorInfo.base, colorInfo.highlight]
-    );
-
-    return { backgroundColor };
-  });
-
-  const moodLabel = moodData[moodIndex] ? moodData[moodIndex].join(', ') : 'Unknown mood';
-
-  return (
-    <Animated.View style={[styles.moodDot, animatedStyle, animatedColor]} accessibilityLabel={`Mood dot for ${moodLabel}`}>
-      <LinearGradient
-        colors={[colorInfo.highlight, colorInfo.base]}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-    </Animated.View>
-  );
-};
-
-
+  return <Animated.View style={animatedStyle} />;
+});
 
 export const MoodMeterScreen = ({ navigation }) => {
+  const { userType } = useContext(AuthenticatedUserContext);
   const [selectedMood, setSelectedMood] = useState('');
-  const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedColor, setSelectedColor] = useState('');
   const [loading, setLoading] = useState(true);
-  const panX = useSharedValue(0);
-  const panY = useSharedValue(0);
-  const isInteracting = useSharedValue(false);
+
+  const panX = useSharedValue(-1);
+  const panY = useSharedValue(-1);
+  
+  const [selectedDot, setSelectedDot] = useState({ x: -1, y: -1 });
 
   useEffect(() => {
-    const timeout = setTimeout(() => setLoading(false), 1000);
+    const timeout = setTimeout(() => setLoading(false), 500);
     return () => clearTimeout(timeout);
   }, []);
 
-  const handleGestureStart = useCallback(() => {
-    isInteracting.value = true;
-  }, [isInteracting]);
-
-  const handleGestureEnd = useCallback(() => {
-    isInteracting.value = false;
-    panX.value = -1; // Set to a value outside the grid
-    panY.value = -1;
-  }, [isInteracting, panX, panY]);
-
   const handleGesture = useCallback(({ nativeEvent }) => {
-    const x = nativeEvent.x;
-    const y = nativeEvent.y;
-    panX.value = x;
-    panY.value = y;
-
-    updateSelectedMood(x, y);
+    panX.value = nativeEvent.x;
+    panY.value = nativeEvent.y;
+    updateSelectedMood(nativeEvent.x, nativeEvent.y);
   }, []);
 
-  const updateSelectedMood = useCallback((x, y) => {
+  const updateSelectedMood = (x, y) => {
     const gridX = Math.floor(x / (DOT_SIZE + GAP_SIZE));
     const gridY = Math.floor(y / (DOT_SIZE + GAP_SIZE));
     
-    if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
-      const quadrantIndex = (gridX >= GRID_SIZE / 2 ? 1 : 0) + (gridY >= GRID_SIZE / 2 ? 2 : 0);
-      const quadrant = Object.keys(moodData)[quadrantIndex];
-      const index = ((gridY % (GRID_SIZE / 2)) * (GRID_SIZE / 2) + (gridX % (GRID_SIZE / 2))) % moodData[quadrant].length;
-      setSelectedMood(moodData[quadrant][index]);
+    if (gridX !== selectedDot.x || gridY !== selectedDot.y) {
+      setSelectedDot({ x: gridX, y: gridY });
+  
+      const isRight = gridX >= GRID_SIZE / 2;
+      const isBottom = gridY >= GRID_SIZE / 2;
+      let quadrant, color;
 
-      // Calculate the distance from the touch point to the center of the dot
-      const dotCenterX = gridX * (DOT_SIZE + GAP_SIZE) + DOT_SIZE / 2;
-      const dotCenterY = gridY * (DOT_SIZE + GAP_SIZE) + DOT_SIZE / 2;
-      const dx = dotCenterX - x;
-      const dy = dotCenterY - y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (isRight && isBottom) {
+        quadrant = 'lowEnergyHighPleasant';
+        color = colorPalette.lowEnergyHighPleasant.base;
+      } else if (!isRight && isBottom) {
+        quadrant = 'lowEnergyLowPleasant';
+        color = colorPalette.lowEnergyLowPleasant.base;
+      } else if (isRight && !isBottom) {
+        quadrant = 'highEnergyHighPleasant';
+        color = colorPalette.highEnergyHighPleasant.base;
+      } else {
+        quadrant = 'highEnergyLowPleasant';
+        color = colorPalette.highEnergyLowPleasant.base;
+      }
 
-      // Interpolate the color based on the distance
-      const colorProgress = Math.max(0, Math.min(1, 1 - (distance / (DOT_SIZE / 2))));
-      const interpolatedColor = interpolateColor(
-        colorProgress,
-        [0, 1],
-        [colorPalette[quadrant].base, colorPalette[quadrant].highlight]
-      );
+      const moodOptions = moodData[quadrant] || [];
+      if (moodOptions.length === 0) {
+        console.log('No moods found for this quadrant');
+      }
+  
 
-      setSelectedColor(interpolatedColor);
+      const moodIndex = (gridY % (GRID_SIZE / 2)) * (GRID_SIZE / 2) + (gridX % (GRID_SIZE / 2));
+      const mood = moodOptions[moodIndex % moodOptions.length];
+      setSelectedMood(mood);
+      setSelectedColor(color);
     }
-  }, []);
+  };
+  
+  
+  
 
-  const renderMoodDots = useMemo(() => {
+  const renderMoodGrid = () => {
     const dots = [];
-    Object.entries(moodData).forEach(([quadrant], quadrantIndex) => {
-      const colorInfo = Object.values(colorPalette)[quadrantIndex];
+    Object.entries(moodData).forEach(([quadrant, moods], quadrantIndex) => {
+      const color = colorPalette[quadrant].base;
       const startX = (quadrantIndex % 2) * (GRID_SIZE / 2);
       const startY = Math.floor(quadrantIndex / 2) * (GRID_SIZE / 2);
 
       for (let i = 0; i < GRID_SIZE / 2; i++) {
         for (let j = 0; j < GRID_SIZE / 2; j++) {
+          const dotX = startX + i;
+          const dotY = startY + j;
+          const isSelected = dotX === selectedDot.x && dotY === selectedDot.y;
+
           dots.push(
             <MoodDot
-              key={`${startX + i}-${startY + j}`}
-              x={startX + i}
-              y={startY + j}
-              colorInfo={colorInfo}
-              panX={panX}
-              panY={panY}
-              moodIndex={quadrant}
-              isInteracting={isInteracting}
+              key={`${dotX}-${dotY}`}
+              x={dotX}
+              y={dotY}
+              color={color}
+              isSelected={isSelected}
             />
           );
         }
       }
     });
     return dots;
-  }, [panX, panY, isInteracting]);
+  };
 
   if (loading) {
     return <LoadingIndicator />;
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>How are you feeling right now?</Text>
+    <RootLayout screenName={'Mood'} navigation={navigation} userType={userType}>
+      <View style={styles.container}>
+        <Text style={styles.title}>How are you feeling right now?</Text>
 
-      <View style={styles.leftLabelContainer}>
-        <Text style={styles.energyLabel}>High Energy</Text>
-        <Text style={styles.energyLabel}>Low Energy </Text>
-      </View>
-
-      <PanGestureHandler 
-        onGestureEvent={handleGesture}
-        onBegan={handleGestureStart}
-        onEnded={handleGestureEnd}
-        onFailed={handleGestureEnd}
-        onCancelled={handleGestureEnd}
-      >
         <View style={styles.gridContainer}>
-          {renderMoodDots}
+          <PanGestureHandler onGestureEvent={handleGesture}>
+            <View style={styles.grid}>{renderMoodGrid()}</View>
+          </PanGestureHandler>
         </View>
-      </PanGestureHandler>
 
-      <View style={styles.bottomLabelContainer}>
-        <Text style={styles.pleasantnessLabel}>Low Pleasantness</Text>
-        <Text style={styles.pleasantnessLabel}>High Pleasantness</Text>
-      </View>
-
-      <View style={styles.moodTextContainer}>
-        <Text style={styles.moodText}>
-          {selectedMood ? "You are feeling " : "Select a mood"}
-        </Text>
-        {selectedMood && (
-          <Text style={[styles.moodText, styles.highlightedMood, { color: selectedColor }]}>
-           {selectedMood}
+        <View style={styles.moodTextContainer}>
+          <Text style={styles.moodText}>
+            {selectedMood ? "You are feeling " : "Select a mood"}
           </Text>
-        )}
+          {selectedMood && (
+            <Text style={[styles.moodText, styles.highlightedMood, { color: selectedColor }]}>
+              {selectedMood}
+            </Text>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: selectedColor || Colors.purple }]}
+          onPress={() => navigation.navigate('MoodResult', { selectedMood })}
+        >
+          <Text style={styles.buttonText}>Next</Text>
+        </TouchableOpacity>
       </View>
-
-      <TouchableOpacity style={styles.button} 
-        onPress={() => {
-          console.log('Selected mood: ', selectedMood);
-          navigation.navigate('Mood2', { selectedMood });
-        }}>
-        <Text style={styles.buttonText}>Next</Text>
-      </TouchableOpacity>
-    </View>
+    </RootLayout>
   );
 };
 
@@ -244,86 +170,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: Colors.white,
   },
   title: {
     fontSize: 26,
-    fontWeight: "700",
+    fontWeight: '700',
     marginBottom: 20,
-    textAlign: "center",
+    textAlign: 'center',
     color: '#333',
   },
   gridContainer: {
-    width: GRID_WIDTH,
-    height: GRID_WIDTH,
-    backgroundColor: '#fff',
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    borderRadius: 20,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    width: '90%',
+    height: '55%',
+    borderRadius: 10,
+    overflow: 'hidden',
   },
-  leftLabelContainer: {
-   position:'absolute',
-   top:'38%',
-   left:'-5%',
-   justifyContent:'space-between',
-   height:'22%',
-  },
-  bottomLabelContainer: {
-    position:'absolute',
-   flexDirection:'row',
-   justifyContent:'space-between',
-   bottom:'29%',
-   width:'77%',
- },
-  energyLabel:{
-   fontSize:14,
-   fontWeight:'bold',
-   transform:[{rotate:'-90deg'}],
-  },
-  pleasantnessLabel:{
-   fontSize:14,
-   fontWeight:'bold',
-  },
-  moodDot: {
-    position: 'absolute',
-    shadowColor: '#fff',
-    shadowOffset: { width: 0, height: 2 },
+  grid: {
+    flex: 1,
+    position: 'relative',
+    padding: 10,
   },
   moodTextContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    alignItems: 'center',
-    bottom: -40,
     marginTop: 20,
+    alignItems: 'center',
   },
   moodText: {
-    fontSize: 20,
-    textAlign: "center",
-    color: '#555',
-  },
-  highlightedMood: {
-    fontWeight: 'bold',
-    marginLeft: 4,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
   },
   button: {
-    marginTop: 20,
-    backgroundColor: "#4682B4",
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    bottom: -70,
+    paddingHorizontal: 30,
+    borderRadius: 20,
+    marginTop: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
   buttonText: {
-    color: "white",
-    fontSize: 16,
+    color: Colors.white,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
