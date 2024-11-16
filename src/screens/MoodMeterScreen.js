@@ -11,7 +11,6 @@ const GRID_SIZE = 10;
 const DOT_SIZE = Math.min(width, height) / (GRID_SIZE * 1.2);
 const GAP_SIZE = 1;
 const MAGNIFICATION_FACTOR = 1.5;
-const REPULSION_FACTOR = 1.2;
 const GRID_WIDTH = GRID_SIZE * (DOT_SIZE + GAP_SIZE) - GAP_SIZE;
 
 const MoodDot = ({ x, y, colorInfo, panX, panY, moodIndex, isInteracting }) => {
@@ -101,7 +100,6 @@ const MoodDot = ({ x, y, colorInfo, panX, panY, moodIndex, isInteracting }) => {
 
 export const MoodMeterScreen = ({ navigation }) => {
   const [selectedMood, setSelectedMood] = useState('');
-  const [selectedEmoji, setSelectedEmoji] = useState('');
   const [selectedColor, setSelectedColor] = useState(null);
   const [loading, setLoading] = useState(true);
   const panX = useSharedValue(0);
@@ -163,7 +161,7 @@ export const MoodMeterScreen = ({ navigation }) => {
 
   const renderMoodDots = useMemo(() => {
     const dots = [];
-    Object.entries(moodData).forEach(([quadrant, moods], quadrantIndex) => {
+    Object.entries(moodData).forEach(([quadrant], quadrantIndex) => {
       const colorInfo = Object.values(colorPalette)[quadrantIndex];
       const startX = (quadrantIndex % 2) * (GRID_SIZE / 2);
       const startY = Math.floor(quadrantIndex / 2) * (GRID_SIZE / 2);
@@ -198,7 +196,7 @@ export const MoodMeterScreen = ({ navigation }) => {
 
       <View style={styles.leftLabelContainer}>
         <Text style={styles.energyLabel}>High Energy</Text>
-        <Text style={styles.energyLabel}>Low Energy</Text>
+        <Text style={styles.energyLabel}>Low Energy </Text>
       </View>
 
       <PanGestureHandler 
