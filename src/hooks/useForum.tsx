@@ -45,6 +45,7 @@ const useForum = (forumId: string) => {
     const [authorType, setAuthorType] = useState<string>('');
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [hasImage, setHasImage] = useState<boolean>(false);
   
 
     const fetchForumById = async (forumId: string) => {
@@ -328,6 +329,8 @@ const useForum = (forumId: string) => {
             if (selectedImage) {
                 const storage = getStorage();
                 const imageRef = storageRef(storage, `forums/posts/${forum.id}/${Date.now()}_${selectedImage.name}`);
+                setHasImage(true);
+
                 await uploadBytes(imageRef, selectedImage);
                 imageUrl = await getDownloadURL(imageRef);
             }
@@ -339,9 +342,12 @@ const useForum = (forumId: string) => {
                 forumId: forum.id,
                 status: 'pending',
                 title: postTitle,
+                hasImage: hasImage,
+                reacted: 0,
+                reactedBy: [],
                 authorName: anonymous ? 'Anonymous' : authorName,
                 authorType: authorType,
-                imageUrl: imageUrl, // Add the image URL to the post data
+                imageUrl: imageUrl, 
             };
     
             const postsRef = collection(doc(db, 'forums', forum.id), 'posts');

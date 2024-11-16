@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
 import { Camera, Upload } from 'lucide-react';
-import Alert from '../pages/UiElements/Alerts';
+import { toast, ToastContainer } from 'react-toastify';  // Import ToastContainer here
+
+// Include the react-toastify CSS in your app
+import 'react-toastify/dist/ReactToastify.css';
 
 interface UserData {
   organizationName?: string;
@@ -12,13 +15,11 @@ interface UserData {
   userType: 'organization' | 'admin';
 }
 
-
 const Profile: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [backgroundPicture, setBackgroundPicture] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null); // Updated alert state
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -38,7 +39,6 @@ const Profile: React.FC = () => {
           setUserData(userDoc.data() as UserData);
         } else {
           console.log('No such document!');
-
         }
       }
     };
@@ -57,7 +57,7 @@ const Profile: React.FC = () => {
         } else {
           setBackgroundPicture(base64String);
         }
-        setAlert({ type: "success", message: 'picture selected. Click "Upload" to save changes."' });
+        toast.success('Picture selected. Click "Upload" to save changes.');  // Display success toast
       };
       reader.readAsDataURL(file);
     }
@@ -66,13 +66,13 @@ const Profile: React.FC = () => {
   const handleImageUpload = async (type: 'profile' | 'background') => {
     const user = auth.currentUser;
     if (!user || !userData) {
-      setAlert({ type: "error", message: "User not authenticated or data not loaded. Please log in and try again." });
+      toast.error("User not authenticated or data not loaded. Please log in and try again.");  // Display error toast
       return;
     }
 
     const imageData = type === 'profile' ? profilePicture : backgroundPicture;
     if (!imageData) {
-      setAlert({ type: "error", message: `No ${type} picture selected. Please choose an image first.` });
+      toast.error(`No ${type} picture selected. Please choose an image first.`);  // Display error toast
       return;
     }
 
@@ -95,7 +95,7 @@ const Profile: React.FC = () => {
         setBackgroundPicture(null);
       }
 
-      setAlert({ type: "success", message: "User data updated successfully." });
+      toast.success('User data updated successfully.');  // Success toast
       
       // Set a timeout to refresh the page after 3 seconds
       setTimeout(() => {
@@ -104,18 +104,15 @@ const Profile: React.FC = () => {
 
     } catch (error) {
       console.error('Error uploading image:', error);
-      setAlert({ type: "error", message: `Failed to upload ${type} picture. Please try again.` });
+      toast.error(`Failed to upload ${type} picture. Please try again.`);  // Error toast
     } finally {
       setIsUploading(false);
     }
   };
 
   return (
-    
     <div className="max-w-4xl mx-auto p-4">
-      
       <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
-        
         <div className="relative h-64">
           <img
             src={userData?.backgroundPicture || '../images/cover/cover-01.png'}
@@ -124,7 +121,7 @@ const Profile: React.FC = () => {
           />
           <label
             htmlFor="background"
-            className="absolute bottom-4 right-4  dark:bg-gray-700 text-gray-700 dark:text-white py-2 px-4 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 transition duration-300 cursor-pointer"
+            className="absolute bottom-4 right-4 dark:bg-gray-700 text-gray-700 text-white py-2 px-4 rounded-full hover:shadow-lg shadow-lg hover:shadow-primary/50 bg-primary  transition duration-300 cursor-pointer"
           >
             <Camera className="inline-block mr-2" size={18} />
             <span>Change Cover</span>
@@ -138,14 +135,14 @@ const Profile: React.FC = () => {
             />
           </label>
         </div>
-        
+
         <div className="relative px-6 py-10">
           <div className="absolute -top-20 left-1/2 transform -translate-x-1/2">
             <div className="relative">
               <img 
                 src={userData?.profilePicture || '../images/profile/profile-01.jpg'}
                 alt="profile"
-                className="w-40 h-40 rounded-full border-4 border-white dark:border-gray-700 shadow-lg object-cover"
+                className="w-40 h-40 rounded-full border-4 border-white hover:shadow-lg shadow-lg hover:shadow-primary/50 bg-primary  object-cover"
               />
               <label
                 htmlFor="profile"
@@ -163,9 +160,9 @@ const Profile: React.FC = () => {
               </label>
             </div>
           </div>
-         
+
           <div className="text-center mt-16">
-            <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">
+            <h3 className="text-2xl font-semibold text-gray-800 dark:text-black">
               {userData ? (userData.userType === 'organization' ? userData.organizationName : userData.adminName) : 'Loading...'}
             </h3>
             <p className="text-gray-600 dark:text-gray-300 mt-2">
@@ -205,13 +202,12 @@ const Profile: React.FC = () => {
               )}
             </div>
           )}
-           
         </div>
-        {alert && <Alert type={alert.type} message={alert.message} />} {/* Use Alert component */}
       </div>
-      
+
+      {/* ToastContainer to show toast messages */}
+      <ToastContainer />
     </div>
-    
   );
 };
 

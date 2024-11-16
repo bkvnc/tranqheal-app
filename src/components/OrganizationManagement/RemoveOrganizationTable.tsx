@@ -3,20 +3,12 @@ import {
   collection,
   getDocs,
   getDoc,
-  query,
-  orderBy,
-  limit,
-  startAfter,
-  endBefore,
-  QueryDocumentSnapshot,
   deleteDoc,
-  updateDoc,
   doc,
-  Timestamp,
 } from "firebase/firestore";
 import { db } from "../../config/firebase";
-import React, { useEffect, useState } from "react";
-import Alert from "../../pages/UiElements/Alerts";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify"; // Import toast
 import dayjs from 'dayjs';
 
 interface Organization {
@@ -24,7 +16,7 @@ interface Organization {
   email: string;
   organizationName: string;
   createdAt: any | null;
-  lastLogin: any | null; 
+  lastLogin: any | null;
   status: string;
 }
 
@@ -34,14 +26,13 @@ const RemoveOrganizationTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [orgsPerPage] = useState(5);
 
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>(""); // For storing search term
 
   const fetchOrganizations = async () => {
     try {
       setLoading(true);
       const orgSnapshot = await getDocs(collection(db, "organizations"));
-  
+
       if (!orgSnapshot.empty) {
         const orgList: Organization[] = orgSnapshot.docs.map((doc) => {
           const data = doc.data();
@@ -54,7 +45,7 @@ const RemoveOrganizationTable = () => {
             lastLogin: data.lastLogin?.toDate() || null, // Convert Firestore timestamp to Date
           };
         });
-  
+
         setOrganizations(orgList);
       } else {
         setOrganizations([]); // Clear the list if there are no documents
@@ -62,61 +53,38 @@ const RemoveOrganizationTable = () => {
       setLoading(false);
     } catch (error) {
       console.error("Error fetching organizations: ", error);
-      setAlert({ type: "error", message: "Error fetching organizations. Please try again later." });
+      toast.error("Error fetching organizations. Please try again later."); // Use toast for error
       setLoading(false);
     }
   };
-  
- 
-  
+
   useEffect(() => {
     fetchOrganizations();
   }, []);
-  
- 
-
-  const handleEditOrganizationStatus = async (orgId: string, newStatus: string) => {
-    try {
-      const orgRef = doc(db, "organizations", orgId);
-      await updateDoc(orgRef, { status: newStatus });
-      setOrganizations((prev) =>
-        prev.map((org) =>
-          org.orgId === orgId ? { ...org, status: newStatus } : org
-        )
-      );
-      setAlert({ type: "success", message: `Organization status updated to ${newStatus}` });
-    } catch (error) {
-      console.error("Error updating organization status: ", error);
-      setAlert({ type: "error", message: "Error updating organization status." });
-    }
-  };
 
   const handleDeleteOrganization = async (orgId: string) => {
     try {
       const orgRef = doc(db, "organizations", orgId);
-      const orgSnapshot = await getDoc(orgRef); 
-      
+      const orgSnapshot = await getDoc(orgRef);
+
       if (!orgSnapshot.exists()) {
-        setAlert({ type: "error", message: "Organization not found." });
+        toast.error("Organization not found."); // Use toast for error
         return;
       }
-      
-      await deleteDoc(orgRef); 
+
+      await deleteDoc(orgRef);
       setOrganizations((prev) => prev.filter((org) => org.orgId !== orgId));
-      setAlert({ type: "success", message: "Organization deleted successfully" });
+      toast.success("Organization deleted successfully"); // Use toast for success
     } catch (error) {
       console.error("Error deleting organization: ", error);
-      setAlert({ type: "error", message: "Error deleting organization. Please try again." });
+      toast.error("Error deleting organization. Please try again."); // Use toast for error
     }
-    setTimeout(() => {
-      setAlert(null);
-    }, 1000);
   };
 
- 
-  const filteredOrganizations = organizations.filter(org =>
-    org.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredOrganizations = organizations.filter(
+    (org) =>
+      org.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      org.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const indexOfLastOrg = currentPage * orgsPerPage;
@@ -128,7 +96,6 @@ const RemoveOrganizationTable = () => {
 
   return (
     <>
-      {alert && <Alert type={alert.type} message={alert.message} />}
       <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
         <div className="max-w-full overflow-x-auto">
           <div className="flex items-center">
@@ -158,9 +125,9 @@ const RemoveOrganizationTable = () => {
                 <th className="min-w-[150px] py-4 px-4 font-medium text-black dark:text-white cursor-pointer">
                   Last Logged In
                 </th>
-                <th className="min-w-[150px] py-4 px-4 font-medium text-black dark:text-white cursor-pointer">
+                {/* <th className="min-w-[150px] py-4 px-4 font-medium text-black dark:text-white cursor-pointer">
                   Status
-                </th>
+                </th> */}
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
               </tr>
             </thead>
@@ -189,25 +156,19 @@ const RemoveOrganizationTable = () => {
                         {org.lastLogin ? dayjs(org.lastLogin).format("DD/MM/YYYY HH:mm") : "N/A"}
                       </p>
                     </td>
+                    {/* <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                      {org.status === "active" ? (
+                        <p className="inline-flex rounded-full bg-success bg-opacity-10 py-1 px-3 text-sm font-medium text-success">
+                          Active
+                        </p>
+                      ) : (
+                        <p className="inline-flex rounded-full bg-danger bg-opacity-10 py-1 px-3 text-sm font-medium text-danger">
+                          Inactive
+                        </p>
+                      )}
+                    </td> */}
                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                    {org.status === "active" ? (
-                      <p className="inline-flex rounded-full bg-success bg-opacity-10 py-1 px-3 text-sm font-medium text-success">
-                        Active
-                      </p>
-                    ) : (
-                      <p className="inline-flex rounded-full bg-danger bg-opacity-10 py-1 px-3 text-sm font-medium text-danger">
-                        Inactive
-                      </p>
-                    )}
-                  </td>
-                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                        <button
-                          className="hover:text-primary"
-                          onClick={() => handleEditOrganizationStatus(org.orgId, org.status === 'active' ? 'inactive' : 'active')}
-                        >
-                          {org.status === 'active' ? 'Set Inactive' : 'Set Active'}
-                        </button>
-                      <button className="hover:text-primary ml-2" onClick={() => handleDeleteOrganization(org.orgId)}>
+                      <button className="text-danger hover:bg-danger hover:text-white rounded-md px-2 hover:shadow-lg hover:shadow-danger/50 ml-2" onClick={() => handleDeleteOrganization(org.orgId)}>
                         Delete
                       </button>
                     </td>
@@ -235,7 +196,7 @@ const RemoveOrganizationTable = () => {
             >
               Next
             </button>
-         </div>
+          </div>
         </div>
       </div>
     </>

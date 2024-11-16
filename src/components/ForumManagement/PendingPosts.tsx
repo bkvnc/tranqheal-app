@@ -225,13 +225,13 @@ const PendingPosts = () => {
                                      <td className="border-b py-5 px-4">
                                         <button
                                             onClick={() => handleApprove(post.forumId, post.id)}
-                                            className="py-1 px-3 dark:text-white rounded-md hover:bg-success hover:text-white  hover:shadow-lg hover:shadow-success/50"
+                                            className="py-1 px-3  dark:text-white rounded-md hover:bg-success hover:text-white  hover:shadow-lg hover:shadow-success/50"
                                         >
                                             Approve
                                         </button>
                                         <button
                                             onClick={() => handleReject(post.forumId, post.id)}
-                                            className="ml-2 py-1 px-3 dark:text-white rounded-md hover:bg-danger hover:text-white  hover:shadow-lg hover:shadow-danger/50"
+                                            className="ml-2 py-1 px-3 text-danger dark:text-white rounded-md hover:bg-danger hover:text-white  hover:shadow-lg hover:shadow-danger/50"
                                         >
                                             Reject
                                         </button>

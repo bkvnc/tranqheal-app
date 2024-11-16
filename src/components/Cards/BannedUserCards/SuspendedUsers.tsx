@@ -1,37 +1,91 @@
 import React, { useEffect, useState } from 'react';
-import { getDocs, collection, query, where, getFirestore } from 'firebase/firestore'; 
-import { FirebaseApp } from 'firebase/app'; // Import your Firebase app config
+import { collection, onSnapshot, getDocs } from 'firebase/firestore';
+import { db } from '../../../config/firebase';
 import dayjs from 'dayjs';
 
-const SuspendedUsers = () => {
-  const [suspendedUsers, setSuspendedUsers] = useState<any[]>([]);
-  const db = getFirestore(); // Get Firestore instance
+interface SuspendedUser {
+  id: string;
+  forumId: string;
+  suspendedAt: Date | null;
+  suspendedBy: string;
+  authorName: string;
+  reason: string;
+  suspendedUntil: Date | null;
+  status: 'suspended';
+}
+
+const SuspendedUsers: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [suspendedPerPage] = useState(5);
+  const [suspendedUsers, setSuspendedUsers] = useState<SuspendedUser[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Function to fetch suspended users from the subcollection under forums
+    const unsubscribes: (() => void)[] = [];
+
     const fetchSuspendedUsers = async () => {
-      const forumRef = collection(db, 'forums'); // Reference to the 'forums' collection
-      const forumSnapshot = await getDocs(forumRef); // Get all forum documents
+      try {
+        const forumsSnapshot = await getDocs(collection(db, 'forums'));
 
-      const users: any[] = [];
-      for (const forumDoc of forumSnapshot.docs) {
-        const suspendedRef = collection(forumDoc.ref, 'suspendedUsers'); // Subcollection under each forum
-        const suspendedSnapshot = await getDocs(suspendedRef);
+        forumsSnapshot.forEach((forumDoc) => {
+          const forumId = forumDoc.id;
 
-        suspendedSnapshot.forEach((doc) => {
-          // Assuming suspended users have a 'name', 'status', and 'until' field
-          users.push({
-            id: doc.id,
-            ...doc.data(),
+          const suspendedUsersRef = collection(db, `forums/${forumId}/suspendedUsers`);
+          const unsubscribe = onSnapshot(suspendedUsersRef, (suspendedUsersSnapshot) => {
+            setSuspendedUsers((prevSuspendedUsers) => {
+              const updatedSuspendedUsers: SuspendedUser[] = suspendedUsersSnapshot.docs.map((doc) => {
+                const data = doc.data();
+                const suspendedAt = data.suspendedAt ? data.suspendedAt.toDate() : null;
+                const suspendedUntil = data.suspendedUntil ? data.suspendedUntil.toDate() : null;
+                return {
+                  id: doc.id,
+                  forumId,
+                  suspendedAt,
+                  suspendedBy: data.suspendedBy,
+                  authorName: data.authorName,
+                  reason: data.reason,
+                  suspendedUntil,
+                  status: 'suspended',
+                };
+              });
+
+              // Remove previous suspended users from this forum and replace with updated data
+              const filteredPrevSuspendedUsers = prevSuspendedUsers.filter(
+                (user) => user.forumId !== forumId
+              );
+
+              return [...filteredPrevSuspendedUsers, ...updatedSuspendedUsers];
+            });
           });
-        });
-      }
 
-      setSuspendedUsers(users); // Update state with the suspended users
+          unsubscribes.push(unsubscribe);
+        });
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching suspended users:', error);
+        setError('Failed to fetch suspended users.');
+        setIsLoading(false);
+      }
     };
 
     fetchSuspendedUsers();
-  }, [db]);
+
+    return () => {
+      unsubscribes.forEach((unsubscribe) => unsubscribe());
+    };
+  }, []);
+
+  const indexOfLastSuspended = currentPage * suspendedPerPage;
+  const indexOfFirstSuspended = indexOfLastSuspended - suspendedPerPage;
+  const currentBan = suspendedUsers.slice(indexOfFirstSuspended,indexOfLastSuspended);
+  const totalPages = Math.ceil(suspendedUsers.length / suspendedPerPage);
+
+  if (isLoading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
+
+
+  if (error) return <div>{error}</div>;
 
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
@@ -43,27 +97,46 @@ const SuspendedUsers = () => {
         <table className="w-full table-auto">
           <thead>
             <tr className="bg-gray-2 text-left dark:bg-meta-4">
-              <th className="px-4 text-black dark:text-white">Suspended Users</th>
-              <th className="px-4 text-black dark:text-white">Status</th>
+              <th className="px-4 text-black dark:text-white">Suspended User</th>
+              <th className="px-4 text-black dark:text-white">Reason</th>
+              <th className="px-4 text-black dark:text-white">Suspended At</th>
               <th className="px-4 text-black dark:text-white">Until</th>
             </tr>
           </thead>
           <tbody>
-            {suspendedUsers.map((user) => (
+            {currentBan.map((user) => (
               <tr key={user.id}>
+                <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">{user.authorName}</td>
+                <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">{user.reason}</td>
                 <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">
-                  {user.name}
+                  {user.suspendedAt ? dayjs(user.suspendedAt).format('YYYY-MM-DD HH:mm:ss') : 'N/A'}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">
-                  {user.status}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">
-                  {dayjs(user.until.seconds * 1000).format('YYYY-MM-DD HH:mm:ss')}
+                  {user.suspendedUntil ? dayjs(user.suspendedUntil).format('YYYY-MM-DD HH:mm:ss') : 'N/A'}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        <div className="flex justify-between mt-4">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <div className="flex items-center">
+            <span>Page {currentPage} of {totalPages}</span>
+          </div>
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );
