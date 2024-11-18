@@ -50,24 +50,30 @@ export const ForumPostScreen = ({ route, navigation }) => {
   
   const checkBanStatus = async () => {
     try {
-      if (!auth.currentUser) return;
-
+      if (!auth.currentUser) {
+        console.warn('User is not authenticated.');
+        return;
+      }
+  
+      console.log('Checking ban status for user:', auth.currentUser.uid);
+  
       const bannedUsersRef = collection(firestore, `forums/${forumId}/bannedUsers`);
       const q = query(bannedUsersRef, where('userId', '==', auth.currentUser.uid));
       const snapshot = await getDocs(q);
-
+  
       if (!snapshot.empty) {
         const banData = snapshot.docs[0].data();
         setIsBanned(true);
-        setBanReason(banData.reason || 'No reason provided');
+        setBanReason(banData.reason ?? 'No reason provided');
       } else {
         setIsBanned(false);
         setBanReason('');
       }
     } catch (error) {
-      console.error('Error checking ban status:', error);
+      console.error('Error while checking ban status:', error);
     }
   };
+  
   // Fetch user data, forum details, posts, and membership status on mount
   useEffect(() => { 
     const fetchUserData = async () => {
@@ -520,6 +526,7 @@ const handleReportForum = async () => {
               // Extract the author's name from the forum document
               const authorName = forumDoc.data().authorName;
               const authorType = forumDoc.data().authorType;
+              const authorId = forumDoc.data().authorId;
           
               // Increment the report count in the forum
               await updateDoc(forumRef, { reportCount: increment(1) });
@@ -527,6 +534,7 @@ const handleReportForum = async () => {
               // Add a new report
               const reportsRef = collection(forumRef, 'reports');
               await addDoc(reportsRef, {
+                authorId: authorId,
                 authorName: authorName,  
                 authorType: authorType,
                 reporterName: reporterName,
