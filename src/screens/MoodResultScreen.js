@@ -23,7 +23,7 @@ export const MoodResultScreen = ({ navigation }) => {
 
         {/* Buttons */}
         <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('')} >
-          <Text style={styles.buttonText}>Placeholder</Text>
+          <Text style={styles.buttonText}>Seek Professional</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Home')}>
