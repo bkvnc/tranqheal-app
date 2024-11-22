@@ -23,6 +23,7 @@ import { LoadingIndicator } from '../components';
 export const ForumsScreen = ({ navigation }) => {
   const { user, userType } = useContext(AuthenticatedUserContext); 
   const [authorName, setAuthorName] = useState(null);
+  const [authorType, setAuthorType] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [ loading, setLoading ] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -42,7 +43,6 @@ export const ForumsScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (user) {
-      setAuthorName(`${user.firstName} ${user.lastName}`);  // Use context data
       fetchUserDataAndForums();
     }
   }, [user]);
@@ -53,13 +53,20 @@ export const ForumsScreen = ({ navigation }) => {
       if (user) {
         // Fetch user profile from Firestore
         const userDocRef = doc(firestore, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
+        const profRef = doc(firestore, 'professionals', auth.currentUser.uid);
+        const userSnapshot = await getDoc(userDocRef);
         
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
+        if (userSnapshot.exists()) {
+          const userData = userSnapshot.data();
           setAuthorName(`${userData.firstName} ${userData.lastName}`);
-        } else {
-          console.warn('No such document!');
+          setAuthorType(userData.userType);
+        }else{
+          const profSnapshot = await getDoc(profRef);
+          if (profSnapshot.exists()) {
+            const profData = profSnapshot.data();
+            setAuthorName(`${profData.firstName} ${profData.lastName}`);
+            setAuthorType(profData.userType);
+        }
         }
   
         // Fetch forums as before

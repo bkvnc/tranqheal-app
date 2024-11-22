@@ -9,16 +9,18 @@ import {
   FlatList,
   Alert,
   RefreshControl,
-  Image
+  Image,
+  Switch,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc, increment, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc, increment, setDoc, serverTimestamp, FieldValue } from 'firebase/firestore';
 import { auth, firestore, storage } from 'src/config';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
 import { LoadingIndicator } from '../components';
+
 
 export const ForumPostScreen = ({ route, navigation }) => {
   const { forumId } = route.params;
@@ -42,6 +44,7 @@ export const ForumPostScreen = ({ route, navigation }) => {
   const [selectedImageUri, setSelectedImageUri] = useState(null);
   const [forumData, setForumData] = useState(null);
   const [ hasImage, setHasImage ] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   const predefinedTags = [
     'Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'
@@ -270,7 +273,6 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
       const selectedImage = result.assets[0].uri;
       console.log("Selected Image URI:", selectedImage);
       setSelectedImageUri(selectedImage);
-      setHasImage(true);
     }
   };
   
@@ -292,7 +294,7 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
       <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
       <Text style={styles.postContent} numberOfLines={2}>{item.content}</Text>
       <View style={styles.metaContainer}>
-        <Text style={styles.authorText}>by {item.authorName}</Text>   
+        <Text style={styles.authorText}>by {item.isAnonymous ? 'Anonymous' : item.authorName}</Text>   
         {item.hasImage && (
           <View style={styles.imageLabelContainer}>
             <Ionicons name="image-outline" size={20} color="#7f4dff" />
@@ -334,6 +336,7 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
           await uploadBytes(imageRef, blob);
           imageUrl = await getDownloadURL(imageRef);
           console.log("Image uploaded, download URL:", imageUrl);
+          setHasImage(true);
         }
   
         const newPost = {
@@ -349,6 +352,7 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
           hasImage: hasImage,
           reacted: 0,
           reactedBy: [],
+          isAnonymous: isAnonymous,
         };
   
         const forumRef = doc(firestore, 'forums', forumId);
@@ -501,8 +505,6 @@ const getUserName = async () => {
   return null;
 };
 
-
-
 //Report Forum
 const handleReportForum = async () => {
   const reporterName = await getUserName();
@@ -518,38 +520,43 @@ const handleReportForum = async () => {
         text: 'OK',
         onPress: async () => {
           try {
-            // Fetch the forum document to get the authorName
+            console.log('Fetching forum document...');
             const forumRef = doc(firestore, 'forums', forumId);
             const forumDoc = await getDoc(forumRef);
-          
-            if (forumDoc.exists()) {
-              // Extract the author's name from the forum document
-              const authorName = forumDoc.data().authorName;
-              const authorType = forumDoc.data().authorType;
-              const authorId = forumDoc.data().authorId;
-          
-              // Increment the report count in the forum
-              await updateDoc(forumRef, { reportCount: increment(1) });
-          
-              // Add a new report
-              const reportsRef = collection(forumRef, 'reports');
-              await addDoc(reportsRef, {
-                authorId: authorId,
-                authorName: authorName,  
-                authorType: authorType,
-                reporterName: reporterName,
-                reportedBy: auth.currentUser.uid,
-                reason: 'Inappropriate content',
-                timestamp: new Date(),
-              });
-          
-              Alert.alert('Success', 'Report Submitted.');
-            } else {
-              console.error('Forum not found');
-              Alert.alert('Error', 'Forum not found.');
+            
+            // Check if the forum document exists
+            if (!forumDoc.exists()) {
+              throw new Error('Forum document does not exist.');
             }
+          
+            console.log('Forum document found:', forumDoc.data());
+          
+            const authorName = forumDoc.data().authorName;
+            const authorType = forumDoc.data().authorType;
+            const authorId = forumDoc.data().authorId;
+            const currentData = forumDoc.data();
+
+            // Increment reportCount
+            const updatedReportCount = currentData.reportCount + 1;
+            console.log('Incrementing report count...');
+            await updateDoc(forumRef, { reportCount: updatedReportCount });
+
+            // Add a report in the subcollection
+            console.log('Adding report...');
+            const reportsRef = collection(forumRef, 'reports');
+            await addDoc(reportsRef, {
+              authorId: authorId,
+              authorName: authorName,
+              authorType: authorType,
+              reporterName: reporterName,
+              reportedBy: auth.currentUser.uid,
+              reason: 'Inappropriate content',
+              timestamp: new Date(),
+            });
+          
+            Alert.alert('Success', 'Report Submitted.');
           } catch (error) {
-            console.error('Error reporting forum:', error);
+            console.error('Error reporting forum:', error.message);
             Alert.alert('Error', 'Could not submit the report. Please try again.');
           }
         },
@@ -657,14 +664,24 @@ return (
                 />
 
                 {/* Image Attachment Button */}
-                <TouchableOpacity onPress={pickImage} style={styles.attachIcon}>
-                    <Ionicons name="image-outline" size={24} color="#2F2F2F" />
+                <View style={styles.attachContainer}>
+                  <TouchableOpacity onPress={pickImage} style={styles.attachButton}>
+                    <Ionicons name="image-outline" size={28} color="#2F2F2F" />
                     <Text style={styles.attachText}>Attach Image</Text>
-                </TouchableOpacity>
-
+                  </TouchableOpacity>
                   {selectedImageUri && (
                     <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
                   )}
+                </View>
+
+                  {/* Anonymous Toggle */}
+                  <View style={styles.toggleContainer}>
+                    <Text style={styles.toggleLabel}>Post as Anonymous</Text>
+                    <Switch
+                      value={isAnonymous}
+                      onValueChange={(value) => setIsAnonymous(value)}
+                    />
+                  </View>
 
                 <View style={styles.modalButtons}>
                   <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
@@ -889,10 +906,14 @@ const styles = StyleSheet.create({
   tagButtonText: {
     color: '#333',
   },
-  attachIcon: {
+  attachContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+  },
+  attachButton: {
+    flexDirection: 'row',      
+    alignItems: 'center',      
+    marginBottom: 5,           
   },
   attachText: {
     marginLeft: 5,
@@ -904,6 +925,16 @@ const styles = StyleSheet.create({
     height: 60,
     marginBottom: 10,
     borderRadius: 10,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    color: '#000',
   },
   metaContainer: {
     flexDirection: 'row',

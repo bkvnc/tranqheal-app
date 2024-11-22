@@ -1,4 +1,4 @@
-import { doc, setDoc , serverTimestamp} from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp} from 'firebase/firestore';
 import { firestore } from '../config';
 import { getDefaultProfileImage } from './getDefaultProfileImage';
 
