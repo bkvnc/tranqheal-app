@@ -15,6 +15,7 @@ export const PostDetailsScreen = ({ route, navigation }) => {
   const { postId, forumId } = route.params;
   const [postData, setPostData] = useState(null);
   const [authorName, setAuthorName] = useState('');
+  const [authorType, setAuthorType] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [ loading, setLoading ] = useState(true);
   const [comments, setComments] = useState([]);
@@ -31,6 +32,7 @@ export const PostDetailsScreen = ({ route, navigation }) => {
   const [isEditCommentModalVisible, setIsEditCommentModalVisible] = useState(false);
   const [isOptionsModalVisible, setIsOptionsModalVisible] = useState(false);
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+  const [isAnonymousModalVisible, setIsAnonymousModalVisible] = useState(false);
   const [blacklistedWords, setBlacklistedWords] = useState([]);
   const [editedImageUri, setEditedImageUri] = useState(null);
   
@@ -48,12 +50,20 @@ export const PostDetailsScreen = ({ route, navigation }) => {
       try {
         if (auth.currentUser) {
           const userRef = doc(firestore, 'users', auth.currentUser.uid);
+          const profRef = doc(firestore, 'professionals', auth.currentUser.uid);
           const userSnapshot = await getDoc(userRef);
   
           if (userSnapshot.exists()) {
             const userData = userSnapshot.data();
             setAuthorName(`${userData.firstName} ${userData.lastName}`);
-
+            setAuthorType(userData.userType);
+          }else{
+            const profSnapshot = await getDoc(profRef);
+            if (profSnapshot.exists()) {
+              const profData = profSnapshot.data();
+              setAuthorName(`${profData.firstName} ${profData.lastName}`);
+              setAuthorType(profData.userType);
+          }
           }
         }
       } catch (error) {
@@ -71,7 +81,6 @@ export const PostDetailsScreen = ({ route, navigation }) => {
   }, [auth.currentUser]);
 
 
- 
   //Fetch Post Details
   const fetchPostDetails = async () => {
     try {
@@ -242,7 +251,7 @@ const handleDeletePost = () => {
   
 
   //Handle Comment
-  const handleAddComment = async () => {
+  const handleAddComment = async (anonymous = false) => {
     if (!newComment.trim()) {
       Alert.alert('Error', 'Please enter a comment before submitting.');
       return;
@@ -256,12 +265,15 @@ const handleDeletePost = () => {
       return;
     }
   
+    console.log("Adding comment with isAnonymous:", anonymous);
     // Proceed to add the comment if no blacklisted words are found
     const newCommentObj = {
       content: newComment,
-      dateCreated: Timestamp.now(),
-      author: authorName,
+      dateCreated: new Date(),
+      authorName: authorName,
+      authorType: authorType,
       authorId: user.uid,
+      isAnonymous: anonymous,
     };
   
     try {
@@ -272,12 +284,53 @@ const handleDeletePost = () => {
       // Add the new comment to the local state
       setComments([{ ...newCommentObj, id: docRef.id }, ...comments]);
       setNewComment(''); // Clear the input field
+      setIsAnonymousModalVisible(false);
   
     } catch (error) {
       console.error("Error adding comment:", error);
       Alert.alert('Error', 'Could not add comment.');
     }
   };
+
+  //Render Comments  
+  const renderCommentItem = ({ item }) => (
+    <View style={styles.commentItem}>
+      <Text style={styles.commentAuthor}> {item.isAnonymous ? 'Anonymous' : item.authorName}</Text>
+      <Text style={styles.commentContent}>{item.content}</Text>
+      <Text style={styles.commentDate}>
+        {item.dateCreated ? moment(item.dateCreated).fromNow() : 'Unknown date'}
+      </Text>
+      <View style={styles.iconRow}>
+        {item.authorId === user.uid ? (
+          <>
+            <TouchableOpacity onPress={() => {
+              console.log("Editing comment:", item);
+              setCommentToEdit(item);
+              setEditCommentText(item.content);
+              setIsEditCommentModalVisible(true);
+            }}>
+              <Ionicons name="create-outline" size={20} color="#000" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleDeleteComment(item.id)}>
+              <Ionicons name="trash-outline" size={20} color="#000" />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity onPress={() => handleReportComment(item.id)}>
+            <Ionicons name="alert-circle-outline" size={20} color="#000" />
+          </TouchableOpacity>
+        )}
+          <TouchableOpacity onPress={() => handleCommentReact(item.id)}>
+            <Ionicons
+              name={item.userReacted ? "heart" : "heart-outline"} 
+              size={20}
+              color={item.userReacted ? 'red' : '#333333'} 
+            />
+            <Text style={styles.reactionCountText}>{item.commentReacted || 0}</Text>
+          </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   //Edit Comment Handle
   const handleEditComment = async () => {
@@ -310,7 +363,7 @@ const handleDeletePost = () => {
       Alert.alert('Error', 'Could not update comment.');
     }
   };
-  
+
   //Handle React Post
   const handleReact = async () => {
     try {
@@ -358,7 +411,7 @@ const handleDeletePost = () => {
     }
   };
   
-  
+
   // Function to handle reaction on a specific comment
   const handleCommentReact = async (commentId) => {
     try {
@@ -408,7 +461,7 @@ const handleDeletePost = () => {
   };
   
   //Delete Comment Handler
-const handleDeleteComment = async (commentId) => {
+  const handleDeleteComment = async (commentId) => {
   Alert.alert(
     "Delete Comment",
     "Are you sure you want to delete this comment?",
@@ -435,9 +488,9 @@ const handleDeleteComment = async (commentId) => {
       },
     ] 
   ); 
-};
+  };
 
-const getUserName = async () => {
+  const getUserName = async () => {
   const currentUserId = auth.currentUser?.uid;
 
   if (!currentUserId) return null;
@@ -471,7 +524,7 @@ const getUserName = async () => {
 
   // If not found in any collection
   return null;
-};
+  };
 
 
   // Report a post
@@ -578,46 +631,6 @@ const handleReportComment = async (commentId) => {
   );
 };
 
-//Render Comments
-const renderCommentItem = ({ item }) => (
-    <View style={styles.commentItem}>
-      <Text style={styles.commentAuthor}> {item.authorName}</Text>
-      <Text style={styles.commentContent}>{item.content}</Text>
-      <Text style={styles.commentDate}>
-        {item.dateCreated ? moment(item.dateCreated).fromNow() : 'Unknown date'}
-      </Text>
-      <View style={styles.iconRow}>
-        {item.authorId === user.uid ? (
-          <>
-            <TouchableOpacity onPress={() => {
-              console.log("Editing comment:", item);
-              setCommentToEdit(item);
-              setEditCommentText(item.content);
-              setIsEditCommentModalVisible(true);
-            }}>
-              <Ionicons name="create-outline" size={20} color="#000" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDeleteComment(item.id)}>
-              <Ionicons name="trash-outline" size={20} color="#000" />
-            </TouchableOpacity>
-          </>
-        ) : (
-          <TouchableOpacity onPress={() => handleReportComment(item.id)}>
-            <Ionicons name="alert-circle-outline" size={20} color="#000" />
-          </TouchableOpacity>
-        )}
-          <TouchableOpacity onPress={() => handleCommentReact(item.id)}>
-            <Ionicons
-              name={item.userReacted ? "heart" : "heart-outline"} 
-              size={20}
-              color={item.userReacted ? 'red' : '#333333'} 
-            />
-            <Text style={styles.reactionCountText}>{item.commentReacted || 0}</Text>
-          </TouchableOpacity>
-      </View>
-    </View>
-);
-
 //Pick image
 const pickImage = async () => {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -663,7 +676,7 @@ if (loading) {
               <Text style={styles.timeText}>
                 {new Date(postData?.dateCreated.toDate()).toLocaleString('en-US', {hour12: true})}
               </Text>
-              <Text style={styles.authorText}>{postData?.authorName}</Text>
+              <Text style={styles.authorText}>{postData?.isAnonymous ? 'Anonymous' : postData?.authorName}</Text>
             </View>
 
             {/* Post Image */}
@@ -702,12 +715,47 @@ if (loading) {
                 value={newComment}
                 onChangeText={setNewComment}
               />
-              <TouchableOpacity onPress={handleAddComment} style={styles.sendButton}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (!newComment.trim()) {
+                    Alert.alert('Error', 'Please enter a comment before submitting.');
+                    return;
+                  }
+                  setIsAnonymousModalVisible(true);
+                }}
+                style={styles.sendButton}
+              >
                 <Ionicons name="send-outline" size={24} color="#000" />
               </TouchableOpacity>
             </View>
           )
         }
+
+        {/* Anonymous Modal */}
+        <Modal visible={isAnonymousModalVisible} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.AnoynmousModalContent}>
+              <Text style={styles.modalTitle}>Send Comment as Anonymous?</Text>
+
+              <View style={styles.AnonymousModalButtons}>
+                  <TouchableOpacity onPress={() => {  
+                    handleAddComment(true); 
+                  }}>
+                    <Text style={styles.sendButtonText}>Yes</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={() => { 
+                    handleAddComment(false); 
+                  }}>
+                    <Text style={styles.sendButtonText}>No</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setIsAnonymousModalVisible(false)}>
+                   <Text style={styles.sendButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Image Modal */}
         <Modal visible={isImageModalVisible} transparent animationType="fade">
@@ -880,6 +928,14 @@ const styles = StyleSheet.create({
   sendButton: {
     padding: 8,
   },
+  sendButtonText: {
+    flexDirection: 'row',
+    color:'#000',
+    fontSize: 16,
+  },
+  sendCancelButtonText: {
+   marginTop: 10,
+  },
   commentsContainer: {
     flex: 1,
     marginBottom: 8, 
@@ -966,10 +1022,31 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     color: '#000' 
   },
-  modalButtons:{
-    flexDirection :'row' ,
-    justifyContent :'space-between',
-    marginTop: 20,
+  AnoynmousModalContent: {
+    witdh: '50%',
+    padding: 20,
+    backgroundColor: '#fff', 
+    borderRadius: 10,
+  },
+  AnonymousModalButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    marginTop: 15,
+  },
+  modalTitle: {
+    fontSize: 18,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+  },
+  horizontalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '60%', 
+    marginBottom: 10, 
   },
   cancelButton:{
     paddingVertical :8 ,
