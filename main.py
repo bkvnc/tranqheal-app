@@ -28,6 +28,9 @@ class AssessmentData(BaseModel):
     preferences: UserPreferences
     selfAssessmentScores: SelfAssessmentScores
 
+class MoodRequest(BaseModel):
+    mood: str
+
 # Main matching endpoint
 @app.post("/match-professionals/")
 def match_professionals(assessment: AssessmentData):
@@ -105,7 +108,8 @@ def calculate_match_score(professional, assessment):
     return score
 
 @app.post("/get-mood-suggestions/")
-def get_mood_suggestions(mood: str):
+def get_mood_suggestions(mood_request: MoodRequest):
+    mood = mood_request.mood
     # Reference to the 'moodSuggestions' collection in Firestore
     mood_suggestions_ref = db.collection("moodSuggestions")
 
