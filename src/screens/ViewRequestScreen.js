@@ -1,14 +1,58 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons'; // For icons
 import { RootLayout } from '../navigation/RootLayout';
 import { Colors } from '../config';
 import { AuthenticatedUserContext } from '../providers';
+import { firestore } from '../config';
 
 export const ViewRequestScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const [modalVisible, setModalVisible] = useState(false);
   const [reason, setReason] = useState(''); // To store the decline reason
+
+
+  useEffect(() => {
+    if (!userType || !userType.uid) return;
+
+    const fetchRequests = async () => {
+      try {
+        const querySnapshot = await firestore
+          .collection('matchingRequests')
+          .where('professionalId', '==', user.uid)
+          .get();
+
+        const fetchedRequests = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setRequests(fetchedRequests);
+      } catch (error) {
+        console.error('Error fetching requests:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRequests();
+  }, [userType]);
+
+  const renderItem = ({ item }) => (
+    <View style={styles.requestItem}>
+      <View style={styles.requestInfo}>
+        <Text style={styles.name}>{item.requesterName}</Text>
+        <Text style={styles.time}>{item.createdAt}</Text>
+        <Text style={styles.date}>{item.createdAt}</Text>
+      </View>
+      <View style={styles.icons}>
+        <MaterialIcons name="check-circle" size={24} color="green" />
+        <TouchableOpacity onPress={openDeclineModal}>
+          <MaterialIcons name="cancel" size={24} color="red" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
 
   // Function to open modal
   const openDeclineModal = () => {
@@ -23,50 +67,27 @@ export const ViewRequestScreen = ({ navigation }) => {
   };
 
   return (
-    <RootLayout screenName={'ViewRequest'} navigation={navigation} userType={userType}>
+    <RootLayout screenName={'ViewRequest'} navigation={navigation} userType={user.userType}>
       <View style={styles.container}>
-        {/* Main title */}
         <Text style={styles.title}>View Requests</Text>
 
-        {/* Request list */}
-        <View style={styles.requestList}>
-          <View style={styles.requestItem}>
-            <View style={styles.requestInfo}>
-              <Text style={styles.name}>John Smith</Text>
-              <Text style={styles.time}>9:40am</Text>
-              <Text style={styles.date}>25 June 2024</Text>
-            </View>
-            <View style={styles.icons}>
-              <MaterialIcons name="check-circle" size={24} color="green" />
-              <TouchableOpacity onPress={openDeclineModal}>
-                <MaterialIcons name="cancel" size={24} color="red" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.requestItem}>
-            <View style={styles.requestInfo}>
-              <Text style={styles.name}>Alex Johnson</Text>
-              <Text style={styles.time}>10:00am</Text>
-              <Text style={styles.date}>26 June 2024</Text>
-            </View>
-            <View style={styles.icons}>
-              <MaterialIcons name="check-circle" size={24} color="green" />
-              <TouchableOpacity onPress={openDeclineModal}>
-                <MaterialIcons name="cancel" size={24} color="red" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        {loading ? (
+          <ActivityIndicator size="large" color={Colors.purple} />
+        ) : (
+          <FlatList
+            data={requests}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            ListEmptyComponent={<Text style={styles.emptyText}>No requests found.</Text>}
+          />
+        )}
 
         {/* Decline Modal */}
         <Modal
           animationType="slide"
           transparent={true}
           visible={modalVisible}
-          onRequestClose={() => {
-            setModalVisible(false);
-          }}
+          onRequestClose={() => setModalVisible(false)}
         >
           <View style={styles.modalContainer}>
             <View style={styles.modalView}>
@@ -83,11 +104,11 @@ export const ViewRequestScreen = ({ navigation }) => {
             </View>
           </View>
         </Modal>
-
       </View>
     </RootLayout>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

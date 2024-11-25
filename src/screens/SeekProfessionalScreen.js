@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
 import { Colors } from '../config';
+import { auth, firestore } from 'src/config';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 
 export const SeekProfessionalScreen = ({ navigation, route }) => {
@@ -13,9 +15,75 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
   const [viewDetails, setViewDetails] = useState(false);
   const [viewOtherProfessionals, setViewOtherProfessionals] = useState(false);
 
-  const handleSendRequest = () => {
-    console.log('Request sent to professional');
+  const handleSendRequest = async () => {
+    if (!bestMatch?.id) {
+      console.error('Error: Professional ID is missing in match data.');
+      return;
+    }
+
+    const currentUser = auth.currentUser;
+  
+    if (!currentUser?.uid) {
+      console.error('Error: User ID is undefined.');
+      return;
+    }
+    console.log('Database instance:', firestore);
+    console.log('Professional ID:', bestMatch.id);
+    console.log('User ID:', currentUser?.uid);
+  
+    try {
+      const professionalRef = doc(firestore, 'professionals', bestMatch.id); 
+      const matchingRequestsRef = collection(professionalRef, 'matchingRequests'); 
+      const requestDocRef = doc(matchingRequestsRef,  currentUser?.uid); 
+      const profSnapshot = await getDoc(professionalRef);
+  
+      const requestData = {
+        userId: currentUser?.uid,
+        professionalId: bestMatch.id,
+        requesterName: profSnapshot.data().firstName + ' ' + profSnapshot.data().lastName,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      };
+
+      
+      const profData = profSnapshot.data();
+
+      const forumId = profData.forumId;
+
+      
+      const notificationRef = doc(collection(firestore, `notifications/${profSnapshot.data().professionalId}/messages`));
+
+
+      await setDoc(notificationRef, {
+        recipientId: bestMatch.id,
+        recipientType: profSnapshot.data().userType,  
+        message: `You've been matched! A seeker is seeking you expertise. Please review and respond to the request at your earliest convenience.`,
+        type: `matching`,
+        createdAt: serverTimestamp(), 
+        isRead: false,
+        additionalData: {
+          postId: newPostId,
+          forumId: forumId,
+        },
+      });
+
+    
+      const notificationDoc = await getDoc(notificationRef);
+      const notificationData = notificationDoc.data();
+
+      if (notificationData && notificationData.createdAt) {
+        const createdAtDate = notificationData.createdAt.toDate();
+        console.log("Notification createdAt:", createdAtDate);
+      }
+
+  
+      await setDoc(requestDocRef, requestData); 
+      console.log('Request sent successfully!');
+    } catch (error) {
+      console.error('Error sending request:', error);
+    }
   };
+  
 
   const handleToggleViewProfessional = () => {
     setViewDetails(prevState => {
