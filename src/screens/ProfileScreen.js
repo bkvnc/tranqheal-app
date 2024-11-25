@@ -9,6 +9,7 @@ import { LoadingIndicator } from '../components';
 import { auth, firestore, storage } from '../config';
 import { AuthenticatedUserContext } from '../providers';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ScrollView } from 'react-native-gesture-handler';
 
 
 export const ProfileScreen = () => {
@@ -86,7 +87,8 @@ export const ProfileScreen = () => {
 
   return (
     <RootLayout screenName="Profile" navigation={navigation} userType={userType}>
-        <View style={styles.container}>
+      <ScrollView>
+      <View style={styles.container}>
           <View style={styles.header}>
             <View style={styles.textContainer}>
               <Text style={styles.ProfileTitle}>Profile</Text>
@@ -141,6 +143,7 @@ export const ProfileScreen = () => {
             <Text style={styles.detailTitle}>Facebook: {profileData?.facebookLink || 'N/A'}</Text>
           </View>
         </View>
+      </ScrollView>  
     </RootLayout>  
   );
 }
