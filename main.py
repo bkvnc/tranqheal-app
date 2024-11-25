@@ -104,6 +104,36 @@ def calculate_match_score(professional, assessment):
 
     return score
 
+@app.post("/get-mood-suggestions/")
+def get_mood_suggestions(mood: str):
+    # Reference to the 'moodSuggestions' collection in Firestore
+    mood_suggestions_ref = db.collection("moodSuggestions")
+
+    # Loop through the quadrants (e.g., redQuadrant, blueQuadrant)
+    for quadrant in ["redQuadrant", "blueQuadrant"]:
+        mood_data = mood_suggestions_ref.document(quadrant).get()
+
+        if mood_data.exists:
+            data = mood_data.to_dict()
+
+            # Check if the mood is present in the 'moods' field (individual moods)
+            if mood in data.get("moods", {}):
+                return {"mood": mood, "suggestions": data["moods"][mood]}
+
+            # If not in 'moods', check the 'categories' for relevant category
+            for category, moods in data.get("categories", {}).items():
+                if mood in moods:
+                    # Check if the 'suggestions' field has corresponding suggestions for the category
+                    if category in data.get("suggestions", {}):
+                        return {
+                            "mood": mood,
+                            "category": category,
+                            "suggestions": data["suggestions"][category]
+                        }
+
+    # If mood not found in any categories or moods
+    raise HTTPException(status_code=404, detail=f"No suggestions found for mood: {mood}")
+
 @app.get("/")
 def read_root():
     return {"message": "TranqHeal's API is up and running"}
