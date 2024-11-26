@@ -1,19 +1,25 @@
 import os
 import json
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from firebase_admin import credentials, firestore, initialize_app
 
 service_account_info = json.loads(os.getenv("FIREBASE_SERVICE_ACCOUNT"))
-
 cred = credentials.Certificate(service_account_info)
 initialize_app(cred)
-
 db = firestore.client()
 
 app = FastAPI()
 
-# Define Pydantic models for input data
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 class UserPreferences(BaseModel):
     preferredProfAge: str 
     preferredProfGender: str  
@@ -110,13 +116,10 @@ def calculate_match_score(professional, assessment):
 @app.post("/get-mood-suggestions/")
 def get_mood_suggestions(mood_request: MoodRequest):
     mood = mood_request.mood
-    # Reference to the 'moodSuggestions' collection in Firestore
     mood_suggestions_ref = db.collection("moodSuggestions")
 
-    # Loop through the quadrants (e.g., redQuadrant, blueQuadrant)
-    for quadrant in ["redQuadrant", "blueQuadrant"]:
+    for quadrant in ["redQuadrant", "blueQuadrant", "positiveQuadrant"]:
         mood_data = mood_suggestions_ref.document(quadrant).get()
-
         if mood_data.exists:
             data = mood_data.to_dict()
 
