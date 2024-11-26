@@ -3,14 +3,15 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons'; // For icons
 import { RootLayout } from '../navigation/RootLayout'; // Assuming RootLayout exists
 
-export const MoodResultScreen = ({ navigation }) => {
+export const MoodResultScreen = ({ navigation, route }) => {
+  const { selectedMood, suggestion } = route.params;
   return (
     <RootLayout screenName={'MoodResultScreen'} navigation={navigation}>
       <View style={styles.container}>
        
         {/* Message Box */}
         <View style={styles.messageBox}>
-          <Text style={styles.messageText}>Based on your input, we recommend...</Text>
+          <Text style={styles.messageText}>Based on your input, we recommend... ({suggestion})</Text>
         </View>
 
         {/* Mood Emoji */}
@@ -22,12 +23,8 @@ export const MoodResultScreen = ({ navigation }) => {
         </View>
 
         {/* Buttons */}
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('')} >
-          <Text style={styles.buttonText}>Seek Professional</Text>
-        </TouchableOpacity>
-        
         <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Home')}>
-          <Text style={styles.buttonText}>Finish</Text>
+          <Text style={styles.buttonText}>Finish</Text> 
         </TouchableOpacity>
       </View>
     </RootLayout>

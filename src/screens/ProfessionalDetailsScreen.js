@@ -31,7 +31,6 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log('Fetched Data:', data);
 
           const fullName = [
             data.firstName,

@@ -26,7 +26,6 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log('Fetched Organization Data:', data);
         setOrganizationData(data);
       } else {
         console.warn('No organization document found.');
