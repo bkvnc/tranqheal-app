@@ -507,57 +507,47 @@ const getUserName = async () => {
 
 //Report Forum
 const handleReportForum = async () => {
-  const reporterName = await getUserName();
+  const reporterName = await getUserName();  // Retrieve the name of the reporter
   Alert.alert(
-    'Report Forum',
-    'Are you sure you want to report this forum?',
+    "Report Forum",
+    "Are you sure you want to report this forum?",
     [
+      { text: "Cancel", style: "cancel" },
       {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'OK',
+        text: "OK",
         onPress: async () => {
           try {
-            console.log('Fetching forum document...');
-            const forumRef = doc(firestore, 'forums', forumId);
+            console.log("Reporting forum with ID:", forumId);
+
+            // Reference the forum
+            const forumRef = doc(firestore, "forums", forumId);
             const forumDoc = await getDoc(forumRef);
-            
-            // Check if the forum document exists
-            if (!forumDoc.exists()) {
-              throw new Error('Forum document does not exist.');
+
+            if (forumDoc.exists()) {
+              // Increment the report count
+              const currentReportCount = forumDoc.data().reportCount || 0;
+              await updateDoc(forumRef, {
+                reportCount: currentReportCount + 1,
+              });
+
+              // Add a report document in the `reports` subcollection
+              await addDoc(collection(forumRef, "reports"), {
+                authorName: forumDoc.data().authorName,
+                authorType: forumDoc.data().authorType,
+                authorId: forumDoc.data().authorId,
+                reporterName: reporterName,
+                reportedBy: auth.currentUser.uid,
+                reason: "Inappropriate content",
+                timestamp: new Date(),
+              });
+
+              Alert.alert("Success", "Report submitted.");
+            } else {
+              Alert.alert("Error", "Forum not found.");
             }
-          
-            console.log('Forum document found:', forumDoc.data());
-          
-            const authorName = forumDoc.data().authorName;
-            const authorType = forumDoc.data().authorType;
-            const authorId = forumDoc.data().authorId;
-            const currentData = forumDoc.data();
-
-            // Increment reportCount
-            const updatedReportCount = currentData.reportCount + 1;
-            console.log('Incrementing report count...');
-            await updateDoc(forumRef, { reportCount: updatedReportCount });
-
-            // Add a report in the subcollection
-            console.log('Adding report...');
-            const reportsRef = collection(forumRef, 'reports');
-            await addDoc(reportsRef, {
-              authorId: authorId,
-              authorName: authorName,
-              authorType: authorType,
-              reporterName: reporterName,
-              reportedBy: auth.currentUser.uid,
-              reason: 'Inappropriate content',
-              timestamp: new Date(),
-            });
-          
-            Alert.alert('Success', 'Report Submitted.');
           } catch (error) {
-            console.error('Error reporting forum:', error.message);
-            Alert.alert('Error', 'Could not submit the report. Please try again.');
+            console.error("Error reporting forum:", error);
+            Alert.alert("Error", "Could not submit the report. Please try again.");
           }
         },
       },

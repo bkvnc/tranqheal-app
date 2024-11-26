@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image,  FlatList } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image,  FlatList, RefreshControl } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import RNPickerSelect from 'react-native-picker-select';
@@ -18,32 +18,41 @@ export const ViewProfScreen = ({ navigation }) => {
   const [ selectedTimeAvailable, setSelectedTimeAvailable ] = useState(null);
   const [ professionals, setProfessionals ] = useState([]);
   const [ loading, setLoading ] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  
+  const fetchProfessionals = async () => {
+    try {
+      const professionalsCollection = collection(firestore, 'professionals');
+      const professionalSnapshot = await getDocs(professionalsCollection);
+      const professionalList = professionalSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return { id: doc.id, ...data, availability: data.availability };
+      })
+      .filter(professional => professional.status === 'Verified');
+
+      setProfessionals(professionalList);
+    } catch (error) {
+      console.error('Error fetching professionals:', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProfessionals = async () => {
-      try {
-        const professionalsCollection = collection(firestore, 'professionals');
-        const professionalSnapshot = await getDocs(professionalsCollection);
-        const professionalList = professionalSnapshot.docs.map(doc => {
-          const data = doc.data();
-          console.log("Fetched professional: ", data);
-          return { id: doc.id, ...data, availability: data.availability };
-        })
-        .filter(professional => professional.status === 'Verified');
-
-        setProfessionals(professionalList);
-      } catch (error) {
-        console.error('Error fetching professionals:', error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    
     fetchProfessionals();
   }, []);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchProfessionals();
+    setRefreshing(false);
+  };
+
+
   const filteredProfessionals = professionals.filter(professional => {
-    const fullName = `${professional.firstName || ''} ${professional.middleName || ''} ${professional.lastName || ''}`.trim();
+  const fullName = `${professional.firstName || ''} ${professional.middleName || ''} ${professional.lastName || ''}`.trim();
   
     return (
       (selectedGender ? professional.gender === selectedGender : true) &&
@@ -65,8 +74,8 @@ export const ViewProfScreen = ({ navigation }) => {
     setSelectedTimeAvailable(null);
   };
 
-  const handleProfessionalPress = (professional) => {
-    navigation.navigate('ProfessionalDetails', { professional });
+  const handleProfessionalPress = (professionalId) => {
+    navigation.navigate('ProfessionalDetails', { professionalId });
   };
 
   const renderStars = (rating) => {
@@ -89,7 +98,7 @@ export const ViewProfScreen = ({ navigation }) => {
     const rating = item.rating !== undefined ? item.rating : 0;
 
     return (
-      <TouchableOpacity style={styles.professionalCard} onPress={() => handleProfessionalPress(item)}>
+      <TouchableOpacity style={styles.professionalCard} onPress={() => handleProfessionalPress(item.id)}>
         <Image source={{ uri: item.profileImage }} style={styles.professionalImage} />
         <View style={styles.professionalDetails}>
           <Text style={styles.professionalName}>{fullName}</Text>
@@ -106,7 +115,8 @@ export const ViewProfScreen = ({ navigation }) => {
   if (loading) {
     return <LoadingIndicator />;
   }
-  
+
+ 
   return (
     <RootLayout navigation={navigation} screenName="ViewProf" userType={userType}>
       <View style={styles.container}>
@@ -127,6 +137,9 @@ export const ViewProfScreen = ({ navigation }) => {
           </View>
         </View>
       <FlatList
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
           data={filteredProfessionals}
           renderItem={renderProfessional}
           keyExtractor={(item) => item.id}
