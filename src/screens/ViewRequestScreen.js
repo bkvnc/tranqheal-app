@@ -1,73 +1,193 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons'; // For icons
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  TextInput,
+  FlatList,
+  ActivityIndicator,
+} from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { RootLayout } from '../navigation/RootLayout';
 import { Colors } from '../config';
 import { AuthenticatedUserContext } from '../providers';
-import { firestore } from '../config';
+import { auth, firestore } from '../config';
+import {
+  collection,
+  doc,
+  query,
+  getDocs,
+  deleteDoc,
+  setDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
 
 export const ViewRequestScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const [modalVisible, setModalVisible] = useState(false);
-  const [reason, setReason] = useState(''); // To store the decline reason
+  const [reason, setReason] = useState('');
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRequest, setSelectedRequest] = useState(null);
 
+  const fetchRequests = async () => {
+    setLoading(true);
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser || !currentUser.uid) return;
+
+      const q = query(
+        collection(
+          firestore,
+          `professionals/${currentUser.uid}/matchingRequests`
+        )
+      );
+      const querySnapshot = await getDocs(q);
+
+      const fetchedRequests = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setRequests(fetchedRequests);
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!userType || !userType.uid) return;
-
-    const fetchRequests = async () => {
-      try {
-        const querySnapshot = await firestore
-          .collection('matchingRequests')
-          .where('professionalId', '==', user.uid)
-          .get();
-
-        const fetchedRequests = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setRequests(fetchedRequests);
-      } catch (error) {
-        console.error('Error fetching requests:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchRequests();
-  }, [userType]);
+  }, []);
+
+  const openDeclineModal = (request) => {
+    setSelectedRequest(request);
+    setModalVisible(true);
+  };
+
+  const handleDecline = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser || !selectedRequest?.id) {
+      console.error('No user or selected request found.');
+      return;
+    }
+
+    try {
+      // Reference to the matching request to delete
+      const matchingRequestDocRef = doc(
+        firestore,
+        'professionals',
+        currentUser.uid,
+        'matchingRequests',
+        selectedRequest.id
+      );
+
+      // Optionally send a notification to the requester
+      const notificationRef = doc(
+        collection(firestore, `notifications/${selectedRequest.userId}/messages`)
+      );
+      await setDoc(notificationRef, {
+        recipientId: selectedRequest.userId,
+        message: `Your matching request has been declined. Reason: ${reason}`,
+        type: 'matching',
+        createdAt: serverTimestamp(),
+        isRead: false,
+      });
+
+      // Delete the matching request
+      await deleteDoc(matchingRequestDocRef);
+      console.log('Request declined and removed successfully!');
+
+      // Clear the modal and refresh the requests
+      setModalVisible(false);
+      setReason('');
+      fetchRequests();
+    } catch (error) {
+      console.error('Error declining request:', error);
+    }
+  };
+
+  const handleAccept = async (selectedRequest) => {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser || !selectedRequest?.id) {
+      console.error('No user or selected request found.');
+      return;
+    }
+
+    try {
+      const matchingRequestDocRef = doc(
+        firestore,
+        'professionals',
+        currentUser.uid,
+        'matchingRequests',
+        selectedRequest.id
+      );
+      const acceptedRequestsRef = collection(
+        firestore,
+        'professionals',
+        currentUser.uid,
+        'acceptedRequests'
+      );
+      const requestDocRef = doc(acceptedRequestsRef, selectedRequest.id);
+
+      const acceptedData = {
+        requesterId: selectedRequest.userId,
+        requesterName: selectedRequest.requesterName || 'Unknown User',
+        status: 'accepted',
+        acceptedAt: serverTimestamp(),
+      };
+      await setDoc(requestDocRef, acceptedData);
+
+      const notificationRef = doc(
+        collection(firestore, `notifications/${selectedRequest.userId}/messages`)
+      );
+      await setDoc(notificationRef, {
+        recipientId: selectedRequest.userId,
+        message: `You've been matched! A professional has accepted your request.`,
+        type: 'matching',
+        createdAt: serverTimestamp(),
+        isRead: false,
+      });
+
+      await deleteDoc(matchingRequestDocRef);
+      console.log('Request accepted successfully, and matching request removed!');
+      fetchRequests();
+    } catch (error) {
+      console.error('Error accepting request:', error);
+    }
+  };
 
   const renderItem = ({ item }) => (
     <View style={styles.requestItem}>
-      <View style={styles.requestInfo}>
-        <Text style={styles.name}>{item.requesterName}</Text>
-        <Text style={styles.time}>{item.createdAt}</Text>
-        <Text style={styles.date}>{item.createdAt}</Text>
+      <View>
+        <Text style={styles.name}>{item.requesterName || 'Unknown User'}</Text>
+        <Text style={styles.time}>
+          {item.createdAt?.toDate
+            ? item.createdAt.toDate().toLocaleTimeString()
+            : 'Time not available'}
+        </Text>
+        <Text style={styles.date}>
+          {item.createdAt?.toDate
+            ? item.createdAt.toDate().toLocaleDateString()
+            : 'Date not available'}
+        </Text>
       </View>
       <View style={styles.icons}>
-        <MaterialIcons name="check-circle" size={24} color="green" />
-        <TouchableOpacity onPress={openDeclineModal}>
+        <TouchableOpacity onPress={() => handleAccept(item)}>
+          <MaterialIcons name="check-circle" size={24} color="green" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => openDeclineModal(item)}>
           <MaterialIcons name="cancel" size={24} color="red" />
         </TouchableOpacity>
       </View>
     </View>
   );
 
-
-  // Function to open modal
-  const openDeclineModal = () => {
-    setModalVisible(true);
-  };
-
-  // Function to handle submit
-  const handleSubmit = () => {
-    // You can handle the decline action here 
-    console.log('Decline reason:', reason);
-    setModalVisible(false);
-  };
-
   return (
-    <RootLayout screenName={'ViewRequest'} navigation={navigation} userType={user.userType}>
+    <RootLayout screenName="ViewRequest" navigation={navigation} userType={userType}>
       <View style={styles.container}>
         <Text style={styles.title}>View Requests</Text>
 
@@ -78,6 +198,7 @@ export const ViewRequestScreen = ({ navigation }) => {
             data={requests}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
+            contentContainerStyle={{ paddingBottom: 20 }}
             ListEmptyComponent={<Text style={styles.emptyText}>No requests found.</Text>}
           />
         )}
@@ -85,7 +206,7 @@ export const ViewRequestScreen = ({ navigation }) => {
         {/* Decline Modal */}
         <Modal
           animationType="slide"
-          transparent={true}
+          transparent
           visible={modalVisible}
           onRequestClose={() => setModalVisible(false)}
         >
@@ -98,7 +219,7 @@ export const ViewRequestScreen = ({ navigation }) => {
                 value={reason}
                 onChangeText={(text) => setReason(text)}
               />
-              <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+              <TouchableOpacity style={styles.submitButton} onPress={handleDecline}>
                 <Text style={styles.submitText}>Submit</Text>
               </TouchableOpacity>
             </View>
@@ -107,7 +228,7 @@ export const ViewRequestScreen = ({ navigation }) => {
       </View>
     </RootLayout>
   );
-};
+};  
 
 
 const styles = StyleSheet.create({

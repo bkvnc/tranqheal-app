@@ -5,9 +5,11 @@ import { Colors } from '../config';
 import NotificationIndicator from '../components/NotificationIndicator';
 import { useState } from 'react';
 import { useNotifications } from '../components/NotificationContext';
+import { AuthenticatedUserContext } from '../providers';
 
 export const RootLayout = ({ children, navigation, screenName, userType,  }) => {
   const { hasUnreadNotifications } = useNotifications();
+  
 
   const renderLeftIcon = () => {
     if (screenName === 'Home' || screenName === 'ProfessionalHome') {
@@ -61,6 +63,10 @@ export const RootLayout = ({ children, navigation, screenName, userType,  }) => 
               <View style={screenName === 'Mood' ? styles.activeIconContainer : styles.iconContainer}>
                 <Ionicons name="happy-outline" size={30} color='black'/>
               </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() =>{
+              
+            }}>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => {
                 if (screenName === 'Profile' || screenName === 'ProfessionalProfile') {

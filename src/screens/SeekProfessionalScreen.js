@@ -4,7 +4,7 @@ import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
 import { Colors } from '../config';
 import { auth, firestore } from 'src/config';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc,getDoc, serverTimestamp } from 'firebase/firestore';
 
 
 export const SeekProfessionalScreen = ({ navigation, route }) => {
@@ -36,22 +36,20 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
       const matchingRequestsRef = collection(professionalRef, 'matchingRequests'); 
       const requestDocRef = doc(matchingRequestsRef,  currentUser?.uid); 
       const profSnapshot = await getDoc(professionalRef);
+      const userSnapshot = await getDoc(doc(firestore, 'users', currentUser?.uid));
   
       const requestData = {
         userId: currentUser?.uid,
         professionalId: bestMatch.id,
-        requesterName: profSnapshot.data().firstName + ' ' + profSnapshot.data().lastName,
+        requesterName: userSnapshot.data().firstName + ' ' + userSnapshot.data().lastName,
         status: 'pending',
         createdAt: serverTimestamp(),
       };
 
-      
-      const profData = profSnapshot.data();
-
-      const forumId = profData.forumId;
+    
 
       
-      const notificationRef = doc(collection(firestore, `notifications/${profSnapshot.data().professionalId}/messages`));
+      const notificationRef = doc(collection(firestore, `notifications/${bestMatch.id}/messages`));
 
 
       await setDoc(notificationRef, {
@@ -61,10 +59,6 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
         type: `matching`,
         createdAt: serverTimestamp(), 
         isRead: false,
-        additionalData: {
-          postId: newPostId,
-          forumId: forumId,
-        },
       });
 
     

@@ -6,12 +6,10 @@ import { AuthenticatedUserContext } from '../providers';
 
 export const ViewRequestHistoryScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
-  // Sample data for historical requests
-  const requestHistory = [
-    { id: '1', name: 'John Smith', date: '25 June 2024', status: 'approved' },
-    { id: '2', name: 'Alex Johnson', date: '19 May 2024', status: 'rejected' },
-    { id: '3', name: 'Skyler Jones', date: '5 March 2024', status: 'approved' },
-  ];
+  
+
+
+  
 
   return (
     <RootLayout screenName={'ViewRequestHistory'} navigation={navigation} userType={userType}>
