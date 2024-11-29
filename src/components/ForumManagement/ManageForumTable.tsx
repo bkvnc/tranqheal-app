@@ -73,7 +73,7 @@ const ManageForumTable = () => {
     };
 
     
-            // Filter forums by search term
+          
             const filteredForums = forums.filter(forum =>
                 forum.authorName && forum.authorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 forum.title && forum.title.toLowerCase().includes(searchTerm.toLowerCase())

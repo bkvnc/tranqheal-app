@@ -216,13 +216,13 @@ const PendingPosts = () => {
                         ) : (
                             currentPending.map(post => (
                                 <tr key={post.id}>
-                                    <td className="border-b py-5 px-4">{post.id}</td>
-                                    <td className="border-b py-5 px-4">{post.author} {post.authorName}</td>
-                                    <td className="border-b py-5 px-4">{post.content}</td>
-                                    <td className="border-b py-5 px-4">
+                                    <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">{post.id}</td>
+                                    <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">{post.author} {post.authorName}</td>
+                                    <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">{post.content}</td>
+                                    <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
                                         {dayjs(post.dateCreated).format('MMM D, YYYY')}
                                     </td>
-                                     <td className="border-b py-5 px-4">
+                                     <td className="bborder-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
                                         <button
                                             onClick={() => handleApprove(post.forumId, post.id)}
                                             className="py-1 px-3  dark:text-white rounded-md hover:bg-success hover:text-white  hover:shadow-lg hover:shadow-success/50"
