@@ -57,11 +57,10 @@ const RemoveProfessionalTable = () => {
             const currentUser = auth.currentUser;
             if (!currentUser) return;
 
-            // Delete the professional document
             const professionalDocRef = doc(db, `organizations/${currentUser.uid}/professionals`, id);
             await deleteDoc(professionalDocRef);
 
-            // Remove the deleted professional from the local state
+           
             setProfessionals(prevProfessionals => 
                 prevProfessionals.filter(professional => professional.id !== id)
             );
