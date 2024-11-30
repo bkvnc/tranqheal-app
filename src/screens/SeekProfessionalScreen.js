@@ -4,7 +4,7 @@ import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
 import { Colors } from '../config';
 import { auth, firestore } from 'src/config';
-import { collection, doc, setDoc,getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, addDoc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 
 export const SeekProfessionalScreen = ({ navigation, route }) => {
@@ -43,7 +43,7 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
         professionalId: bestMatch.id,
         requesterName: userSnapshot.data().firstName + ' ' + userSnapshot.data().lastName,
         status: 'pending',
-        createdAt: serverTimestamp(),
+        requestedAt: serverTimestamp(),
       };
 
     
@@ -73,6 +73,7 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
   
       await setDoc(requestDocRef, requestData); 
       console.log('Request sent successfully!');
+      navigation.navigate('Success');
     } catch (error) {
       console.error('Error sending request:', error);
     }

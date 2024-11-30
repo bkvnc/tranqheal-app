@@ -4,8 +4,11 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { ProfessionalHomeScreen, MenuScreen, NotificationScreen, 
     ProfessionalProfileScreen, EditProfessionalProfileScreen, 
     ViewRequestScreen, ViewRequestHistoryScreen, ViewOrgScreen, 
-    OrganizationDetailsScreen, ViewAcceptedRequestScreen 
+    OrganizationDetailsScreen, ViewAcceptedRequestsScreen
 } from '../screens';
+
+
+
 
 import { ForumStack } from './ForumStack';
 
@@ -24,7 +27,7 @@ export const ProfessionalStack = () => {
             <Stack.Screen name="ViewRequestHistory" component={ViewRequestHistoryScreen} />
             <Stack.Screen name="ViewOrganizations" component={ViewOrgScreen} />
             <Stack.Screen name="OrganizationDetails" component={OrganizationDetailsScreen} />
-            {/* <Stack.Screen name="AcceptedRequest" component={ViewAcceptedRequestsScreen} /> */}
+            <Stack.Screen name="ViewAcceptedRequests" component={ViewAcceptedRequestsScreen} />
         </Stack.Navigator>
     );
 }

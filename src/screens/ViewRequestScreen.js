@@ -21,6 +21,7 @@ import {
   getDocs,
   deleteDoc,
   setDoc,
+  addDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 
@@ -75,7 +76,6 @@ export const ViewRequestScreen = ({ navigation }) => {
     }
 
     try {
-      // Reference to the matching request to delete
       const matchingRequestDocRef = doc(
         firestore,
         'professionals',
@@ -84,7 +84,37 @@ export const ViewRequestScreen = ({ navigation }) => {
         selectedRequest.id
       );
 
-      // Optionally send a notification to the requester
+      // Declined requests are stored in the 'declinedRequests' collection
+      const declinedRequestsRef = doc(
+        firestore,
+        'professionals',
+        currentUser.uid,
+        'declinedRequests',
+        selectedRequest.id
+      );
+
+      const requestHistoryRef = collection(
+        firestore,
+        'professionals',
+        currentUser.uid,
+        'requestHistory'
+      );
+
+      const requestDocRef = doc(requestHistoryRef, selectedRequest.id);
+      await addDoc(requestDocRef, {
+        ...selectedRequest,
+        status: 'declined',
+        declinedReason: reason,
+        declinedAt: serverTimestamp(),
+      });
+
+      await setDoc(declinedRequestsRef, {
+        ...selectedRequest,
+        status: 'declined',
+        reason: reason,
+        declinedAt: serverTimestamp(),
+      });
+
       const notificationRef = doc(
         collection(firestore, `notifications/${selectedRequest.userId}/messages`)
       );
@@ -96,11 +126,9 @@ export const ViewRequestScreen = ({ navigation }) => {
         isRead: false,
       });
 
-      // Delete the matching request
       await deleteDoc(matchingRequestDocRef);
       console.log('Request declined and removed successfully!');
-
-      // Clear the modal and refresh the requests
+      
       setModalVisible(false);
       setReason('');
       fetchRequests();
@@ -125,13 +153,22 @@ export const ViewRequestScreen = ({ navigation }) => {
         'matchingRequests',
         selectedRequest.id
       );
-      const acceptedRequestsRef = collection(
+
+      // Accepted requests are stored in the 'acceptedRequests' collection
+      const acceptedRequestsRef = doc(
         firestore,
         'professionals',
         currentUser.uid,
-        'acceptedRequests'
+        'acceptedRequests',
+        selectedRequest.id
       );
-      const requestDocRef = doc(acceptedRequestsRef, selectedRequest.id);
+
+      const requestHistoryRef = collection(
+        firestore,
+        'professionals',
+        currentUser.uid,
+        'requestHistory'
+      );
 
       const acceptedData = {
         requesterId: selectedRequest.userId,
@@ -139,7 +176,11 @@ export const ViewRequestScreen = ({ navigation }) => {
         status: 'accepted',
         acceptedAt: serverTimestamp(),
       };
-      await setDoc(requestDocRef, acceptedData);
+
+      await setDoc(acceptedRequestsRef, acceptedData);
+      await addDoc(requestHistoryRef, {
+        ...acceptedData,
+      });
 
       const notificationRef = doc(
         collection(firestore, `notifications/${selectedRequest.userId}/messages`)
@@ -160,31 +201,32 @@ export const ViewRequestScreen = ({ navigation }) => {
     }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.requestItem}>
-      <View>
-        <Text style={styles.name}>{item.requesterName || 'Unknown User'}</Text>
-        <Text style={styles.time}>
-          {item.createdAt?.toDate
-            ? item.createdAt.toDate().toLocaleTimeString()
-            : 'Time not available'}
-        </Text>
-        <Text style={styles.date}>
-          {item.createdAt?.toDate
-            ? item.createdAt.toDate().toLocaleDateString()
-            : 'Date not available'}
-        </Text>
+  const renderItem = ({ item }) => {
+    const requestedAt = item.requestedAt?.toDate(); 
+    const formattedTime = requestedAt
+      ? requestedAt.toLocaleTimeString('en-US', { timeZone: 'Asia/Singapore', hour12: true })
+      : 'Time not available';
+    const formattedDate = requestedAt
+      ? requestedAt.toLocaleDateString('en-US', { timeZone: 'Asia/Singapore' })
+      : 'Date not available';
+    return (
+      <View style={styles.requestItem}>
+        <View>
+          <Text style={styles.name}>{item.requesterName || 'Unknown User'}</Text>
+          <Text style={styles.time}>{formattedTime}</Text>
+          <Text style={styles.date}>{formattedDate}</Text>
+        </View>
+        <View style={styles.icons}>
+          <TouchableOpacity onPress={() => handleAccept(item)}>
+            <MaterialIcons name="check-circle" size={24} color="green" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => openDeclineModal(item)}>
+            <MaterialIcons name="cancel" size={24} color="red" />
+          </TouchableOpacity>
+        </View>
       </View>
-      <View style={styles.icons}>
-        <TouchableOpacity onPress={() => handleAccept(item)}>
-          <MaterialIcons name="check-circle" size={24} color="green" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => openDeclineModal(item)}>
-          <MaterialIcons name="cancel" size={24} color="red" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <RootLayout screenName="ViewRequest" navigation={navigation} userType={userType}>
@@ -228,8 +270,7 @@ export const ViewRequestScreen = ({ navigation }) => {
       </View>
     </RootLayout>
   );
-};  
-
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -260,67 +301,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   name: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginRight: 10,
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 5,
   },
   time: {
     fontSize: 12,
-    color: '#666',
-    marginRight: 10,
+    color: 'gray',
   },
   date: {
     fontSize: 12,
-    color: '#666',
+    color: 'gray',
   },
   icons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: 60, // Adjust based on icon spacing
+    alignItems: 'center',
   },
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)', // Translucent background
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalView: {
-    width: '90%',
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    width: 300,
     padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 15,
-  },
-  input: {
-    width: '100%',
-    height: 100,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 10,
-    padding: 10,
-    textAlignVertical: 'top', // To start the text at the top
     marginBottom: 20,
   },
+  input: {
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    marginBottom: 20,
+    paddingHorizontal: 10,
+    width: '100%',
+    borderRadius: 8,
+  },
   submitButton: {
-    backgroundColor: Colors.purple,
+    backgroundColor: '#FF0000',
     paddingVertical: 10,
     paddingHorizontal: 40,
-    borderRadius: 20,
+    borderRadius: 8,
   },
   submitText: {
-    color: '#fff',
+    color: 'white',
+    fontSize: 16,
     fontWeight: 'bold',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: 'gray',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
