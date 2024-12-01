@@ -57,11 +57,10 @@ const RemoveProfessionalTable = () => {
             const currentUser = auth.currentUser;
             if (!currentUser) return;
 
-            // Delete the professional document
             const professionalDocRef = doc(db, `organizations/${currentUser.uid}/professionals`, id);
             await deleteDoc(professionalDocRef);
 
-            // Remove the deleted professional from the local state
+           
             setProfessionals(prevProfessionals => 
                 prevProfessionals.filter(professional => professional.id !== id)
             );
@@ -89,7 +88,7 @@ const RemoveProfessionalTable = () => {
                 <div className="flex items-center">
                     <input
                         type="text"
-                        placeholder="Search responder by name or email"
+                        placeholder="Search professional by name or email"
                         className="mb-3 w-100 rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}

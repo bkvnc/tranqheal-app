@@ -39,7 +39,7 @@ const ManageForumTable = () => {
 
                 if (userDoc.exists()) {
                     setUserData(userDoc.data() as UserData);
-                    fetchForums(); // Fetch forums after setting user data
+                    fetchForums();
                 } else {
                     console.log('No such document!');
                 }
@@ -55,7 +55,7 @@ const ManageForumTable = () => {
         const forumsData = forumsSnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-            dateCreated: doc.data().dateCreated instanceof Date ? doc.data().dateCreated : new Date(doc.data().dateCreated),
+            dateCreated: doc.data().dateCreated?.toDate(),
         } as Forum));
         setForums(forumsData);
     };
@@ -73,7 +73,7 @@ const ManageForumTable = () => {
     };
 
     
-            // Filter forums by search term
+          
             const filteredForums = forums.filter(forum =>
                 forum.authorName && forum.authorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 forum.title && forum.title.toLowerCase().includes(searchTerm.toLowerCase())

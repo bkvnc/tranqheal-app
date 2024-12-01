@@ -14,20 +14,6 @@ import '../../styles.css';
 
 
 
-/**
- * ForumDetailsPage component displays detailed information about a specific forum
- * including its description, posts, and allows the user to join/leave the forum
- * or add/delete posts if authorized.
- *
- * Features:
- * - Displays forum title, creation date, author name, tags, and total members.
- * - Lists approved posts with their content, author, and creation date.
- * - Allows authors or members to add new posts and optionally post anonymously.
- * - Enables authors to delete posts.
- * - Provides user authentication check and error handling.
- * - Highlights blacklisted words in post titles and content.
- * - Utilizes Firebase for data fetching and React hooks for state management.
- */
 
 const ForumDetailsPage: React.FC = () => {
     const { forumId } = useParams<{ forumId: string }>();
@@ -45,7 +31,7 @@ const ForumDetailsPage: React.FC = () => {
         canJoin: isAuthor && !isMember,   
         canAddPosts: isAuthor || isMember,
         canDeletePosts: isAuthor,
-        canJoinOrLeave: !isAuthor && !isMember, // Change to show button if not author and not a member
+        canJoinOrLeave: !isAuthor && !isMember, 
     };
     
 
@@ -65,12 +51,12 @@ const ForumDetailsPage: React.FC = () => {
         console.error("Authentication error:", error);
         console.error("Error code:", error.code);
         console.error("Error message:", error.message);
-    } // Check if the user is authenticated
+    }
         if (!user) {
             console.error("User is not authenticated");
             setError("User is not authenticated");
             setLoading(false);
-            return; // Exit early if user is not authenticated
+            return; 
         }
 
 
@@ -98,7 +84,7 @@ const ForumDetailsPage: React.FC = () => {
 
     useEffect(() => {
         if (error) {
-            toast.error(error); // Show error toast
+            toast.error(error);
         }
     }, [error]);
 
@@ -154,7 +140,7 @@ const ForumDetailsPage: React.FC = () => {
                                             {post.content}
                                         </p>
                                         
-                                        {/* Add image display if post has an image */}
+                                      
                                         {post.imageUrl && (
                                             <div className="mt-3">
                                                 <img

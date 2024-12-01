@@ -64,7 +64,7 @@ export interface Comment {
     id: string;
     content: string;
     dateCreated: any;
-    author: string;
+    authorName: string;
     authorId: string;
     postId: string;
     commentReactions: string[];
