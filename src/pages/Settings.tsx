@@ -19,6 +19,7 @@ type UserData = {
   days?: string[];
   username?: string;
   userType?: string;
+  facebookLink?: string;
 };
 
 const servicesList = [
@@ -360,6 +361,22 @@ const Settings = () => {
                         id="email"
                         placeholder="Enter email address"
                         value={userData.email || ""}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </div>
+                  <div className="mb-5.5 mt-5">
+                    <label className="mb-3 block text-sm font-medium text-black dark:text-white"  htmlFor="facebookLink" >
+                      Facebook Link
+                    </label>
+                    <div className="relative">
+                      <input
+                        className="w-full rounded border border-stroke bg-gray py-3 pl-11.5 pr-4.5 text-black focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-primary"
+                        type="facebookLink"
+                        name="facebookLink"
+                        id="facebookLink"
+                        placeholder="Enter facebook link"
+                        value={userData.facebookLink || ""}
                         onChange={handleChange}
                       />
                     </div>

@@ -62,6 +62,8 @@ const TopForumsTable = () => {
     return 0;
   };
 
+  
+
   const indexOfLastForum = currentPage * ForumsPerPage;
   const indexOfFirstForum = indexOfLastForum - ForumsPerPage;
   const currentForums = forums.slice(indexOfFirstForum, indexOfLastForum);

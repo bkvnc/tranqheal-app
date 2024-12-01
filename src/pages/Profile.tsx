@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
 import { Camera, Upload } from 'lucide-react';
-import { toast, ToastContainer } from 'react-toastify';  // Import ToastContainer here
+import { toast, ToastContainer } from 'react-toastify'; 
 
-// Include the react-toastify CSS in your app
+
 import 'react-toastify/dist/ReactToastify.css';
 
 interface UserData {
