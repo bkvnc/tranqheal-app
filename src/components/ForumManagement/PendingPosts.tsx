@@ -108,7 +108,7 @@ const PendingPosts = () => {
                 reviewedAt: new Date(),
             };
     
-            // Update the post status
+          
             await updateDoc(postRef, updateData);
             console.log(`Post status updated to ${newStatus}`);
 
@@ -133,7 +133,7 @@ const PendingPosts = () => {
 
                 if (notificationData && notificationData.createdAt) {
                 const createdAtDate = notificationData.createdAt.toDate();
-                console.log("Notification createdAt:", createdAtDate); // For debugging
+                console.log("Notification createdAt:", createdAtDate); 
                 }
                             console.log(`Notification created for post ${postId}`);
     

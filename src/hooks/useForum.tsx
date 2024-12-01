@@ -34,8 +34,8 @@ const useForum = (forumId: string) => {
     const [error, setError] = useState<string | null>(null);
     const [isMember, setIsMember] = useState<boolean>(false);
     const [isAuthor, setIsAuthor] = useState<boolean>(false);
-    const [creatingPost, setCreatingPost] = useState<boolean>(false); // State to track post creation
-    const [anonymous, setAnonymous] = useState<boolean>(false); // State for anonymous posts
+    const [creatingPost, setCreatingPost] = useState<boolean>(false);
+    const [anonymous, setAnonymous] = useState<boolean>(false); 
     const [highlightedContent, setHighlightedContent] = useState<string>('');
     const [highlightedTitle, setHighlightedTitle] = useState<string>('');
     const [blacklistedWords, setBlacklistedWords] = useState<string[]>([]); 
@@ -105,7 +105,7 @@ const useForum = (forumId: string) => {
                             ...data,
                             dateCreated: data.dateCreated instanceof Date
                                 ? data.dateCreated
-                                : data.dateCreated?.toDate?.() ?? data.dateCreated, // use toDate() only if it’s a Firestore Timestamp
+                                : data.dateCreated?.toDate?.() ?? data.dateCreated, 
                             forumId: forumId
                         };
                     }) as Post[];
@@ -139,12 +139,12 @@ const useForum = (forumId: string) => {
             console.error("Authentication error:", error);
             console.error("Error code:", error.code);
             console.error("Error message:", error.message);
-        } // Check if the user is authenticated
+        } 
             if (!user) {
                 console.error("User is not authenticated");
                 setError("User is not authenticated");
                 setLoading(false);
-                return; // Exit early if user is not authenticated
+                return; 
             }
 
             if (!forumId) {
@@ -178,59 +178,86 @@ const useForum = (forumId: string) => {
     }, [forumId]);
 
     useEffect(() => {
-        const user = auth.currentUser; // Get the current user once
-        if (user && forum) { // Ensure forum is defined
-            // Check if the user is the author of any posts
+        const user = auth.currentUser;
+        if (user && forum) {
             const authorCheck = posts.some(post => post.authorId === user.uid);
-            // Check if the user is the author of the forum
+       
             const forumAuthorCheck = forum.authorId === user.uid;
     
-            // Set isAuthor to true if the user is either the author of a post or the forum
+         
             setIsAuthor(authorCheck || forumAuthorCheck);
         } else {
-            setIsAuthor(false); // Optionally set to false if there's no user or forum
+            setIsAuthor(false); 
         }
     }, [posts, forum]);
     
     
     const handleJoinLeaveForum = async () => {
-        const user = auth.currentUser; // Check if the user is authenticated
-        if (!user || !forum || isAuthor) return; // Prevent authors from joining/leaving
-    
-        try {
-            const membershipRef = doc(db, 'memberships', `${user.uid}_${forum.id}`);
-    
-            if (isMember) {
-                // Leave forum logic
-                await deleteDoc(membershipRef); 
-                await updateDoc(doc(db, 'forums', forum.id), {
-                    members: arrayRemove(user.uid),
-                    totalMembers: increment(-1),
-                });
-                toast.success(`You have left the forum ${forum.title}`);
-            } else {
-                // Join forum logic
-                await setDoc(membershipRef, { userId: user.uid, forumId: forum.id }); 
-                await updateDoc(doc(db, 'forums', forum.id), {
-                    members: arrayUnion(user.uid),
-                    totalMembers: increment(1),
-                });
-                toast.success(`You have joined the forum ${forum.title}`);
-            }
-    
-            // Determine action type and notification type based on membership status
-            const action = isMember ? 'left' : 'joined';
-            const notificationType = isMember ? NotificationTypes.LEAVE : NotificationTypes.JOIN;
-    
-            await sendNotification(user.uid, `You have ${action} the forum ${forum.title}`, notificationType);
-    
-            // Toggle membership status in state
-            setIsMember(!isMember);
-        } catch (error: any) {
-            console.error('Error updating membership:', error);
-            toast.error(`Failed to update membership: ${error?.message || 'An unknown error occurred'}`);
+        const user = auth.currentUser; 
+        if (!user || !forum || isAuthor) return; 
+
+        if(isMember){
+            console.log("User is already a member of the forum.");
+        }else{
+            console.log("User is not a member of the forum.");
         }
-    };
+      
+        try {
+          const membershipRef = doc(db, 'memberships', `${user.uid}_${forum.id}`);
+          const forumRef = doc(db, 'forums', forum.id);
+          const forumSnap = await getDoc(forumRef);
+          const organizationRef = doc(db, 'organizations', user.uid);
+          const organizationSnap = await getDoc(organizationRef);
+          const organizationName = organizationSnap.data()?.organizationName;
+      
+          if (isMember) {
+            // Leave forum
+            await deleteDoc(membershipRef); 
+            await updateDoc(forumRef, {
+              members: arrayRemove(user.uid),
+              totalMembers: increment(-1),
+            });
+            toast.success(`You have left the forum ${forum.title}`);
+          } else {
+            // Join forum
+            await setDoc(membershipRef, { userId: user.uid, forumId: forum.id, joinedAt: new Date() }); 
+            await updateDoc(forumRef, {
+              members: arrayUnion(user.uid),
+              totalMembers: increment(1),
+            });
+      
+            // Send notification to forum author
+            const notificationRef = doc(collection(db, `notifications/${forumSnap.data().authorId}/messages`));
+            await setDoc(notificationRef, {
+              recipientId: forumSnap.data().authorId,
+              recipientType: forumSnap.data().authorType,  
+              message: `${organizationName} has joined the forum ${forum.title}`,
+              type: `post_join`,
+              createdAt: serverTimestamp(),
+              isRead: false,
+              additionalData: {
+                forumId: forum.id,
+                userId: user.uid,
+              },
+            });
+      
+            // Debugging notification creation
+            const notificationDoc = await getDoc(notificationRef);
+            const notificationData = notificationDoc.data();
+            if (notificationData?.createdAt) {
+              console.log("Notification createdAt:", notificationData.createdAt.toDate());
+            }
+      
+            toast.success(`You have joined the forum ${forum.title}`);
+          }
+      
+          setIsMember(!isMember);
+        } catch (error: any) {
+          console.error('Error updating membership:', error);
+          toast.error(`Failed to update membership: ${error?.message || 'An unknown error occurred'}`);
+        }
+      };
+      
     
 
     const highlightBlacklistedWords = (content: string, blacklistedWords: string[]): string => {

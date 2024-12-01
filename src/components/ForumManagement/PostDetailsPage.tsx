@@ -76,14 +76,14 @@ const PostDetailsPage: React.FC = () => {
                 if (docSnap.exists()) {
                     const postData = { id: postId, ...docSnap.data() } as Post;
                     
-                    // Check if post is pending
+                 
                     if (postData.status === 'pending') {
                         console.log('Post is pending:', postData);
                     }
     
                     setPost(postData);
     
-                    // Check if the current user has reacted
+    
                     const userId = auth.currentUser?.uid;
                     if (userId) {
                         setHasReacted(postData.reactedBy?.includes(userId) || false);
@@ -344,7 +344,7 @@ const PostDetailsPage: React.FC = () => {
             await addDoc(commentRef, {
                 content: commentContent,
                 dateCreated: currentDate,
-                author: anonymous ? 'Anonymous' : authorName,
+                authorName: anonymous ? 'Anonymous' : authorName,
                 forumId: forumId,
                 authorId: user.uid,
                 postId: postId,
@@ -409,13 +409,13 @@ const PostDetailsPage: React.FC = () => {
     
 
     const handleDeleteComment = async (forumId: string, postId: string, commentId: string) => {
-        // Confirm if the user really wants to delete the comment
+
         const confirmDelete = window.confirm("Are you sure you want to delete this comment?");
         if (!confirmDelete) {
-            return; // Exit the function if the user cancels
+            return; 
         }
     
-        // Set the path to the specific comment document in the nested structure
+  
         const commentDocRef = doc(db, 'forums', forumId, 'posts', postId, 'comments', commentId);
         try {
             await deleteDoc(commentDocRef);
@@ -530,7 +530,7 @@ const PostDetailsPage: React.FC = () => {
                                 <li key={comment.id} className="p-6 bg-white shadow-md rounded-lg border border-gray-200 transition-transform transform hover:scale-105">
                                     <p className="text-gray-800">{comment.content}</p>
                                     <p className="text-sm text-black">
-                                        By <a href={`/profile/${comment.authorId}`} className="text-blue-500 hover:underline">{comment.author}</a> on {formattedDate(comment.dateCreated)}
+                                        By <a href={`/profile/${comment.authorId}`} className="text-blue-500 hover:underline">{comment.authorName}</a> on {formattedDate(comment.dateCreated)}
                                     </p>
                                     <motion.button
                                         onClick={() => toggleCommentReaction(comment.id)}

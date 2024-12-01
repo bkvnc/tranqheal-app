@@ -67,7 +67,7 @@ const MyForumTable: React.FC = () => {
                 const forumsData = forumsSnapshot.docs.map((doc) => ({
                     id: doc.id,
                     ...doc.data(),
-                    dateCreated: doc.data().dateCreated?.toDate(), // Ensure dateCreated exists
+                    dateCreated: doc.data().dateCreated?.toDate(), 
                 } as Forum));
                 setForums(forumsData);
             }
@@ -84,7 +84,7 @@ const MyForumTable: React.FC = () => {
 
         try {
             const forumRef = collection(db, 'forums');
-            const user = auth.currentUser; // Get the current user
+            const user = auth.currentUser; 
 
             if (!user) {
                 throw new Error('User not authenticated');
@@ -95,10 +95,9 @@ const MyForumTable: React.FC = () => {
                 description,
                 dateCreated: currentDate,
                 totalComments: 0,
-                status: 'pending',
                 tags,
                 totalMembers: 0,
-                authorId: user.uid, // Store authorId here
+                authorId: user.uid, 
                 authorName: userData?.organizationName || 'Anonymous',
                 authorType: userData?.userType || 'user',
                 reports: [],
@@ -130,10 +129,12 @@ const MyForumTable: React.FC = () => {
         }
     };
 
-    // Pagination logic
+    const filteredForums = forums.filter(forum =>
+        (forum.title?.toLowerCase().includes(searchTerm.toLowerCase()) || '')
+    );
     const indexOfLastForum = currentPage * forumsPerPage;
     const indexOfFirstForum = indexOfLastForum - forumsPerPage;
-    const currentForums = forums.slice(indexOfFirstForum, indexOfLastForum);
+    const currentForums = filteredForums.slice(indexOfFirstForum, indexOfLastForum);
     const totalPages = Math.ceil(forums.length / forumsPerPage);
 
     return (
@@ -144,7 +145,7 @@ const MyForumTable: React.FC = () => {
                     <div className="flex items-center">
                     <input
                         type="text"
-                        placeholder="Search post by title or author"
+                        placeholder="Search forum by title "
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="mb-3 w-100 rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
