@@ -1,15 +1,18 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
 import RadioGroup from 'react-native-radio-buttons-group';   //https://www.npmjs.com/package/react-native-radio-buttons-group
 import { RootLayout } from '../navigation/RootLayout';
 import { Colors } from '../config';
 import { AuthenticatedUserContext } from '../providers';
 import { getFirestore, doc, addDoc, collection } from 'firebase/firestore';
 import { auth, firestore } from '../config';
+import { assessmentQuestions } from 'src/utils/assessmentQuestions';
+import { assessmentStates } from 'src/utils/assessmentStates';
 
 export const SAScreen3 = ({navigation, route}) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const { gad7Total, phq9Total } = route.params;
+  const { answers, setAnswers } = useState(assessmentStates.SecondSet);
 
   const interpretPHQ9 = (score) => {
     if (score <= 4) return 'Minimal or no depression';
@@ -32,20 +35,6 @@ export const SAScreen3 = ({navigation, route}) => {
     return 'Severe stress';
   };
 
-  // State for each question's answer
-  const [answers, setAnswers] = useState({
-    upsetUnexpectedly: null, 
-    unableControlThings: null,
-    nervousAndStressed: null,
-    handlePersonalProblems: null,
-    thingsGoingYourWay: null,
-    unableToCope: null,
-    controlIrritations: null,
-    onTopOfThings: null,
-    angeredByThings: null,
-    pilingUpDifficulties: null,
-  });
-
   const handleSelectOption = (key, selectedId) => {
     setAnswers((prevAnswers) => ({ ...prevAnswers, [key]: selectedId }));
   };
@@ -63,14 +52,12 @@ export const SAScreen3 = ({navigation, route}) => {
       'angeredByThings',
       'pilingUpDifficulties',
     ];
-    //Questions that need to be reversed
     const reversedKeys = [
       'handlePersonalProblems', 
       'thingsGoingYourWay', 
       'controlIrritations', 
       'onTopOfThings'
     ];
-    //Reversing the score
     const reverseScore = (value) => {
       switch (parseInt(value)) {
         case 0: return 4;
@@ -89,17 +76,23 @@ export const SAScreen3 = ({navigation, route}) => {
       '4': '3',
       '5': '4',
     };
-    //Calculate the total score
     return pssKeys.reduce((total, key) => {
       const selectedId = answers[key];
       const answerValue = idToValue[selectedId] || '0';
       const score = reversedKeys.includes(key) ? reverseScore(answerValue) : parseInt(answerValue);
       console.log(`key: ${key}, answer: ${answerValue}, score: ${score}`);
       return total + score;
-    }, 0); //Initialize total to 0
+    }, 0); 
   };
 
   const handleFinish = async () => {
+    const unansweredQuestions = Object.keys(answers).filter((key) => answers[key] === null);
+
+    if (unansweredQuestions.length > 0) {
+      Alert.alert('Incomplete Assessment', 'Please answer all questions.');
+      return;
+    }
+
     const user = auth.currentUser;
     const pssTotal = calculatePSSTotalScore();
     const phq9Interpretation = interpretPHQ9(phq9Total);
@@ -130,14 +123,6 @@ export const SAScreen3 = ({navigation, route}) => {
     }
   };
 
-  const radioOptions = [
-    { id: '1', label: 'Never', value: '0' },
-    { id: '2', label: 'Almost never', value: '1' },
-    { id: '3', label: 'Sometimes', value: '2' },
-    { id: '4', label: 'Fairly often', value: '3' },
-    { id: '5', label: 'Very often', value: '4' },
-  ];
-
   return (
     <RootLayout screenName={'SelfAssessment3'} navigation={navigation} userType={userType}>
       <ScrollView style={styles.container}>
@@ -149,23 +134,12 @@ export const SAScreen3 = ({navigation, route}) => {
       </Text>
 
       {/* Questions with Never options */}
-      {[
-        { label: 'How often have you been upset because of something that happened unexpectedly?', key: 'upsetUnexpectedly' },
-        { label: 'Have you felt that you were unable to control the important things in your life?', key: 'unableControlThings' },
-        { label: 'Have you felt nervous and stressed?', key: 'nervousAndStressed' },
-        { label: 'Have you felt confident about your ability to handle your personal problems?', key: 'handlePersonalProblems' },
-        { label: 'Have you felt that things were going your way?', key: 'thingsGoingYourWay' },
-        { label: 'Have you found that you could not cope with all the things you had to do?', key: 'unableToCope' },
-        { label: 'Have you been able to control irritations in your life?', key: 'controlIrritations' },
-        { label: 'Have you felt that you were on top of things?', key: 'onTopOfThings' },
-        { label: 'Have you been angered because of things that happened that were outside of your control?', key: 'angeredByThings' },
-        { label: 'Have you felt difficulties were piling up so high that you could not overcome them?', key: 'pilingUpDifficulties' },
-      ].map((question) => (
+      {assessmentQuestions.SecondSet.map((question) => (
         <View style={styles.inputSection} key={question.key}>
           <Text style={styles.label}>{question.label}</Text>
           <View style={styles.radioGroup}>
             <RadioGroup
-              radioButtons={radioOptions}
+              radioButtons={assessmentStates.secondRadioOptions}
               onPress={(selectedId) => {
                 console.log('button:', selectedId);
                 handleSelectOption(question.key, selectedId);

@@ -4,11 +4,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { HomeScreen, MenuScreen, NotificationScreen, ProfileScreen, EditProfileScreen,
     ViewProfScreen, ProfessionalDetailsScreen, ViewOrgScreen, OrganizationDetailsScreen,
     SAPreferenceScreen, SAScreen, SelfAssessmentLogs, SAScreen2, SAScreen3, SAResultScreen, 
-    MoodScreen, MoodScreen2, MoodMeterScreen, MoodResultScreen, MoodLogsScreen, MatchingScreen, 
-    SeekProfessionalScreen, 
+    MoodScreen, MoodProcessScreen, MoodMeterScreen, MoodResultScreen, MoodLogsScreen, MatchingScreen, 
+    SeekProfessionalScreen, SuccessScreen
 } from '../screens';
 
-import { SuccessScreen } from 'src/screens/successScreen';
 
 import { ForumStack } from './ForumStack';
 
@@ -35,7 +34,7 @@ export const AppStack = () => {
             <Stack.Screen name="SelfAssessmentResult" component={SAResultScreen} />
             <Stack.Screen name="MoodMeter" component={MoodMeterScreen} /> 
             <Stack.Screen name="Mood" component={MoodScreen} />
-            <Stack.Screen name="Mood2" component={MoodScreen2} />
+            <Stack.Screen name="MoodProcess" component={MoodProcessScreen} />
             <Stack.Screen name="MoodResult" component={MoodResultScreen} />
             <Stack.Screen name="MoodLogs" component={MoodLogsScreen} />
             <Stack.Screen name="Matching" component={MatchingScreen} />

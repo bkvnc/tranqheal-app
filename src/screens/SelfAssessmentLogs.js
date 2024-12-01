@@ -4,13 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootLayout } from '../navigation/RootLayout';
 import { Colors, firestore, auth } from '../config';
 import { AuthenticatedUserContext } from '../providers';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, writeBatch, doc } from 'firebase/firestore';
 import { LoadingIndicator } from '../components';
 
 export const SelfAssessmentLogs = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const [selfAssessments, setSelfAssessments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [isloading, setIsLoading] = useState(true);
   const [ modalVisible, setModalVisible ] = useState(false);
   const [ selectedLog, setSelectedLog ] = useState(null);
 
@@ -30,7 +30,7 @@ export const SelfAssessmentLogs = ({ navigation }) => {
       console.error('Error fetching self-assessment logs:', error);
       Alert.alert('Error', 'There was an error fetching your self-assessment logs.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -48,13 +48,56 @@ export const SelfAssessmentLogs = ({ navigation }) => {
     setModalVisible(false);
   }
 
-  if (loading) {
+  const clearLogs = () => {
+    Alert.alert(
+      'Clear All Logs',
+      'Are you sure you want to clear all logs?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          onPress: async () => {
+            try {
+              const currentUser = auth.currentUser;
+              if (!currentUser) return;
+
+              const batch = writeBatch(firestore);
+              selfAssessments.forEach((selfAssessment) => {
+                const selfAssessmentRef = doc(
+                  firestore,
+                  `users/${currentUser.uid}/selfAssessment`,
+                  selfAssessment.id
+                );
+                batch.delete(selfAssessmentRef);
+              });
+              await batch.commit();
+              setSelfAssessments([]);
+              Alert.alert('Success', 'All logs have been cleared.');              
+            } catch (error) {
+              console.error("Error clearing logs:", error);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  if (isloading) {
     return <LoadingIndicator />; 
   }
 
   return (
     <RootLayout screenName={'SelfAssessmentLogs'} navigation={navigation} userType={userType}>
       <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.textContainer}>
+            <Text style={styles.ProfileTitle}>Logs</Text>
+          </View>
+          <TouchableOpacity onPress={clearLogs} style={styles.clearButton}>
+            <Ionicons name="trash-outline" size={24} color="black" />
+            <Text style={styles.clearButtonText}>Clear All</Text>
+          </TouchableOpacity>
+        </View>
         {selfAssessments.length > 0 ? (
           <FlatList
             data={selfAssessments}
@@ -129,6 +172,30 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: 'white',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  textContainer: {
+    flex: 1,
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  ProfileTitle: {
+    fontSize: 34,
+    fontWeight: 'bold',
+  },
+  clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 5,
+  },
+  clearButtonText: {
+    fontSize: 16,
+    marginLeft: 5,
+    color: 'black',
   },
   logContainer: {
     padding: 15,

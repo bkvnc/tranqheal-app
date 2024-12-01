@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Image, SafeAreaView, StatusBar } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../config';
 import NotificationIndicator from '../components/NotificationIndicator';
-import { useState } from 'react';
 import { useNotifications } from '../components/NotificationContext';
 import { AuthenticatedUserContext } from '../providers';
 

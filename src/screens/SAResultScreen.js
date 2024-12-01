@@ -6,7 +6,6 @@ import { Colors, auth } from '../config';
 import { AuthenticatedUserContext } from '../providers';
 import { getFirestore, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
-
 export const SAResultScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const [assessmentData, setAssessmentData] = useState(null);
