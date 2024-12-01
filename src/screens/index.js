@@ -31,6 +31,7 @@ import { EditProfileScreen } from './editProfileScreen';
 import { ProfessionalHomeScreen } from './ProfessionalHomeScreen';
 import { ViewRequestScreen } from './ViewRequestScreen';
 import { ViewRequestHistoryScreen } from './ViewRequestHistoryScreen';
+import { ViewAcceptedRequestsScreen } from './ViewAcceptedRequestsScreen';
 import { MoodMeterScreen } from './MoodMeterScreen';
 import {MoodScreen2} from './MoodScreen2';
 import {MoodResultScreen} from './MoodResultScreen';
@@ -40,6 +41,7 @@ import { EditProfessionalProfileScreen } from './editProfessionalProfileScreen';
 import { SeekProfessionalScreen } from './SeekProfessionalScreen';
 import { MoodLogsScreen } from './MoodLogsScreen';
 
+
 export { WelcomeScreen, RegisterAsScreen, LoginScreen, 
     SignupScreen, ProfessionalRegisterScreen, UploadCredentialsScreen, ViewProfScreen, ViewOrgScreen, ForumsScreen, 
     HomeScreen, SAScreen, SAScreen2, SAScreen3, MoodScreen, 
@@ -48,4 +50,4 @@ export { WelcomeScreen, RegisterAsScreen, LoginScreen,
     ForumPostScreen, OrganizationDetailsScreen, ProfessionalDetailsScreen,
     EditProfileScreen, ProfessionalHomeScreen, ViewRequestScreen,
     ViewRequestHistoryScreen, MoodMeterScreen, MoodScreen2, MoodResultScreen,
-    EditProfessionalProfileScreen, ProfessionalProfileScreen, SeekProfessionalScreen, MoodLogsScreen, MatchingScreen, SelfAssessmentLogs };
+    EditProfessionalProfileScreen, ProfessionalProfileScreen, SeekProfessionalScreen, MoodLogsScreen, MatchingScreen, SelfAssessmentLogs, ViewAcceptedRequestsScreen };
