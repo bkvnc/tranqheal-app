@@ -183,11 +183,15 @@ export const ForumPostScreen = ({ route, navigation }) => {
   const handleJoinForum = async () => {
     try {
       const membershipRef = collection(firestore, 'memberships');
-  
+      const forumRef = doc(firestore, 'forums', forumId);
       await addDoc(membershipRef, {
         forumId: forumId,
         userId: auth.currentUser.uid, 
         joinedAt: new Date(),
+      });
+
+      await updateDoc(forumRef, {
+        totalMembers: increment(1),
       });
 
 
@@ -299,7 +303,7 @@ const handleSaveForumEdits = async () => {
         const blacklistedWordsRef = collection(firestore, 'blacklistedWords');
         const snapshot = await getDocs(blacklistedWordsRef);
         const blacklistedWords = snapshot.docs.map(doc => doc.data().word.toLowerCase());
-  
+       
         const postTitleLower = newPostTitle.toLowerCase();
         const postContentLower = newPostContent.toLowerCase();
   
@@ -336,6 +340,8 @@ const handleSaveForumEdits = async () => {
           reactedBy: [],
           isAnonymous: isAnonymous,
         };
+
+        
   
         const forumRef = doc(firestore, 'forums', forumId);
           const postsRef = collection(forumRef, 'posts');
@@ -343,7 +349,10 @@ const handleSaveForumEdits = async () => {
 
           // Create the new post first and retrieve the document reference
           const postDocRef = await addDoc(postsRef, newPost);
-
+          //update totalPosts in forum
+          await updateDoc(forumRef, {
+          totalPosts: increment(1),
+        })
           const postSnap = await getDoc(forumRef);
           const orgSnap = await getDoc(organizationRef);
           // Now that the post has been added, we can safely use the ID
@@ -409,12 +418,18 @@ const handleSaveForumEdits = async () => {
       onPress: async () => {
         try {
           const membershipRef = collection(firestore, 'memberships');
+          const forumRef = doc(firestore, 'forums', forumId);
           const q = query(membershipRef, where('forumId', '==', forumId), where('userId', '==', auth.currentUser.uid));
           const snapshot = await getDocs(q);
+
+
 
           // Delete each membership document found (should be only one)
           snapshot.forEach(async (doc) => {
             await deleteDoc(doc.ref);
+          });
+          await updateDoc(forumRef, {
+            totalMembers: increment(-1),
           });
 
           setIsMember(false); // Update UI state to reflect leave status
