@@ -6,9 +6,21 @@ const TotalPostsCard = () => {
   const [postCount, setPostCount] = useState<number>(0);
 
   const fetchPostsCount = async () => {
-    const postsCollectionRef = collection(db, 'forums',);
-    const postsSnapshot = await getDocs(postsCollectionRef);
-    setPostCount(postsSnapshot.size);
+    let totalPostCount = 0;
+  
+    const forumsCollectionRef = collection(db, "forums");
+    const forumsSnapshot = await getDocs(forumsCollectionRef);
+  
+    for (const forumDoc of forumsSnapshot.docs) {
+      const postsCollectionRef = collection(db, `forums/${forumDoc.id}/posts`);
+      const postsSnapshot = await getDocs(postsCollectionRef);
+  
+     
+      totalPostCount += postsSnapshot.size;
+    }
+  
+   
+    setPostCount(totalPostCount);
   };
 
   useEffect(() => {

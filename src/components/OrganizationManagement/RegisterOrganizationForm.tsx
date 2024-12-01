@@ -1,14 +1,15 @@
-import React, { useState, ChangeEvent, FormEvent } from 'react';
-import { getAuth, createUserWithEmailAndPassword, UserCredential } from 'firebase/auth';
+import React, { useState, ChangeEvent, FormEvent, useEffect } from 'react';
+import { getAuth, createUserWithEmailAndPassword, UserCredential, sendEmailVerification } from 'firebase/auth';
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { toast, ToastContainer } from 'react-toastify';
+import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import 'react-toastify/dist/ReactToastify.css';
 
 const auth = getAuth();
 const db = getFirestore();
+const storage = getStorage();
 
-// Define a default profile picture URL
-const DEFAULT_PROFILE_PICTURE = 'src/images/user/user-01.png'; // Replace with your default image URL
+const DEFAULT_PROFILE_PICTURE_PATH = '/defaultImages/defaultAva.png'; // Path in Firestore storage
 const DEFAULT_BACKGROUD_PICTURE = 'src/images/cover/cover-01.png';
 
 type UserType = 'organization' | 'admin';
@@ -53,6 +54,23 @@ const Register: React.FC = () => {
     });
 
     const [loading, setLoading] = useState<boolean>(false);
+    const [profilePictureUrl, setProfilePictureUrl] = useState<string>('');
+
+    // Fetch the default profile picture URL from Firebase Storage
+    useEffect(() => {
+        const fetchDefaultProfilePicture = async () => {
+            try {
+                const profilePictureRef = ref(storage, DEFAULT_PROFILE_PICTURE_PATH);
+                const url = await getDownloadURL(profilePictureRef);
+                setProfilePictureUrl(url); // Store the URL in state
+            } catch (error) {
+                console.error('Error fetching profile picture:', error);
+                toast.error('Error fetching default profile picture.');
+            }
+        };
+
+        fetchDefaultProfilePicture();
+    }, []);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -92,7 +110,6 @@ const Register: React.FC = () => {
         }
 
         try {
-            // Create a new user in Firebase Authentication
             const userCredential: UserCredential = await createUserWithEmailAndPassword(
                 auth,
                 formData.email,
@@ -100,12 +117,15 @@ const Register: React.FC = () => {
             );
             const user = userCredential.user;
 
+            // Send email verification
+            await sendEmailVerification(user);
+
             // User data to be stored in Firestore
             const userData: UserData = {
                 email: formData.email,
                 userType: formData.userType,
                 createdAt: serverTimestamp(),
-                profilePicture: DEFAULT_PROFILE_PICTURE,
+                profilePicture: profilePictureUrl || '', // Use the fetched profile picture URL
                 backgroundPicture: DEFAULT_BACKGROUD_PICTURE,
             };
 
@@ -123,7 +143,9 @@ const Register: React.FC = () => {
             await setDoc(doc(db, collectionName, user.uid), userData);
 
             // Show success toast
-            toast.success('Registration successful! You can now log in.');
+            toast.success('Registration successful! Please check your email to verify your account.');
+
+            // Optionally, redirect user to login page or show additional instructions
         } catch (error: any) {
             let errorMessage = 'An unknown error occurred';
 
@@ -240,13 +262,14 @@ const Register: React.FC = () => {
                             required
                         />
                     </div>
-                    <div className="flex justify-center gap-4">
+
+                    <div className="flex items-center justify-center">
                         <button
                             type="submit"
+                            className="btn btn-primary w-full max-w-[250px]"
                             disabled={loading}
-                            className="inline-block w-full rounded bg-[#9F4FDD] hover:shadow-lg hover:shadow-[#9F4FDD]/50  py-3 px-5 text-center text-base font-semibold text-white transition hover:bg-opacity-90"
                         >
-                            {loading ? 'Processing...' : 'Register'}
+                            {loading ? 'Registering...' : 'Register'}
                         </button>
                     </div>
                 </div>

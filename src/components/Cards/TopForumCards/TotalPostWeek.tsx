@@ -9,23 +9,22 @@ const TotalPostWeekCard = () => {
   const fetchWeeklyPostsCount = async () => {
     const startOfWeek = dayjs().startOf("week").toDate();
     
-    // Get all forums
-    const forumsCollectionRef = collection(db, "forums"); // Adjust to your collection name if needed
+    const forumsCollectionRef = collection(db, "forums"); 
     const forumsSnapshot = await getDocs(forumsCollectionRef);
 
     let totalPosts = 0;
 
-    // For each forum, query its 'posts' subcollection
+    
     for (const forumDoc of forumsSnapshot.docs) {
       const postsCollectionRef = collection(forumDoc.ref, "posts");
 
       const weeklyQuery = query(postsCollectionRef, where("dateCreated", ">=", startOfWeek));
       const postsSnapshot = await getDocs(weeklyQuery);
 
-      totalPosts += postsSnapshot.size; // Accumulate post count
+      totalPosts += postsSnapshot.size; 
     }
 
-    setPostCount(totalPosts); // Set the total posts count for this week
+    setPostCount(totalPosts); 
   };
 
   useEffect(() => {

@@ -8,25 +8,22 @@ const TotalPostMonthCard = () => {
 
   const fetchMonthlyPostsCount = async () => {
     const startOfMonth = dayjs().startOf("month").toDate();
-
-    // Get all forums
-    const forumsCollectionRef = collection(db, "forums"); // Adjust to your collection name if needed
+    const forumsCollectionRef = collection(db, "forums"); 
     const forumsSnapshot = await getDocs(forumsCollectionRef);
 
     let totalPosts = 0;
 
-    // For each forum, query its 'posts' subcollection
     for (const forumDoc of forumsSnapshot.docs) {
       const postsCollectionRef = collection(forumDoc.ref, "posts");
 
-      // Query the posts subcollection for the current month
+   
       const monthlyQuery = query(postsCollectionRef, where("dateCreated", ">=", startOfMonth));
       const postsSnapshot = await getDocs(monthlyQuery);
 
-      totalPosts += postsSnapshot.size; // Accumulate the post count
+      totalPosts += postsSnapshot.size; 
     }
 
-    setPostCount(totalPosts); // Set the total post count for this month
+    setPostCount(totalPosts); 
   };
 
   useEffect(() => {
