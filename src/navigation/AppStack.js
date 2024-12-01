@@ -5,8 +5,9 @@ import { HomeScreen, MenuScreen, NotificationScreen, ProfileScreen, EditProfileS
     ViewProfScreen, ProfessionalDetailsScreen, ViewOrgScreen, OrganizationDetailsScreen,
     SAPreferenceScreen, SAScreen, SelfAssessmentLogs, SAScreen2, SAScreen3, SAResultScreen, 
     MoodScreen, MoodProcessScreen, MoodMeterScreen, MoodResultScreen, MoodLogsScreen, MatchingScreen, 
-    SeekProfessionalScreen,
+    SeekProfessionalScreen, SuccessScreen
 } from '../screens';
+
 
 import { ForumStack } from './ForumStack';
 
@@ -38,6 +39,7 @@ export const AppStack = () => {
             <Stack.Screen name="MoodLogs" component={MoodLogsScreen} />
             <Stack.Screen name="Matching" component={MatchingScreen} />
             <Stack.Screen name="SeekProfessional" component={SeekProfessionalScreen} />
+            <Stack.Screen name="Success" component={SuccessScreen} />
         </Stack.Navigator>
     );
 }

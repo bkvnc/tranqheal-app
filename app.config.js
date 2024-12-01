@@ -5,6 +5,7 @@ export default {
     name: "TranqHeal",
     slug: "tranqheal-mobile",
     owner: "bkvnc",
+    scheme: "myapp",
     platforms: ["android"],
     version: "1.0.0",
     orientation: "portrait",
@@ -32,6 +33,8 @@ export default {
       eas: {
         projectId: "ebfe0542-9061-4c3c-9fc2-d675974ff5d6",
       },
+      webClientId: "388083674825-so3c1k6k42e4uccc633v47mmoiu5fb4u.apps.googleusercontent.com",
+      redirectUri: "https://auth.expo.io/@bkvnc/tranqheal-mobile",
     },
     android: {
       permissions: ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],

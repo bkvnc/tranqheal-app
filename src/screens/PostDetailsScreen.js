@@ -52,18 +52,18 @@ export const PostDetailsScreen = ({ route, navigation }) => {
           const userRef = doc(firestore, 'users', auth.currentUser.uid);
           const profRef = doc(firestore, 'professionals', auth.currentUser.uid);
           const userSnapshot = await getDoc(userRef);
+          const profSnapshot = await getDoc(profRef);
   
           if (userSnapshot.exists()) {
             const userData = userSnapshot.data();
             setAuthorName(`${userData.firstName} ${userData.lastName}`);
             setAuthorType(userData.userType);
           }else{
-            const profSnapshot = await getDoc(profRef);
             if (profSnapshot.exists()) {
               const profData = profSnapshot.data();
               setAuthorName(`${profData.firstName} ${profData.lastName}`);
               setAuthorType(profData.userType);
-          }
+            }
           }
         }
       } catch (error) {
@@ -275,13 +275,49 @@ const handleDeletePost = () => {
       authorId: user.uid,
       isAnonymous: anonymous,
     };
+    
+
   
     try {
       const docRef = await addDoc(
         collection(firestore, `forums/${forumId}/posts/${postId}/comments`), 
         newCommentObj
       );
-      // Add the new comment to the local state
+      const commentRef = doc(firestore, `forums/${forumId}/posts/${postId}/comments`, docRef.id);
+      const notificationRef = doc(collection(firestore, `notifications/${postSnap.data().authorId}/messages`));
+
+     // Check if the comment's author is the same as the post's author
+        const commentAuthorId = commentRef.data().authorId; // Comment's author
+        const postAuthorId = newPostId.authorId; // Post's author (update as necessary to fetch the post's author)
+        const commentSnap = await getDoc(commentRef);
+
+        if (commentAuthorId !== postAuthorId) {
+          // Set the notification document with the new post ID
+          await setDoc(notificationRef, {
+            recipientId: postAuthorId,
+            recipientType: commentSnap.data().authorType,  
+            message: `${commentSnap.data().authorName} commented on your post.`,
+            type: `comment`,
+            createdAt: serverTimestamp(), 
+            isRead: false,
+            additionalData: {
+              postId: newPostId,  
+              forumId: forumId,
+            },
+          });
+
+          // Fetch and log the notification to check the createdAt field
+          const notificationDoc = await getDoc(notificationRef);
+          const notificationData = notificationDoc.data();
+
+          if (notificationData && notificationData.createdAt) {
+            const createdAtDate = notificationData.createdAt.toDate();
+            console.log("Notification createdAt:", createdAtDate); // For debugging
+          }
+        } else {
+          console.log("No notification created: User commented on their own post.");
+        }
+
       setComments([{ ...newCommentObj, id: docRef.id }, ...comments]);
       setNewComment(''); // Clear the input field
       setIsAnonymousModalVisible(false);
@@ -292,45 +328,6 @@ const handleDeletePost = () => {
     }
   };
 
-  //Render Comments  
-  const renderCommentItem = ({ item }) => (
-    <View style={styles.commentItem}>
-      <Text style={styles.commentAuthor}> {item.isAnonymous ? 'Anonymous' : item.authorName}</Text>
-      <Text style={styles.commentContent}>{item.content}</Text>
-      <Text style={styles.commentDate}>
-        {item.dateCreated ? moment(item.dateCreated).fromNow() : 'Unknown date'}
-      </Text>
-      <View style={styles.iconRow}>
-        {item.authorId === user.uid ? (
-          <>
-            <TouchableOpacity onPress={() => {
-              console.log("Editing comment:", item);
-              setCommentToEdit(item);
-              setEditCommentText(item.content);
-              setIsEditCommentModalVisible(true);
-            }}>
-              <Ionicons name="create-outline" size={20} color="#000" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDeleteComment(item.id)}>
-              <Ionicons name="trash-outline" size={20} color="#000" />
-            </TouchableOpacity>
-          </>
-        ) : (
-          <TouchableOpacity onPress={() => handleReportComment(item.id)}>
-            <Ionicons name="alert-circle-outline" size={20} color="#000" />
-          </TouchableOpacity>
-        )}
-          <TouchableOpacity onPress={() => handleCommentReact(item.id)}>
-            <Ionicons
-              name={item.userReacted ? "heart" : "heart-outline"} 
-              size={20}
-              color={item.userReacted ? 'red' : '#333333'} 
-            />
-            <Text style={styles.reactionCountText}>{item.commentReacted || 0}</Text>
-          </TouchableOpacity>
-      </View>
-    </View>
-  );
 
   //Edit Comment Handle
   const handleEditComment = async () => {
@@ -656,27 +653,76 @@ if (loading) {
   return <LoadingIndicator />;
 }
 
+//Render Comments  
+const renderCommentItem = ({ item }) => (
+  <View style={styles.commentItem}>
+    <Text style={styles.commentAuthor}>
+      {item.isAnonymous ? 'Anonymous' : item.authorName}
+    </Text>
+    <Text style={styles.commentContent}>{item.content}</Text>
+    <Text style={styles.commentDate}>
+      {item.dateCreated ? moment(item.dateCreated).fromNow() : 'Unknown date'}
+    </Text>
+    
+    <View style={styles.iconRow}>
+      {/* Edit and Delete Options for the Comment Author */}
+      {item.authorId === user.uid ? (
+        <>
+          <TouchableOpacity
+            onPress={() => {
+              console.log("Editing comment:", item);
+              setCommentToEdit(item);
+              setEditCommentText(item.content);
+              setIsEditCommentModalVisible(true);
+            }}
+          >
+            <Ionicons name="create-outline" size={20} color="#000" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleDeleteComment(item.id)}>
+            <Ionicons name="trash-outline" size={20} color="#000" />
+          </TouchableOpacity>
+        </>
+      ) : (
+        <TouchableOpacity onPress={() => handleReportComment(item.id)}>
+          <Ionicons name="alert-circle-outline" size={20} color="#000" />
+        </TouchableOpacity>
+      )}
+      
+      {/* Reaction (Heart) Icon and Count */}
+      <TouchableOpacity onPress={() => handleCommentReact(item.id)} style={styles.reactionIconContainer}>
+        <Ionicons
+          name={item.userReacted ? "heart" : "heart-outline"} 
+          style={[styles.reactionIcon, { color: item.userReacted ? 'red' : '#333' }]}  
+        />
+        <Text style={styles.reactionCount}>
+          {item.commentReacted || 0}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
  return (
     <RootLayout navigation={navigation} screenName="Post Details" userType={userType}>
       <View style={styles.container}>
       {/* Post Header and Comments */}
       <FlatList
-        data={showComments ? comments : []} 
+        data={showComments ? comments : []}
         keyExtractor={(item) => item.id}
-        renderItem={renderCommentItem} 
-        contentContainerStyle={{ paddingBottom: 70 }} // Space for the input box
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        renderItem={renderCommentItem}
+        contentContainerStyle={{ paddingBottom: 70 }} 
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
           <View>
             {/* Post Content */}
             <Text style={styles.postTitle}>{postData?.title}</Text>
             <View style={styles.metaContainer}>
               <Text style={styles.timeText}>
-                {new Date(postData?.dateCreated.toDate()).toLocaleString('en-US', {hour12: true})}
+                {new Date(postData?.dateCreated.toDate()).toLocaleString('en-US', { hour12: true })}
               </Text>
-              <Text style={styles.authorText}>{postData?.isAnonymous ? 'Anonymous' : postData?.authorName}</Text>
+              <Text style={styles.authorText}>
+                {postData?.isAnonymous ? 'Anonymous' : postData?.authorName}
+              </Text>
             </View>
 
             {/* Post Image */}
@@ -685,7 +731,7 @@ if (loading) {
                 <Image source={{ uri: postData.imageUrl }} style={styles.postImage} />
               </TouchableOpacity>
             ) : null}
-            
+
             <Text style={styles.postContent}>{postData?.content}</Text>
 
             {/* Reaction and Comment Icons */}
@@ -695,7 +741,11 @@ if (loading) {
                 <Text>{comments.length}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={handleReact} style={styles.iconButton}>
-                <Ionicons name={userReacted ? 'heart' : 'heart-outline'} size={24} color={userReacted ? 'red' : '#333'} />
+                <Ionicons
+                  name={userReacted ? 'heart' : 'heart-outline'}
+                  size={24}
+                  color={userReacted ? 'red' : '#333'}
+                />
                 <Text>{reacts}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setIsOptionsModalVisible(true)} style={styles.iconButton}>
@@ -705,57 +755,50 @@ if (loading) {
           </View>
         }
       />
-      
-        { showComments && (
-            <View style={styles.commentInputContainer}>
-              {/* Comment Input Box */}
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Add a comment..."
-                value={newComment}
-                onChangeText={setNewComment}
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  if (!newComment.trim()) {
-                    Alert.alert('Error', 'Please enter a comment before submitting.');
-                    return;
-                  }
-                  setIsAnonymousModalVisible(true);
-                }}
-                style={styles.sendButton}
-              >
-                <Ionicons name="send-outline" size={24} color="#000" />
+
+      {/* Show Comment Input Box */}
+      {showComments && (
+        <View style={styles.commentInputContainer}>
+          <TextInput
+            style={styles.commentInput}
+            placeholder="Add a comment..."
+            value={newComment}
+            onChangeText={setNewComment}
+          />
+          <TouchableOpacity
+            onPress={() => {
+              if (!newComment.trim()) {
+                Alert.alert('Error', 'Please enter a comment before submitting.');
+                return;
+              }
+              setIsAnonymousModalVisible(true);
+            }}
+            style={styles.sendButton}
+          >
+            <Ionicons name="send-outline" size={24} color="#000" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Modal: Anonymous Confirmation */}
+      <Modal visible={isAnonymousModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.AnoynmousModalContent}>
+            <Text style={styles.modalTitle}>Send Comment as Anonymous?</Text>
+            <View style={styles.AnonymousModalButtons}>
+              <TouchableOpacity onPress={() => { handleAddComment(true); }}>
+                <Text style={styles.sendButtonText}>Yes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { handleAddComment(false); }}>
+                <Text style={styles.sendButtonText}>No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setIsAnonymousModalVisible(false)}>
+                <Text style={styles.sendButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
-          )
-        }
-
-        {/* Anonymous Modal */}
-        <Modal visible={isAnonymousModalVisible} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.AnoynmousModalContent}>
-              <Text style={styles.modalTitle}>Send Comment as Anonymous?</Text>
-
-              <View style={styles.AnonymousModalButtons}>
-                  <TouchableOpacity onPress={() => {  
-                    handleAddComment(true); 
-                  }}>
-                    <Text style={styles.sendButtonText}>Yes</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity onPress={() => { 
-                    handleAddComment(false); 
-                  }}>
-                    <Text style={styles.sendButtonText}>No</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setIsAnonymousModalVisible(false)}>
-                   <Text style={styles.sendButtonText}>Cancel</Text>
-                  </TouchableOpacity>
-              </View>
-            </View>
           </View>
-        </Modal>
+        </View>
+      </Modal>
 
         {/* Image Modal */}
         <Modal visible={isImageModalVisible} transparent animationType="fade">
@@ -883,236 +926,332 @@ if (loading) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16, 
+    paddingVertical: 12, 
+    backgroundColor: '#ffffff', 
   },
+
+  // Post Header
   postTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 22, 
+    fontWeight: '700', 
+    color: '#222', 
+    marginBottom: 6, 
   },
   metaContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 8,
-  },
-  postContent: {
-    fontSize: 16,
-    marginTop: 10,
-    marginBottom: 16,
-  },
-  commentsContainer: {
-    flexGrow: 1,  
-    marginBottom: 60, 
-  },
-  commentInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    paddingVertical: 8,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    paddingHorizontal: 10,
-  },
-  commentInput: {
-    flex: 1,
-    padding: 10,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 20,
-    fontSize: 16,
-    marginRight: 8,
-  },
-  sendButton: {
-    padding: 8,
-  },
-  sendButtonText: {
-    flexDirection: 'row',
-    color:'#000',
-    fontSize: 16,
-  },
-  sendCancelButtonText: {
-   marginTop: 10,
-  },
-  commentsContainer: {
-    flex: 1,
+    alignItems: 'center', 
     marginBottom: 8, 
   },
-  textInput: { 
-    borderColor: '#ccc', 
-    borderWidth: 1, 
-    padding: 8, 
-    height: 60, 
-    maxHeight: 150, 
-    textAlignVertical: 'top' 
-  },
-  iconRow: { 
-    flexDirection: 'row', 
-    gap: 10, 
-    marginTop: 5 
-  },
-  timeText: { 
-    fontSize: 12, 
-    color: '#888' 
-  },
-  authorText: { 
-    fontSize: 12, 
-    color: '#888' 
-  },
-  postContent: { 
-    fontSize: 16, 
-    marginTop: 10,
-    marginBottom: 10, 
-  },
-  reactContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-around', 
-    marginBottom: 10 ,
-  },
-  iconButton: { 
-    alignItems: 'center' 
-  },
-  commentInput: {
-    flex: 1,
-    padding: 5,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 20,
-    fontSize: 16,
-    marginRight: 8,
-  },
-  sendButton: {
-    padding: 8,
-  },
-  commentItem: { 
-    borderBottomColor: '#ccc', 
-    borderBottomWidth: 1, 
-    paddingVertical: 8 
-  },
-  commentAuthor: { 
-    fontWeight: 'bold' 
-  },
-  commentContent: { 
-    marginVertical: 4 
-  },
-  commentDate: { 
-    fontSize: 12, 
-    color: '#888' 
-  },
-  modalOverlay: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: 'rgba(0,0,0,0.5)', 
-    zIndex: 1000, 
-  },
-  modalContent: { 
-    width: '90%', 
-    padding: 20, 
-    backgroundColor: '#fff', 
-    borderRadius: 10,
-  },
-  modalOption: { 
-    fontSize: 18, 
-    marginBottom: 20 
-  },
-  modalCancel: { 
-    fontSize: 16, 
-    color: '#000' 
-  },
-  AnoynmousModalContent: {
-    witdh: '50%',
-    padding: 20,
-    backgroundColor: '#fff', 
-    borderRadius: 10,
-  },
-  AnonymousModalButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20,
-    marginTop: 15,
-  },
-  modalTitle: {
-    fontSize: 18,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20,
-  },
-  horizontalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '60%', 
-    marginBottom: 10, 
-  },
-  cancelButton:{
-    paddingVertical :8 ,
-    paddingHorizontal :20 ,
-    backgroundColor :'#ccc' ,
-    borderRadius :5 ,
-  },
-  cancelButtonText:{
-      color :'#000' ,
-  },
-  saveButton:{
-      paddingVertical :8 ,
-      paddingHorizontal :20 ,
-      backgroundColor :'#7f4dff' ,
-      borderRadius :5 ,
-  },
-  saveButtonText:{
-      color :'#fff' ,
-  },
-  reactionCountText: {
+  timeText: {
     fontSize: 12,
-    color: '#333',
-    marginTop: 2, 
-    textAlign: 'center', 
+    color: '#777', 
+  },
+  authorText: {
+    fontSize: 12,
+    fontWeight: '500', 
+    color: '#555', 
+  },
+
+  // Post Content
+  postContent: {
+    fontSize: 16,
+    lineHeight: 22, 
+    color: '#333', 
+    marginVertical: 10, 
   },
   postImage: {
-    width: 270,
-    height: 270,
-    resizeMode: 'contain',
+    width: '85%', 
+    height: 200, 
     alignSelf: 'center',
+    resizeMode: 'cover', 
+    borderRadius: 8, 
+    marginVertical: 10, 
+    backgroundColor: '#eaeaea', 
   },
   attachIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    marginTop: 10,
+    marginVertical: 12, 
   },
   attachText: {
-    marginLeft: 5,
+    marginLeft: 8, 
     fontSize: 16,
-    color: '#000',
+    fontWeight: '500', 
+    color: '#444', 
   },
   imagePreview: {
     width: 60,
     height: 60,
-    borderRadius: 10,
+    borderRadius: 8, 
+    backgroundColor: '#d9d9d9', 
+   
   },
+
+  // Icons (Reaction, Heart, Three Dots)
+  reactContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly', 
+    paddingVertical: 8, 
+    borderTopWidth: 1, 
+    borderTopColor: '#eee', 
+  },
+  iconButton: {
+    flexDirection: 'row', 
+    alignItems: 'center',
+    gap: 6, 
+  },
+  reactionCountText: {
+    fontSize: 14, 
+    fontWeight: '500', 
+    color: '#333', 
+  },
+
+// Comments
+commentsContainer: {
+  flexGrow: 1,
+  paddingBottom: 16, 
+  marginBottom: 70, 
+  backgroundColor: '#f9f9f9', 
+},
+
+commentInputContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  borderTopWidth: 1,
+  borderTopColor: '#eee', 
+  paddingVertical: 12, 
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  backgroundColor: '#fff',
+  paddingHorizontal: 16, 
+},
+
+commentInput: {
+  flex: 1,
+  paddingVertical: 10, 
+  paddingHorizontal: 14, 
+  borderColor: '#ccc',
+  borderWidth: 1,
+  borderRadius: 25, 
+  fontSize: 16,
+  backgroundColor: '#f2f2f2', 
+  marginRight: 8, 
+},
+
+sendButton: {
+  padding: 10,
+  borderRadius: 20, 
+},
+
+sendButtonText: {
+  color: '#333',
+  fontSize: 16,
+  fontWeight: '400',
+},
+
+commentItem: {
+  borderBottomColor: '#eee', 
+  borderBottomWidth: 1,
+  paddingVertical: 12, 
+  paddingHorizontal: 16,
+  backgroundColor: '#fff', 
+  marginBottom: 8, 
+  borderRadius: 8, 
+},
+
+commentAuthor: {
+  fontWeight: '600', 
+  fontSize: 14, 
+  color: '#333', 
+},
+
+commentContent: {
+  marginVertical: 6, 
+  fontSize: 14, 
+  color: '#444', 
+},
+
+commentDate: {
+  fontSize: 12,
+  color: '#aaa', 
+  marginTop: 4, 
+},
+
+iconRow: {
+  flexDirection: 'row',
+  gap: 12, 
+  marginTop: 6, 
+  alignItems: 'center', 
+},
+
+reactionContainer: {
+  flexDirection: 'row', 
+  alignItems: 'center', 
+  gap: 6, 
+},
+
+reactionIconContainer: {
+  flexDirection: 'row', 
+  alignItems: 'center', 
+  gap: 6, 
+},
+
+reactionIcon: {
+  fontSize: 20, 
+  color: '#ff5252', 
+},
+
+reactionCount: {
+  fontSize: 14, 
+  fontWeight: '500', 
+  color: '#333', 
+},
+
+// Modals (Common Styles)
+modalOverlay: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: 'rgba(0, 0, 0, 0.7)', 
+  zIndex: 1000,
+},
+
+modalContent: {
+  width: '80%', 
+  padding: 24, 
+  backgroundColor: '#fff',
+  borderRadius: 12, 
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.15, 
+  shadowRadius: 8,
+  elevation: 5, 
+},
+
+modalTitle: {
+  fontSize: 20, 
+  fontWeight: '600', 
+  marginBottom: 16, 
+  color: '#333', 
+},
+
+modalOption: {
+  fontSize: 18,
+  marginBottom: 20,
+  fontWeight: '500', 
+  color: '#444', 
+},
+
+modalCancel: {
+  fontSize: 16,
+  fontWeight: '400', 
+},
+
+ // Edit Post Modal
+textInput: {
+  borderColor: '#ccc',
+  borderWidth: 1,
+  padding: 12, 
+  height: 80, 
+  maxHeight: 180, 
+  textAlignVertical: 'top', 
+  borderRadius: 8, 
+  fontSize: 16, 
+  marginBottom: 16, 
+},
+
+modalButtons: {
+  flexDirection: 'row',
+  justifyContent: 'space-between', 
+  alignItems: 'center',
+  marginTop: 10, 
+},
+
+cancelButton: {
+  paddingVertical: 10,
+  paddingHorizontal: 22,
+  backgroundColor: '#f2f2f2', 
+  borderRadius: 6, 
+  borderWidth: 1,
+  borderColor: '#ddd', 
+  alignItems: 'center', 
+},
+
+cancelButtonText: {
+  color: '#777', 
+  fontSize: 16,
+  fontWeight: '500', 
+},
+
+saveButton: {
+  paddingVertical: 10,
+  paddingHorizontal: 22,
+  backgroundColor: '#7f4dff', 
+  borderRadius: 6, 
+  alignItems: 'center', 
+},
+
+saveButtonText: {
+  color: '#fff', 
+  fontSize: 16,
+  fontWeight: '600', 
+},
+
+  // Anonymous Modal
+  AnoynmousModalContent: {
+    width: '80%',  
+    padding: 24,  
+    backgroundColor: '#fff',
+    borderRadius: 12,  
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15, 
+    shadowRadius: 8,
+    elevation: 5,  
+  },
+  
+  AnonymousModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',  
+    alignItems: 'center',
+    marginTop: 20,  
+    gap: 15,  
+  },
+
+  // Image Modal
   imageModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Dark overlay background
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+    padding: 16,
   },
+  
   fullScreenImage: {
-    width: '100%',  // Make the image take the full width of the screen
-    height: '100%', // Make the image take the full height of the screen
-    resizeMode: 'contain', // Keeps the aspect ratio intact when zooming
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+    borderRadius: 12,
   },
+  
   closeModalButton: {
     position: 'absolute',
     top: 40,
     right: 20,
     zIndex: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Optional: adds a background to the icon
-    borderRadius: 25, // Optional: to make the background circular
-    padding: 8, // Optional: adjust padding around the icon
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 25,
+    padding: 12,
+  },
+  
+  closeModalButtonIcon: {
+    color: '#fff',
+    fontSize: 32,
   },
 });
+

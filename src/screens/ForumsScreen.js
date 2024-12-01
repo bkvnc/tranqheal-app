@@ -17,7 +17,7 @@ import { AuthenticatedUserContext } from '../providers';
 import { RootLayout } from '../navigation/RootLayout';
 import { getDocs, getFirestore, collection, addDoc,doc, getDoc, Timestamp } from 'firebase/firestore';
 import { auth, firestore } from 'src/config';
-import { LoadingIndicator } from '../components';
+import { LoadingIndicator } from '../components'; 
 
 
 export const ForumsScreen = ({ navigation }) => {
@@ -336,7 +336,7 @@ export const ForumsScreen = ({ navigation }) => {
   
           {/* Display Filtered Forums */}
           <View style={styles.forumsList}>
-            {filteredForums.length === 0 ? <Text>No forums found</Text> : filteredForums.map((forum) => renderForumItem({ item: forum }))}
+            {filteredForums.length === 0 ? <Text></Text> : filteredForums.map((forum) => renderForumItem({ item: forum }))}
           </View>
         </View>
       </ScrollView>
@@ -395,171 +395,194 @@ export const ForumsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 24, 
     backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 10,
+    paddingBottom: 12, 
+    marginBottom: 6,
   },
   textContainer: {
     flex: 1,
-    marginRight: 10,
+    marginRight: 12, 
   },
   greeting: {
-    fontSize: 26,
+    fontSize: 28, 
     fontWeight: 'bold',
   },
-  addForumButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#7129F2',
-    padding: 10,
-    borderRadius: 8,
-  },
-  addForumButtonText: {
-    color: '#fff',
-    marginLeft: 5,
-  },
   subText: {
-    fontSize: 14,
+    fontSize: 15, 
     color: '#6c757d',
   },
   iconContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-
-  // Search Bar and Tag Filter
-  searchContainer: {
-    marginTop: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  searchInput: {
-    height: 40,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 10,
-  },
-  searchActionsContainer: {
+  addForumButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  searchButton: {
-    flex: 1,
+    alignItems: 'center',
     backgroundColor: '#7129F2',
-    padding: 10,
-    borderRadius: 5,
-    marginRight: 5,
-    marginTop: 5,
-    alignItems: 'center',
+    padding: 12, 
+    borderRadius: 10, 
   },
-  clearButton: {
-    flex: 1,
-    backgroundColor: '#D3D3D34D',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 5,
-    alignItems: 'center',
+  addForumButtonText: {
+    color: '#fff',
+    marginLeft: 6,
+    fontSize: 16, 
   },
-  searchButtonText: {
-    color: 'white',
-  },
-  clearButtonText: {
-    color: '#333',
-  },
-  forumsList: {
-    marginTop: 10,
-  },
+  
+  // Search Bar and Tag Filter
+searchContainer: { 
+  paddingHorizontal: 10, 
+  paddingBottom: 8, 
+  borderBottomWidth: 1,
+  borderBottomColor: '#ddd',
+},
+searchInput: {
+  height: 44, 
+  paddingHorizontal: 12, 
+  marginBottom: 6,
+  fontSize: 16,
+  borderColor: '#ddd',
+  borderWidth: 1,
+  borderRadius: 12, 
+  backgroundColor: '#f9f9f9', 
+  color: '#333', 
+},
+searchActionsContainer: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginTop: 5, 
+},
+searchButton: {
+  flex: 1,
+  backgroundColor: '#7129F2',
+  paddingVertical: 12, 
+  paddingHorizontal: 14,
+  borderRadius: 8, 
+  marginRight: 8, 
+  alignItems: 'center',
+},
+clearButton: {
+  flex: 1,
+  backgroundColor: '#ECE6F0', 
+  paddingVertical: 12,
+  paddingHorizontal: 14,
+  borderRadius: 8,
+  alignItems: 'center',
+},
+searchButtonText: {
+  color: '#fff',
+  fontSize: 15, 
+  fontWeight: '600',
+},
+clearButtonText: {
+  color: '#333',
+  fontSize: 15,
+  fontWeight: '500',
+},
+forumsList: {
+ marginBottom: 14,
+},
+
+// Search Tags
+tagOption: {
+  paddingVertical: 8, 
+  paddingHorizontal: 14,
+  backgroundColor: '#ECE6F0',
+  borderRadius: 20, 
+  marginTop: 5, 
+},
+selectedTagOption: {
+  backgroundColor: '#7129F2',
+},
+tagOptionText: {
+  fontSize: 14, 
+  color: '#333',
+  fontWeight: '500', 
+},
 
   // Forum Card and Title Styling
   forumContainer: {
-    padding: 15,
-    marginBottom: 15,
+    padding: 15, 
+    marginBottom: 14, 
     backgroundColor: '#f0f0f0',
-    borderRadius: 10,
+    borderRadius: 12, 
   },
   forumTitle: {
-    fontSize: 20,
+    fontSize: 22, 
     fontWeight: 'bold',
     marginBottom: 5,
   },
   metaContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 5,
+    alignItems: 'center', 
   },
   forumDate: {
-    fontSize: 12,
+    fontSize: 13, 
     color: '#6c757d',
-    marginBottom: 4,
-    marginRight: 8,
+    marginBottom: 5,
+    marginRight: 10, 
   },
   tagContainer: {
     flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    alignItems: 'baseline',
-    padding: 10,
-    gap: 8,
-    maxWidth: '80%', 
+    padding: 12, 
+    gap: 6, 
+    maxWidth: '85%', 
   },
   tag: {
     backgroundColor: '#B9A2F1',
     color: '#fff',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 7,
-    fontSize: 12,
-    marginHorizontal: 3,
-    marginBottom: 3,
-    maxWidth: '100%', 
+    paddingHorizontal: 8, 
+    paddingVertical: 4,
+    borderRadius: 10, 
+    fontSize: 13, 
+    marginHorizontal: 2,
+    marginBottom: 4,
   },
   moreTagsContainer: {
-    marginTop: 5,
+    marginTop: 3, 
     alignSelf: 'flex-start',
   },
   moreTags: {
     backgroundColor: '#B9A2F1',
     color: '#fff',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 7,
-    fontSize: 12,
-    marginHorizontal: 3,
+    paddingHorizontal: 10, 
+    paddingVertical: 4,
+    borderRadius: 10, 
+    fontSize: 13, 
     fontWeight: 'bold',
-    marginLeft: 4,
+    marginLeft: 3,
   },
   visitButton: {
-    marginTop: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#7f4dff',
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-    borderRadius: 6,
+    paddingVertical: 8, 
+    paddingHorizontal: 12,
+    borderRadius: 8, 
     alignSelf: 'flex-start',
   },
   visitButtonText: {
     color: '#fff',
-    fontSize: 14,
-    marginLeft: 4,
+    fontSize: 14, 
+    marginLeft: 6,
+    fontWeight: '600', 
   },
-
+  
   // Modal Styles for Create Forum
   modalContainer: {
     flex: 1,
-    padding: 20,
+    padding: 24, 
+    backgroundColor: '#ffffff',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -569,32 +592,42 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 24, 
     fontWeight: 'bold',
+    color: '#333', 
     marginBottom: 8,
   },
   modalInput: {
     marginBottom: 15,
     borderColor: '#ddd',
     borderWidth: 1,
-    padding: 10,
-    borderRadius: 10,
+    padding: 14, 
+    borderRadius: 12, 
+    fontSize: 16, 
+    backgroundColor: '#f9f9f9', 
+  },
+  tagSelectionTitle: {
+    fontSize: 16, 
+    marginBottom: 8, 
+    fontWeight: '600',
+    color: '#555',
   },
   predefinedTagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 5,
-    gap: 5,
+    marginBottom: 12, 
+    gap: 8, 
   },
   predefinedTag: {
     backgroundColor: '#ECE6F0',
-    padding: 10,
-    borderRadius: 20,
-    marginRight: 10,
-    marginBottom: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16, 
+    borderRadius: 16, 
+    marginRight: 8,
+    marginBottom: 8,
   },
   selectedTag: {
-    backgroundColor: '#B9A2F1',
+    backgroundColor: '#7129F2',
   },
   unselectedTag: {
     backgroundColor: '#ECE6F0',
@@ -602,15 +635,15 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 15,
+    marginTop: 20, 
   },
   createForumButton: {
-    backgroundColor: '#7129F2',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
     flex: 1,
+    backgroundColor: '#7129F2',
+    paddingVertical: 12, 
+    paddingHorizontal: 20,
+    borderRadius: 12, 
+    alignItems: 'center',
     marginRight: 10,
   },
   createForumButtonText: {
@@ -619,37 +652,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   cancelButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: 10,
+    flex: 1,
+    backgroundColor: '#f0f0f0', 
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 12, 
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#000',
-    flex: 1,
+    borderColor: '#ccc', 
   },
   cancelButtonText: {
-    color: '#000',
+    color: '#555',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-
-  // Search Tags
-  tagOption: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: '#ECE6F0',
-    borderRadius: 16,
-    margin: 6,
-  },
-  selectedTagOption: {
-    backgroundColor: '#7129F2',
-    color: '#fff',
-  },
-  tagOptionText: {
-    fontSize: 14,
-    color: '#333',
-  },
+  
 });
 
 

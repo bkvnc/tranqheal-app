@@ -27,6 +27,7 @@ import { MoodLogsScreen } from './MoodLogsScreen';
 
 import { MoodProcessScreen } from './MoodProcessScreen';
 import { MatchingScreen } from './MatchingScreen';
+import { SuccessScreen } from './SuccessScreen';
 
 import { PostDetailsScreen } from './PostDetailsScreen';
 import { ForumPostScreen } from './ForumPostScreen';
@@ -36,12 +37,11 @@ import { EditProfileScreen } from './editProfileScreen';
 import { ProfessionalHomeScreen } from './ProfessionalHomeScreen';
 import { ViewRequestScreen } from './ViewRequestScreen';
 import { ViewRequestHistoryScreen } from './ViewRequestHistoryScreen';
-
+import { ViewAcceptedRequestsScreen } from './ViewAcceptedRequestsScreen';
 
 import { ProfessionalProfileScreen } from './ProfessionalProfileScreen';
 import { EditProfessionalProfileScreen } from './editProfessionalProfileScreen';
 import { SeekProfessionalScreen } from './SeekProfessionalScreen';
-
 
 export { WelcomeScreen, RegisterAsScreen, LoginScreen, 
     SignupScreen, ProfessionalRegisterScreen, UploadCredentialsScreen, ViewProfScreen, ViewOrgScreen, ForumsScreen, 
@@ -50,5 +50,5 @@ export { WelcomeScreen, RegisterAsScreen, LoginScreen,
     SAPreferenceScreen, SAResultScreen, PostDetailsScreen,
     ForumPostScreen, OrganizationDetailsScreen, ProfessionalDetailsScreen,
     EditProfileScreen, ProfessionalHomeScreen, ViewRequestScreen,
-    ViewRequestHistoryScreen, MoodMeterScreen, MoodProcessScreen, MoodResultScreen,
+    ViewRequestHistoryScreen, MoodMeterScreen, MoodResultScreen, MoodProcessScreen, ViewAcceptedRequestsScreen, SuccessScreen,
     EditProfessionalProfileScreen, ProfessionalProfileScreen, SeekProfessionalScreen, MoodLogsScreen, MatchingScreen, SelfAssessmentLogs };
