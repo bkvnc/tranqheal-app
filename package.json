@@ -21,6 +21,8 @@
     "@react-navigation/stack": "^6.4.1",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
+    "expo-auth-session": "~6.0.0",
+    "expo-constants": "~17.0.3",
     "expo": "^52.0.11",
     "expo-auth-session": "^6.0.0",
     "expo-document-picker": "~13.0.1",
@@ -28,7 +30,7 @@
     "expo-linear-gradient": "~14.0.1",
     "expo-modules-core": "^2.0.6",
     "expo-status-bar": "~2.0.0",
-    "firebase": "^10.13.1",
+    "firebase": "^10.14.1",
     "formik": "^2.4.6",
     "glob": "^11.0.0",
     "moment": "^2.30.1",
@@ -46,6 +48,7 @@
     "react-native-screens": "~4.1.0",
     "react-native-svg": "15.8.0",
     "rimraf": "^6.0.1",
+    "undefined": "expo-auth-session/providers/google",
     "yup": "^1.4.0"
   },
   "devDependencies": {

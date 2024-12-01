@@ -12,7 +12,20 @@
           "package_name": "com.tranqheal.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "388083674825-lv0btt9hniflrp895bs9h5h425omsvb7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tranqheal.app",
+            "certificate_hash": "7c1c35ee3cca5e02a9a10b3c0789a330c071b518"
+          }
+        },
+        {
+          "client_id": "388083674825-so3c1k6k42e4uccc633v47mmoiu5fb4u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCs1l0ohgVcEyp-rOiS78tSBOtkAzaDwEA"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "388083674825-so3c1k6k42e4uccc633v47mmoiu5fb4u.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

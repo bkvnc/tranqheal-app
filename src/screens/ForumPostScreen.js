@@ -220,39 +220,49 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
   });
 };
 
-  // Function to save forum edits
-  const handleSaveForumEdits = async () => {
-    try {
-      const blacklistedWordsRef = collection(firestore, 'blacklistedWords');
-      const snapshot = await getDocs(blacklistedWordsRef);
-      const blacklistedWords = snapshot.docs.map(doc => doc.data().word.toLowerCase());
+const openEditModal = () => {
+  setEditedTitle(forumData?.title || ""); 
+  setEditedContent(forumData?.content || ""); 
+  setModalType("edit");
+  setModalVisible(true);
+};
 
-      setEditedTitle(forumData?.title);
-      setEditedContent(forumData?.content);
+const safeToLowerCase = (str) => (str ? str.toLowerCase() : "");
 
-      const editedTitleLower = editedTitle.toLowerCase();
-      const editedContentLower = editedContent.toLowerCase();
+// Function to save forum edits
+const handleSaveForumEdits = async () => {
+  try {
+    const blacklistedWordsRef = collection(firestore, 'blacklistedWords');
+    const snapshot = await getDocs(blacklistedWordsRef);
+    const blacklistedWords = snapshot.docs.map(doc => doc.data().word.toLowerCase());
 
-      if (containsBlacklistedWord(editedTitleLower, blacklistedWords) || 
-          containsBlacklistedWord(editedContentLower, blacklistedWords)) {
-        Alert.alert('Error', 'The forum title or content contains blacklisted words. Please remove them and try again.');
-        return;
-      }
+    const editedTitleLower = safeToLowerCase(editedTitle);
+    const editedContentLower = safeToLowerCase(editedContent);
 
-      // Proceed with saving edits if no blacklisted words are found
-      const forumRef = doc(firestore, 'forums', forumId);
-      await updateDoc(forumRef, {
-        title: editedTitle,
-        content: editedContent,
-      });
-
-      setModalVisible(false);
-      Alert.alert('Success', 'Forum details updated successfully.');
-    } catch (error) {
-      console.error('Error updating forum:', error);
-      Alert.alert('Error', 'Could not update forum details.');
+    // Check for blacklisted words
+    if (
+      containsBlacklistedWord(editedTitleLower, blacklistedWords) || 
+      containsBlacklistedWord(editedContentLower, blacklistedWords)
+    ) {
+      Alert.alert('Error', 'The forum title or content contains blacklisted words. Please remove them and try again.');
+      return;
     }
-  };
+
+    // Proceed with saving edits if there are changes
+    const forumRef = doc(firestore, 'forums', forumId);
+    await updateDoc(forumRef, {
+      title: editedTitle,
+      content: editedContent,
+      tags: editedTags,
+    });
+
+    setModalVisible(false);
+    Alert.alert('Success', 'Forum details updated successfully.');
+  } catch (error) {
+    console.error('Error updating forum:', error);
+    Alert.alert('Error', 'Could not update forum details.');
+  }
+};
 
   // Function to handle image picking and uploading
   const pickImage = async () => {
@@ -276,34 +286,6 @@ const containsBlacklistedWord = (text, blacklistedWords) => {
     }
   };
   
-  const renderPostItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.postContainer}
-      onPress={() => {
-        if (isMember || isCreator) {
-          navigation.navigate('PostDetails', {
-            postId: item.id,
-            postAuthor: item.author,
-            forumId: forumId,
-          });
-        } else {
-          Alert.alert('Membership Required', 'You must join this forum to view posts.');
-        }
-      }}
-    >
-      <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
-      <Text style={styles.postContent} numberOfLines={2}>{item.content}</Text>
-      <View style={styles.metaContainer}>
-        <Text style={styles.authorText}>by {item.isAnonymous ? 'Anonymous' : item.authorName}</Text>   
-        {item.hasImage && (
-          <View style={styles.imageLabelContainer}>
-            <Ionicons name="image-outline" size={20} color="#7f4dff" />
-            <Text style={styles.imageLabelText}>Image Attached</Text>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
 
   // Add new post handler
   const handleAddPost = async () => {
@@ -561,6 +543,35 @@ if (loading) {
   return <LoadingIndicator />;
 }
 
+const renderPostItem = ({ item }) => (
+  <TouchableOpacity
+    style={styles.postContainer}
+    onPress={() => {
+      if (isMember || isCreator) {
+        navigation.navigate('PostDetails', {
+          postId: item.id,
+          postAuthor: item.author,
+          forumId: forumId,
+        });
+      } else {
+        Alert.alert('Membership Required', 'You must join this forum to view posts.');
+      }
+    }}
+  >
+    <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
+    <Text style={styles.postContent} numberOfLines={2}>{item.content}</Text>
+    <View style={styles.metaContainer}>
+      <Text style={styles.authorText}>by {item.isAnonymous ? 'Anonymous' : item.authorName}</Text>   
+      {item.hasImage && (
+        <View style={styles.imageLabelContainer}>
+          <Ionicons name="image-outline" size={20} color="#7f4dff" />
+          <Text style={styles.imageLabelText}>Image Attached</Text>
+        </View>
+      )}
+    </View>
+  </TouchableOpacity>
+);
+
 return (
   <RootLayout navigation={navigation} screenName={"ForumPost"} userType={userType} >
     <View style={styles.container}
@@ -570,14 +581,14 @@ return (
         <Text style={styles.forumTitle}>{forumData?.title}</Text>
         
         {isCreator ? (
-            <TouchableOpacity onPress={() => { setModalType("edit"); setModalVisible(true); }} style={styles.editIconContainer}>
-              <Ionicons name="create-outline" size={24} color="#000" style={styles.editIcon} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={handleReportForum} style={styles.editIconContainer}>
-              <Ionicons name="alert-circle-outline" size={24} color="#000" style={styles.editIcon} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity onPress={openEditModal} style={styles.editIconContainer}>
+            <Ionicons name="create-outline" size={24} color="#000" style={styles.editIcon} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={handleReportForum} style={styles.editIconContainer}>
+            <Ionicons name="alert-circle-outline" size={24} color="#000" style={styles.editIcon} />
+          </TouchableOpacity>
+        )}
       </View>
       <Text style={styles.forumAuthor}>by {forumData?.authorName}</Text>
       <Text style={styles.forumContent}>
@@ -735,216 +746,270 @@ return (
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 20,
-        backgroundColor: '#ffffff',
-    },
-    forumTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        flex: 1,
-    },
-    forumAuthor: {
-      fontSize: 16, 
-    },
-    forumContent: {
-      fontSize: 16,  
-      color: '#000', 
-      marginBottom: 20,
-    },
-    titleContainer: {
-      flexDirection: 'row',
-      alignItems: 'center', // Aligns the title and icon vertically
-      justifyContent: 'space-between', // Ensures even spacing
-    },
-    editIconContainer: {
-      padding: 10,
-      justifyContent: 'center',
-    },
-    editIcon: {
-        // size is set directly in the component (size={24}),
-        
-    },
-    joinButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#7f4dff',
-        padding: 10,
-        borderRadius: 8,
-        marginBottom: 20,
-    },
-    joinButtonText: {
-        color: '#fff',
-        marginLeft: 5,
-        fontSize: 16,
-    },
-    addButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#7129F2',
-        padding: 10,
-        borderRadius: 8,
-        marginBottom: 20,
-    },
-    addButtonText: {
-        color: '#fff',
-        marginLeft: 5,
-        fontSize: 16,
-    },
-    leaveButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#7f4dff',
-      padding: 10,
-      borderRadius: 8,
-      marginBottom: 20,
-    },
-    leaveButtonText: {
-          color: '#fff',
-          marginLeft: 5,
-          fontSize: 16,
-    },
-    noPostsContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    noPostsText: {
-        fontSize: 18,
-        color: '#888',
-    },
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    modalContent: {
-        width: '90%',
-        backgroundColor: 'white',
-        padding: 20,
-        borderRadius: 10,
-    },
-    modalTitle: {
-       fontSize: 18,
-       fontWeight: 'bold',
-       marginBottom: 10,
-   },
-   newPostTitleInput:{
-       borderBottomWidth :1 ,
-       borderBottomColor :'#ccc' ,
-       marginBottom :10 ,
-       paddingVertical :5 ,
-   },
-   newPostContentInput:{
-       borderWidth :1 ,
-       borderColor :'#ccc' ,
-       borderRadius :5 ,
-       padding :10 ,
-       height :100 ,
-       textAlignVertical :'top' ,
-       marginBottom :10 ,
-   },
-   modalButtons:{
-       flexDirection :'row' ,
-       justifyContent :'space-between' ,
-   },
-   cancelButton:{
-       paddingVertical :8 ,
-       paddingHorizontal :20 ,
-       backgroundColor :'#ccc' ,
-       borderRadius :5 ,
-   },
-   cancelButtonText:{
-       color :'#000' ,
-   },
-   submitButton:{
-       paddingVertical :8 ,
-       paddingHorizontal :20 ,
-       backgroundColor :'#7f4dff' ,
-       borderRadius :5 ,
-   },
-   submitButtonText:{
-       color :'#fff' ,
-   },
-   postContainer:{ 
-       padding :15,
-       marginVertical :8 , 
-       backgroundColor :'#f0f0f0',
-       borderRadius :10,
-   },
-   tagSectionTitle: {
-    fontSize: 16,
+  container: {
+      flex: 1,
+      padding: 20,
+      backgroundColor: '#ffffff',
+  },
+
+  // Forum Header Styles
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+},
+forumTitle: {
+    fontSize: 26, 
     fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 10,
-  },
-  tagButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    backgroundColor: '#eee',
-    borderRadius: 15,
-    margin: 3,
-  },
-  selectedTag: {
-    backgroundColor: '#7f4dff',
-  },
-  tagButtonText: {
-    color: '#333',
-  },
-  attachContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  attachButton: {
-    flexDirection: 'row',      
-    alignItems: 'center',      
-    marginBottom: 5,           
-  },
-  attachText: {
-    marginLeft: 5,
-    fontSize: 16,
-    color: '#000',
-  },
-  imagePreview: {
-    width: 60,
-    height: 60,
-    marginBottom: 10,
+    flex: 1,
+    color: '#333', 
+},
+forumAuthor: {
+    fontSize: 14, 
+    color: '#666', 
+},
+forumContent: {
+    fontSize: 16,  
+    color: '#444', 
+    marginVertical: 10,
+    lineHeight: 22, 
+},
+editIconContainer: {
+    padding: 10,
+},
+editIcon: {
+    
+},
+
+  // Post List Styles
+postContainer: { 
+    padding: 15,
+    marginVertical: 8, 
+    backgroundColor: '#f9f9f9', 
     borderRadius: 10,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  toggleLabel: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0', 
+},
+postTitle: {
     fontSize: 16,
-    color: '#000',
-  },
-  metaContainer: {
+    fontWeight: '600', 
+    color: '#222', 
+    marginBottom: 5,
+    lineHeight: 20, 
+},
+postContent: {
+    fontSize: 14,
+    color: '#555', 
+    lineHeight: 18, 
+},
+metaContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 5,
-  },
-  imageLabelText: {
-    marginLeft: 5,
-    fontSize: 14,
-    color: '#7f4dff',
-  },
-  imageLabelContainer: {
+    marginTop: 10,
+},
+authorText: {
+    fontSize: 12,
+    color: '#777', 
+},
+imageLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 10,
     justifyContent: 'flex-end',
-  },
-  authorText: {
+},
+imageLabelText: {
+    marginLeft: 5,
+    fontSize: 12,
+    color: '#7f4dff',
+},
+
+ // Add New Post or Join Forum Styles
+joinButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center', 
+  backgroundColor: '#7f4dff',
+  paddingVertical: 12,
+  paddingHorizontal: 20, 
+  borderRadius: 10, 
+  marginBottom: 15, 
+},
+joinButtonText: {
+  color: '#fff',
+  marginLeft: 8, 
+  fontSize: 16,
+  fontWeight: '500', 
+},
+addButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#7129F2',
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderRadius: 10,
+  marginBottom: 15,
+},
+addButtonText: {
+  color: '#fff',
+  marginLeft: 8,
+  fontSize: 16,
+  fontWeight: '500',
+},
+
+// Leave Forum or Delete Forum Styles
+leaveButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#7f4dff',
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderRadius: 10,
+  marginBottom: 15,
+},
+leaveButtonText: {
+  color: '#fff',
+  marginLeft: 8,
+  fontSize: 16,
+  fontWeight: '500',
+},
+
+  // Modal Styles
+  modalContainer: {
     flex: 1,
-  },
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+},
+modalContent: {
+    width: '90%',
+    backgroundColor: '#fff',
+    padding: 24, 
+    borderRadius: 12, 
+    elevation: 5, 
+    shadowColor: '#000', 
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+},
+modalTitle: {
+    fontSize: 20, 
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333', 
+},
+newPostTitleInput: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#bbb', 
+    marginBottom: 15, 
+    paddingVertical: 8,
+},
+newPostContentInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8, 
+    padding: 12,
+    height: 120, 
+    textAlignVertical: 'top',
+    marginBottom: 15,
+},
+attachContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-start', 
+},
+attachButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5, 
+},
+attachText: {
+    marginLeft: 8, 
+    fontSize: 16,
+    color: '#444', 
+},
+imagePreview: {
+    width: 70, 
+    height: 70,
+    marginBottom: 12,
+    borderRadius: 12,
+},
+toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8, 
+},
+toggleLabel: {
+    fontSize: 16,
+    color: '#444',
+},
+modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+},
+cancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    backgroundColor: '#e0e0e0', 
+    borderRadius: 8,
+},
+cancelButtonText: {
+    color: '#444', 
+    fontWeight: '500',
+},
+submitButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    backgroundColor: '#7f4dff',
+    borderRadius: 8,
+},
+submitButtonText: {
+    color: '#fff',
+    fontWeight: '600', 
+},
+
+  // Tags Section Styles
+  tagSectionTitle: {
+    fontSize: 18, 
+    fontWeight: 'bold',
+    marginBottom: 8, 
+    color: '#333',
+},
+tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12, 
+},
+tagButton: {
+    paddingVertical: 6, 
+    paddingHorizontal: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 18, 
+    margin: 4,
+    borderWidth: 1,
+    borderColor: 'transparent', 
+},
+selectedTag: {
+    backgroundColor: '#7f4dff',
+    borderColor: '#6a3bdc', 
+},
+tagButtonText: {
+    color: '#333',
+    fontWeight: '500', 
+},
+
+  // No Posts Message Styles
+noPostsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20, 
+},
+noPostsText: {
+    fontSize: 18, 
+    color: '#888',
+    textAlign: 'center', 
+    lineHeight: 26, 
+},
 });
+

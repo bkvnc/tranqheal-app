@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { RootLayout } from '../navigation/RootLayout';
 import { useNotifications } from '../components/NotificationContext';
 import { auth, firestore } from '../config/firebase';
+import { AuthenticatedUserContext } from 'src/providers'; 
 import { doc, query, collection, orderBy, onSnapshot, updateDoc, writeBatch } from 'firebase/firestore';
 
-export const NotificationScreen = () => {
-  const navigation = useNavigation();
+export const NotificationScreen = ({ navigation }) => {
+  const { userType } = useContext(AuthenticatedUserContext);
   const { setHasUnreadNotifications } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
@@ -118,7 +119,7 @@ export const NotificationScreen = () => {
   );
 
   return (
-    <RootLayout navigation={navigation} screenName="Notifications">
+    <RootLayout navigation={navigation} screenName="Notifications" userType={userType}>
       <View style={{ flex: 1, padding: 20, backgroundColor: 'white' }}>
         <View style={styles.header}>
           <View style={styles.textContainer}>
