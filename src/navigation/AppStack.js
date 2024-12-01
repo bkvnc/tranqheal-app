@@ -4,18 +4,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { HomeScreen, MenuScreen, NotificationScreen, ProfileScreen, EditProfileScreen,
     ViewProfScreen, ProfessionalDetailsScreen, ViewOrgScreen, OrganizationDetailsScreen,
     SAPreferenceScreen, SAScreen, SelfAssessmentLogs, SAScreen2, SAScreen3, SAResultScreen, 
-<<<<<<< HEAD
-    MoodScreen, MoodScreen2, MoodMeterScreen, MoodResultScreen, MoodLogsScreen, MatchingScreen, 
-    SeekProfessionalScreen, SuccessScreen
-} from '../screens';
-
-
-=======
     MoodScreen, MoodProcessScreen, MoodMeterScreen, MoodResultScreen, MoodLogsScreen, MatchingScreen, 
     SeekProfessionalScreen, SuccessScreen
 } from '../screens';
 
->>>>>>> 87ba6451001a3d8de8c559d8389761f93151c467
 
 import { ForumStack } from './ForumStack';
 
