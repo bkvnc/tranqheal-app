@@ -60,8 +60,6 @@ export const NotificationScreen = ({ navigation }) => {
   const handleMarkAsRead = async (id) => {
     try {
       await markNotificationAsRead(id);
-      // No need to manually update notifications array or hasUnreadNotifications
-      // as the onSnapshot listener will automatically update both
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }

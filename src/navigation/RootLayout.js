@@ -5,9 +5,11 @@ import { Colors } from '../config';
 import NotificationIndicator from '../components/NotificationIndicator';
 import { useState } from 'react';
 import { useNotifications } from '../components/NotificationContext';
+import { AuthenticatedUserContext } from '../providers';
 
 export const RootLayout = ({ children, navigation, screenName, userType,  }) => {
   const { hasUnreadNotifications } = useNotifications();
+  
 
   const renderLeftIcon = () => {
     if (screenName === 'Home' || screenName === 'ProfessionalHome') {
@@ -57,10 +59,22 @@ export const RootLayout = ({ children, navigation, screenName, userType,  }) => 
                 <Ionicons name="home-outline" size={30} color='black'/>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Mood')} style={styles.navButton}>
-              <View style={screenName === 'Mood' ? styles.activeIconContainer : styles.iconContainer}>
+            <TouchableOpacity onPress={() => {
+                if (screenName === 'Mood' || screenName === 'ViewAcceptedRequests') {
+                  navigation.navigate(screenName);
+                } else if (userType === "user") {
+                  navigation.navigate('Mood');
+                } else if (userType === "professional") {
+                  navigation.navigate('ViewAcceptedRequests');
+                }
+              }} style={styles.navButton}>
+              <View style={screenName === 'Mood' || screenName === 'ViewAcceptedRequests' ? styles.activeIconContainer : styles.iconContainer}>
                 <Ionicons name="happy-outline" size={30} color='black'/>
               </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() =>{
+              
+            }}>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => {
                 if (screenName === 'Profile' || screenName === 'ProfessionalProfile') {

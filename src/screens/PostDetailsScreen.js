@@ -275,13 +275,49 @@ const handleDeletePost = () => {
       authorId: user.uid,
       isAnonymous: anonymous,
     };
+    
+
   
     try {
       const docRef = await addDoc(
         collection(firestore, `forums/${forumId}/posts/${postId}/comments`), 
         newCommentObj
       );
-      // Add the new comment to the local state
+      const commentRef = doc(firestore, `forums/${forumId}/posts/${postId}/comments`, docRef.id);
+      const notificationRef = doc(collection(firestore, `notifications/${postSnap.data().authorId}/messages`));
+
+     // Check if the comment's author is the same as the post's author
+        const commentAuthorId = commentRef.data().authorId; // Comment's author
+        const postAuthorId = newPostId.authorId; // Post's author (update as necessary to fetch the post's author)
+        const commentSnap = await getDoc(commentRef);
+
+        if (commentAuthorId !== postAuthorId) {
+          // Set the notification document with the new post ID
+          await setDoc(notificationRef, {
+            recipientId: postAuthorId,
+            recipientType: commentSnap.data().authorType,  
+            message: `${commentSnap.data().authorName} commented on your post.`,
+            type: `comment`,
+            createdAt: serverTimestamp(), 
+            isRead: false,
+            additionalData: {
+              postId: newPostId,  
+              forumId: forumId,
+            },
+          });
+
+          // Fetch and log the notification to check the createdAt field
+          const notificationDoc = await getDoc(notificationRef);
+          const notificationData = notificationDoc.data();
+
+          if (notificationData && notificationData.createdAt) {
+            const createdAtDate = notificationData.createdAt.toDate();
+            console.log("Notification createdAt:", createdAtDate); // For debugging
+          }
+        } else {
+          console.log("No notification created: User commented on their own post.");
+        }
+
       setComments([{ ...newCommentObj, id: docRef.id }, ...comments]);
       setNewComment(''); // Clear the input field
       setIsAnonymousModalVisible(false);

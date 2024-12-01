@@ -8,6 +8,8 @@ import { HomeScreen, MenuScreen, NotificationScreen, ProfileScreen, EditProfileS
     SeekProfessionalScreen, 
 } from '../screens';
 
+import { SuccessScreen } from 'src/screens/successScreen';
+
 import { ForumStack } from './ForumStack';
 
 const Stack = createStackNavigator();
@@ -38,6 +40,7 @@ export const AppStack = () => {
             <Stack.Screen name="MoodLogs" component={MoodLogsScreen} />
             <Stack.Screen name="Matching" component={MatchingScreen} />
             <Stack.Screen name="SeekProfessional" component={SeekProfessionalScreen} />
+            <Stack.Screen name="Success" component={SuccessScreen} />
         </Stack.Navigator>
     );
 }

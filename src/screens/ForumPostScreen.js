@@ -339,12 +339,13 @@ const handleSaveForumEdits = async () => {
   
         const forumRef = doc(firestore, 'forums', forumId);
           const postsRef = collection(forumRef, 'posts');
+          const organizationRef = doc(firestore, 'organizations', 'organizationId');
 
           // Create the new post first and retrieve the document reference
           const postDocRef = await addDoc(postsRef, newPost);
 
           const postSnap = await getDoc(forumRef);
-
+          const orgSnap = await getDoc(organizationRef);
           // Now that the post has been added, we can safely use the ID
           const newPostId = postDocRef.id; // The new post's ID
 
@@ -353,14 +354,14 @@ const handleSaveForumEdits = async () => {
 
           // Set the notification document with the new post ID
           await setDoc(notificationRef, {
-            recipientId: auth.currentUser.uid,
+            recipientId: orgSnap.data().organizationId,
             recipientType: postSnap.data().authorType,  
             message: `${authorName} has submitted a new post for review.`,
             type: `post_review`,
             createdAt: serverTimestamp(), 
             isRead: false,
             additionalData: {
-              postId: newPostId,  // Use the correct postId here
+              postId: newPostId,  
               forumId: forumId,
             },
           });
