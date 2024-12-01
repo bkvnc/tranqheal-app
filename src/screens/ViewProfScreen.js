@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image,  FlatList } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image,  FlatList, RefreshControl } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import RNPickerSelect from 'react-native-picker-select';
@@ -13,60 +13,71 @@ export const ViewProfScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
-  const [ minRating, setMinRating ] = useState(0);
-  const [ selectedGender, setSelectedGender ] = useState(null);
-  const [ selectedTimeAvailable, setSelectedTimeAvailable ] = useState(null);
-  const [ professionals, setProfessionals ] = useState([]);
-  const [ loading, setLoading ] = useState(true);
+  const [minRating, setMinRating] = useState(0);
+  const [selectedSpecialty, setSelectedSpecialty] = useState('');
+  const [selectedGender, setSelectedGender] = useState(null);
+  const [selectedTimeAvailable, setSelectedTimeAvailable] = useState('');
+  const [professionals, setProfessionals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchProfessionals = async () => {
+    try {
+      const professionalsCollection = collection(firestore, 'professionals');
+      const professionalSnapshot = await getDocs(professionalsCollection);
+      const professionalList = professionalSnapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          return { id: doc.id, ...data };
+        })
+        .filter((professional) => professional.status === 'Verified');
+
+      setProfessionals(professionalList);
+    } catch (error) {
+      console.error('Error fetching professionals:', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProfessionals = async () => {
-      try {
-        const professionalsCollection = collection(firestore, 'professionals');
-        const professionalSnapshot = await getDocs(professionalsCollection);
-        const professionalList = professionalSnapshot.docs.map(doc => {
-          const data = doc.data();
-          console.log("Fetched professional: ", data);
-          return { id: doc.id, ...data, availability: data.availability };
-        })
-        .filter(professional => professional.status === 'Verified');
-
-        setProfessionals(professionalList);
-      } catch (error) {
-        console.error('Error fetching professionals:', error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProfessionals();
   }, []);
 
-  const filteredProfessionals = professionals.filter(professional => {
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchProfessionals();
+    setRefreshing(false);
+  };
+
+  const filteredProfessionals = professionals.filter((professional) => {
     const fullName = `${professional.firstName || ''} ${professional.middleName || ''} ${professional.lastName || ''}`.trim();
-  
+
     return (
       (selectedGender ? professional.gender === selectedGender : true) &&
-      (minRating > 0 ? professional.rating >= minRating : true) && 
-      (selectedTimeAvailable ? professional.availability[selectedTimeAvailable.toLowerCase()] : true) &&
-      fullName.toLowerCase().includes(searchQuery.toLowerCase()) 
+      (minRating > 0 ? professional.rating >= minRating : true) &&
+      (selectedSpecialty ? professional.specialization?.[selectedSpecialty] === true : true) &&
+      (selectedTimeAvailable ? professional.availability?.[selectedTimeAvailable.toLowerCase()] === true : true) &&
+      fullName.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }).sort((a, b) => b.rating - a.rating);
-
 
   const toggleFilterModal = () => setFilterModalVisible(!isFilterModalVisible);
 
   const handleApplyFilters = () => {
     toggleFilterModal();
   };
+
   const handleClearFilters = () => {
     setSelectedGender(null);
     setMinRating(0);
-    setSelectedTimeAvailable(null);
+    setSelectedSpecialty('');
+    setSelectedTimeAvailable('');
+    setSearchQuery('');
   };
 
-  const handleProfessionalPress = (professional) => {
-    navigation.navigate('ProfessionalDetails', { professional });
+  const handleProfessionalPress = (professionalId) => {
+    navigation.navigate('ProfessionalDetails', { professionalId });
   };
 
   const renderStars = (rating) => {
@@ -86,10 +97,10 @@ export const ViewProfScreen = ({ navigation }) => {
 
   const renderProfessional = ({ item }) => {
     const fullName = `${item.firstName || ''} ${item.middleName || ''} ${item.lastName || ''}`.trim();
-    const rating = item.rating !== undefined ? item.rating : 0;
+    const rating = item.rating || 0;
 
     return (
-      <TouchableOpacity style={styles.professionalCard} onPress={() => handleProfessionalPress(item)}>
+      <TouchableOpacity style={styles.professionalCard} onPress={() => handleProfessionalPress(item.id)}>
         <Image source={{ uri: item.profileImage }} style={styles.professionalImage} />
         <View style={styles.professionalDetails}>
           <Text style={styles.professionalName}>{fullName}</Text>
@@ -106,113 +117,103 @@ export const ViewProfScreen = ({ navigation }) => {
   if (loading) {
     return <LoadingIndicator />;
   }
-  
+
   return (
     <RootLayout navigation={navigation} screenName="ViewProf" userType={userType}>
       <View style={styles.container}>
-              <Text style={styles.title}>View Professionals</Text>
+        <Text style={styles.title}>View Professionals</Text>
         <View style={styles.searchBarRow}>
-            <TouchableOpacity style={styles.sliderButton} onPress={toggleFilterModal}>
-              <Ionicons name="options-outline" size={24} color="white" />
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.sliderButton} onPress={toggleFilterModal}>
+            <Ionicons name="options-outline" size={24} color="white" />
+          </TouchableOpacity>
           <View style={styles.searchBar}>
             <Ionicons name="search-outline" size={20} color="gray" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search by name"
-                placeholderTextColor="gray"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by name"
+              placeholderTextColor="gray"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
         </View>
-      <FlatList
+        <FlatList
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           data={filteredProfessionals}
           renderItem={renderProfessional}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.professionalsList}
-      />
-        {/* Filter Modal */}
+        />
         <Modal isVisible={isFilterModalVisible} onBackdropPress={toggleFilterModal}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Filter Professional By</Text>
-            
-              {/* Specialty Dropdown */}
-              <Text style={styles.filterLabel}>Specialty</Text>
-              <RNPickerSelect
-                onValueChange={(value) => setSelectedSpecialty(value)}
-                items={[
-                  { label: 'All', value: '' },
-                  { label: 'Psychiatrist', value: 'Psychiatrist' },
-                  { label: 'Therapist', value: 'Therapist' },
-                  { label: 'Clinical Psychologist', value: 'Clinical Psychologist' },
-                  { label: 'Counselor', value: 'Counselor' },
-                ]}
-                placeholder={{ label: 'Select Specialty', value: ''}}
-                style={pickerSelectStyles}
-              />
-
-               {/* Gender Dropdown */}
-               <Text style={styles.filterLabel}>Gender</Text>
-              <RNPickerSelect
-                onValueChange={(value) => setSelectedGender(value)}
-                items={[
-                  { label: 'All', value: '' },
-                  { label: 'Male', value: 'Male' },
-                  { label: 'Female', value: 'Female' },
-                ]}
-                placeholder={{ label: 'Select Gender', value: '' }}
-                style={pickerSelectStyles}
-                value={selectedGender}
-              />
-
-                {/* Rating Dropdown */}
-                <Text style={styles.filterLabel}>Minimum Rating</Text>
-              <RNPickerSelect
-                onValueChange={(value) => setMinRating(value)}
-                items={[
-                  { label: 'All', value: 0 },
-                  { label: '1', value: 1 },
-                  { label: '2', value: 2 },
-                  { label: '3', value: 3 },
-                  { label: '4', value: 4 },
-                  { label: '5', value: 5 },
-                ]}
-                placeholder={{ label: 'Select Minimum Rating', value: 0 }}
-                style={pickerSelectStyles}
-                value={minRating}
-              />
-
-                  {/* Time Available Dropdown */}
-                <Text style={styles.filterLabel}>Available Time</Text>
-              <RNPickerSelect
-                onValueChange={(value) => setSelectedTimeAvailable(value)}
-                items={[
-                  { label: 'All', value: '' },
-                  { label: 'Morning', value: 'morning' },
-                  { label: 'Afternoon', value: 'afternoon' },
-                  { label: 'Evening', value: 'evening' },
-                ]}
-                placeholder={{ label: 'Select Time Available', value: '' }}
-                style={pickerSelectStyles}
-                value={selectedTimeAvailable}
-              />
-                  {/* Buttons */}
-                <View style={styles.buttonContainer}>
-                    <TouchableOpacity style={styles.button} onPress={handleApplyFilters}>
-                      <Text style={styles.buttonText}>Apply Filters</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.clearButton]} onPress={handleClearFilters}>
-                      <Text style={styles.buttonText}>Clear Filters</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={toggleFilterModal}>
-                      <Text style={styles.buttonText}>Cancel</Text>
-                    </TouchableOpacity>
-                </View>
-        </View>
-      </Modal>
-    </View>
-  </RootLayout>
+            <Text style={styles.modalTitle}>Filter Professionals By</Text>
+            <Text style={styles.filterLabel}>Specialization</Text>
+            <RNPickerSelect
+              onValueChange={(value) => setSelectedSpecialty(value)}
+              items={[
+                { label: 'All', value: '' },
+                { label: 'Anxiety', value: 'anxiety' },
+                { label: 'Depress', value: 'depress' },
+                { label: 'Stress', value: 'stress' },
+              ]}
+              placeholder={{ label: 'Select Specialty', value: '' }}
+              style={pickerSelectStyles}
+            />
+            <Text style={styles.filterLabel}>Gender</Text>
+            <RNPickerSelect
+              onValueChange={(value) => setSelectedGender(value)}
+              items={[
+                { label: 'All', value: '' },
+                { label: 'Male', value: 'Male' },
+                { label: 'Female', value: 'Female' },
+              ]}
+              placeholder={{ label: 'Select Gender', value: '' }}
+              style={pickerSelectStyles}
+              value={selectedGender}
+            />
+            <Text style={styles.filterLabel}>Minimum Rating</Text>
+            <RNPickerSelect
+              onValueChange={(value) => setMinRating(value)}
+              items={[
+                { label: 'All', value: 0 },
+                { label: '1', value: 1 },
+                { label: '2', value: 2 },
+                { label: '3', value: 3 },
+                { label: '4', value: 4 },
+                { label: '5', value: 5 },
+              ]}
+              placeholder={{ label: 'Select Minimum Rating', value: 0 }}
+              style={pickerSelectStyles}
+              value={minRating}
+            />
+            <Text style={styles.filterLabel}>Available Time</Text>
+            <RNPickerSelect
+              onValueChange={(value) => setSelectedTimeAvailable(value)}
+              items={[
+                { label: 'All', value: '' },
+                { label: 'Morning', value: 'morning' },
+                { label: 'Afternoon', value: 'afternoon' },
+                { label: 'Evening', value: 'evening' },
+              ]}
+              placeholder={{ label: 'Select Time Available', value: '' }}
+              style={pickerSelectStyles}
+              value={selectedTimeAvailable}
+            />
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.button} onPress={handleApplyFilters}>
+                <Text style={styles.buttonText}>Apply Filters</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.clearButton]} onPress={handleClearFilters}>
+                <Text style={styles.buttonText}>Clear Filters</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={toggleFilterModal}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    </RootLayout>
   );
 };
 

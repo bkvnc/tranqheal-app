@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, FlatList } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, FlatList, RefreshControl } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import RNPickerSelect from 'react-native-picker-select';
@@ -16,27 +16,34 @@ export const ViewOrgScreen = ({ navigation }) => {
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchOrganizations = async () => {
+    try {
+      const organizationsCollection = collection(firestore, 'organizations');
+      const organizationSnapshot = await getDocs(organizationsCollection);
+      const organizationList = organizationSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return { id: doc.id, ...data, organizationName: data.organizationName, servicesOffered: data.servicesOffered || [] };
+      });
+
+      setOrganizations(organizationList);
+    } catch (error) {
+      console.error('Error fetching organizations:', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchOrganizations = async () => {
-      try {
-        const organizationsCollection = collection(firestore, 'organizations');
-        const organizationSnapshot = await getDocs(organizationsCollection);
-        const organizationList = organizationSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return { id: doc.id, ...data, organizationName: data.organizationName, servicesOffered: data.servicesOffered || [] };
-        });
-
-        setOrganizations(organizationList);
-      } catch (error) {
-        console.error('Error fetching organizations:', error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchOrganizations();
   }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchOrganizations();
+    setRefreshing(false);
+  };
 
   const filteredOrganizations = organizations.filter(org =>
     (org.organizationName || '').toLowerCase().includes(searchQuery.toLowerCase())
@@ -49,8 +56,8 @@ export const ViewOrgScreen = ({ navigation }) => {
   };
 
   const renderOrganization = ({ item }) => (
-    <TouchableOpacity style={styles.orgCard} onPress={() => handleOrganizationPress(item)}>
-      <Image source={{ uri: item.profileImage }} style={styles.orgImage} />
+    <TouchableOpacity style={styles.orgCard} onPress={() => handleOrganizationPress(item.id)}>
+      <Image source={{ uri: item.profilePicture }} style={styles.orgImage} />
       <View style={styles.orgDetails}>
         <Text style={styles.orgName}>{item.organizationName}</Text>
         <Text style={styles.orgServices}>
@@ -82,6 +89,9 @@ export const ViewOrgScreen = ({ navigation }) => {
         </View>
       </View>
       <FlatList
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         data={filteredOrganizations}
         renderItem={renderOrganization}
         keyExtractor={(item) => item.id}
