@@ -5,10 +5,10 @@ import { HomeScreen, MenuScreen, NotificationScreen, ProfileScreen, EditProfileS
     ViewProfScreen, ProfessionalDetailsScreen, ViewOrgScreen, OrganizationDetailsScreen,
     SAPreferenceScreen, SAScreen, SelfAssessmentLogs, SAScreen2, SAScreen3, SAResultScreen, 
     MoodScreen, MoodScreen2, MoodMeterScreen, MoodResultScreen, MoodLogsScreen, MatchingScreen, 
-    SeekProfessionalScreen, 
+    SeekProfessionalScreen, SuccessScreen
 } from '../screens';
 
-import { SuccessScreen } from 'src/screens/successScreen';
+
 
 import { ForumStack } from './ForumStack';
 
