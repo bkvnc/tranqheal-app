@@ -8,18 +8,18 @@ import { doc, getDoc } from 'firebase/firestore';
 export const MatchingScreen = ({ route, navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const { assessmentData } = route.params;
-  const [loading, setLoading] = useState(true);
+  const [isloading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
-      setLoading(true);
+      setIsLoading(true);
       setError(null);
 
       const user = auth.currentUser;
       if (!user) {
         setError('User not authenticated');
-        setLoading(false);
+        setIsLoading(false);
         return;
       }
 
@@ -31,7 +31,7 @@ export const MatchingScreen = ({ route, navigation }) => {
         
         if (!userDoc.exists()) {
           setError('User document not found.');
-          setLoading(false);
+          setIsLoading(false);
           return;
         }
 
@@ -55,7 +55,6 @@ export const MatchingScreen = ({ route, navigation }) => {
 
         console.log('Request Data:', JSON.stringify(requestData, null, 2));
 
-        // Call matching API
         const response = await fetch("https://tranqheal-api.onrender.com/match-professionals/", {
           method: "POST",
           headers: {
@@ -75,14 +74,14 @@ export const MatchingScreen = ({ route, navigation }) => {
         console.error('Error fetching data or calling API:', error);
         setError('There was an issue processing your request.');
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     fetchUserData();
   }, [assessmentData, navigation]);
 
-  if (loading) {
+  if (isloading) {
     return (
       <RootLayout screenName="Matching" navigation={navigation} userType={userType}>
         <View style={styles.container}>
