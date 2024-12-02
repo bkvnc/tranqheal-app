@@ -12,7 +12,8 @@ import { assessmentStates } from 'src/utils/assessmentStates';
 export const SAScreen3 = ({navigation, route}) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const { gad7Total, phq9Total } = route.params;
-  const { answers, setAnswers } = useState(assessmentStates.SecondSet);
+  const [ answers, setAnswers ] = useState(assessmentStates.SecondSet);
+  const radioOptions = assessmentStates.secondRadioOptions;
 
   const interpretPHQ9 = (score) => {
     if (score <= 4) return 'Minimal or no depression';
@@ -139,7 +140,7 @@ export const SAScreen3 = ({navigation, route}) => {
           <Text style={styles.label}>{question.label}</Text>
           <View style={styles.radioGroup}>
             <RadioGroup
-              radioButtons={assessmentStates.secondRadioOptions}
+              radioButtons={radioOptions}
               onPress={(selectedId) => {
                 console.log('button:', selectedId);
                 handleSelectOption(question.key, selectedId);

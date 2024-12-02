@@ -4,16 +4,18 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { RootLayout } from '../navigation/RootLayout';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, firestore } from '../config';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { LoadingIndicator } from '../components';
+import { auth, firestore, storage } from '../config';
 import { AuthenticatedUserContext } from '../providers';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export const ProfessionalProfileScreen = () => {
   const { userType } = useContext(AuthenticatedUserContext);
   const navigation = useNavigation();
   const [profileData, setProfileData] = useState(null);
+  const [ isLoading, setIsLoading ] = useState(true);
 
-  // Function to handle image picking
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -24,12 +26,30 @@ export const ProfessionalProfileScreen = () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1], 
-      quality: 1,
+      aspect: [1, 1],
+      quality: 1,     
     });
 
     if (!result.canceled) {
-      setProfileImage({ uri: result.assets[0].uri });
+      const selectedImage = result.assets[0].uri;
+
+      const response = await fetch(selectedImage);
+      const blob = await response.blob();
+      const userId = auth.currentUser.uid;
+      const imageRef = ref(storage, `profileImages/${userId}/profilePicure.jpg`);
+
+      await uploadBytes(imageRef, blob);
+      const downloadURL = await getDownloadURL(imageRef);
+
+      const userRef = doc(firestore, 'professionals', userId);
+      await updateDoc(userRef, {
+        profileImage: downloadURL
+      });
+
+      setProfileData((prevData) => ({
+        ...prevData,
+        profileImage: downloadURL,
+      }));
     }
   };
 
@@ -40,10 +60,11 @@ export const ProfessionalProfileScreen = () => {
     try {
       const docSnap = await getDoc(userRef);
       if (docSnap.exists()) {
-        console.log('Profile Data Fetched Successfully: ', docSnap.data());
         setProfileData(docSnap.data());
+        setIsLoading(false);
       } else {
         console.log('No such document!');
+        setIsLoading(false);
       }
     } catch (error) {
       console.log('Error fetching profile data:', error.message);
@@ -55,6 +76,10 @@ export const ProfessionalProfileScreen = () => {
       fetchProfileData();
     }, [])
   );
+
+  if (isLoading) {
+    return <LoadingIndicator />;
+  }
 
   return (
     <RootLayout screenName="ProfessionalProfile" navigation={navigation} userType={userType}>
@@ -70,11 +95,10 @@ export const ProfessionalProfileScreen = () => {
 
           {/* Profile Image with Camera Icon */}
           <View style={styles.imageContainer}>
-          <Image
-                source={profileData?.profileImage ? { uri: profileData.profileImage } : require('../assets/testprofile.jpg')} // Use existing image as placeholder
-                style={styles.profileImage}
-              />
-
+            <Image
+              source={ {uri: profileData?.profileImage} || require('../assets/testprofile.jpg')} 
+              style={styles.profileImage}
+            />
             <TouchableOpacity style={styles.cameraIcon} onPress={pickImage}>
               <Ionicons name="camera-outline" size={24} color="white" />
             </TouchableOpacity>

@@ -353,36 +353,36 @@ const handleSaveForumEdits = async () => {
           await updateDoc(forumRef, {
           totalPosts: increment(1),
         })
-          const postSnap = await getDoc(forumRef);
-          const orgSnap = await getDoc(organizationRef);
-          // Now that the post has been added, we can safely use the ID
-          const newPostId = postDocRef.id; // The new post's ID
+          // const postSnap = await getDoc(forumRef);
+          // const orgSnap = await getDoc(organizationRef);
+          // // Now that the post has been added, we can safely use the ID
+          // const newPostId = postDocRef.id; // The new post's ID
 
-          // Create the notification reference
-          const notificationRef = doc(collection(firestore, `notifications/${postSnap.data().authorId}/messages`));
+          // // Create the notification reference
+          // const notificationRef = doc(collection(firestore, `notifications/${postSnap.data().authorId}/messages`));
 
-          // Set the notification document with the new post ID
-          await setDoc(notificationRef, {
-            recipientId: orgSnap.data().organizationId,
-            recipientType: postSnap.data().authorType,  
-            message: `${authorName} has submitted a new post for review.`,
-            type: `post_review`,
-            createdAt: serverTimestamp(), 
-            isRead: false,
-            additionalData: {
-              postId: newPostId,  
-              forumId: forumId,
-            },
-          });
+          // // Set the notification document with the new post ID
+          // await setDoc(notificationRef, {
+          //   recipientId: orgSnap.data().organizationId,
+          //   recipientType: postSnap.data().authorType,  
+          //   message: `${authorName} has submitted a new post for review.`,
+          //   type: `post_review`,
+          //   createdAt: serverTimestamp(), 
+          //   isRead: false,
+          //   additionalData: {
+          //     postId: newPostId,  
+          //     forumId: forumId,
+          //   },
+          // });
 
-          // Fetch and log the notification to check the createdAt field
-          const notificationDoc = await getDoc(notificationRef);
-          const notificationData = notificationDoc.data();
+          // // Fetch and log the notification to check the createdAt field
+          // const notificationDoc = await getDoc(notificationRef);
+          // const notificationData = notificationDoc.data();
 
-          if (notificationData && notificationData.createdAt) {
-            const createdAtDate = notificationData.createdAt.toDate();
-            console.log("Notification createdAt:", createdAtDate); // For debugging
-          }
+          // if (notificationData && notificationData.createdAt) {
+          //   const createdAtDate = notificationData.createdAt.toDate();
+          //   console.log("Notification createdAt:", createdAtDate); // For debugging
+          // }
   
         // Clear form inputs
         setNewPostTitle('');
@@ -1028,4 +1028,3 @@ noPostsText: {
     lineHeight: 26, 
 },
 });
-

@@ -192,7 +192,7 @@ export const ForumsScreen = ({ navigation }) => {
       tags: selectedTags,
     };
 
-    try {
+    try { 
       const docRef = await addDoc(collection(firestore, 'forums'), newForum);
       setForums([...forums, { id: docRef.id, ...newForum }]);
       setFilteredForums([...filteredForums, { id: docRef.id, ...newForum }]);
