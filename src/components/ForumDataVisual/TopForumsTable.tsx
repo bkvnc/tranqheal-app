@@ -1,28 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../../config/firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 
 interface Forum {
   id: string;
   title: string;
   totalMembers: number;
   totalPosts: number;
-  growthRate: number;
-  dateCreated: { seconds: number };
+  joinerPercentage: number; // Renamed field to represent joiner percentage
+  dateCreated: { seconds: number }; // Firestore timestamp
 }
 
 const TopForumsTable = () => {
   const [forums, setForums] = useState<Forum[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const ForumsPerPage = 5;
+  const [ForumsPerPage] = useState(5);
+
+  // Calculate Joiner Percentage
+  const calculateJoinerPercentage = (data: any): number => {
+    const currentMembers = data.totalMembers || 0; // Total current members
+    const targetMembers = 100; // Hypothetical maximum capacity (adjustable)
+
+    // Calculate joiner percentage
+    const joinerPercentage = (currentMembers / targetMembers) * 100;
+
+    // Ensure percentage does not exceed 100%
+    return Math.min(joinerPercentage, 100);
+  };
 
   useEffect(() => {
     const fetchForums = async () => {
       try {
-        const forumsSnapshot = await getDocs(
-          query(collection(db, 'forums'), orderBy('totalMembers', 'desc'))
-        );
+        const forumsSnapshot = await getDocs(collection(db, 'forums'));
         const fetchedForums: Forum[] = forumsSnapshot.docs.map((doc) => {
           const data = doc.data();
           return {
@@ -31,10 +41,12 @@ const TopForumsTable = () => {
             totalMembers: data.totalMembers || 0,
             totalPosts: data.totalPosts || 0,
             dateCreated: data.dateCreated,
-            growthRate: calculateGrowthRate(data),
+            joinerPercentage: calculateJoinerPercentage(data), // Calculate joiner percentage
           };
         });
 
+        // Sort forums by total members and posts (descending order)
+        fetchedForums.sort((a, b) => b.totalMembers - a.totalMembers || b.totalPosts - a.totalPosts);
         setForums(fetchedForums);
         setLoading(false);
       } catch (error) {
@@ -45,31 +57,14 @@ const TopForumsTable = () => {
     fetchForums();
   }, []);
 
-  const calculateGrowthRate = (data: any): number => {
-    const currentCount = data.totalMembers || 0;
-    const dateCreated = data.dateCreated?.seconds || 0;
-    const currentTime = Math.floor(Date.now() / 1000);
-    const timeDifference = (currentTime - dateCreated) / (60 * 60 * 24);
-
-    if (timeDifference > 0) {
-      return parseFloat(((currentCount / timeDifference) * 100).toFixed(1));
-    }
-
-    return 0;
-  };
-
+  // Pagination logic
   const indexOfLastForum = currentPage * ForumsPerPage;
   const indexOfFirstForum = indexOfLastForum - ForumsPerPage;
   const currentForums = forums.slice(indexOfFirstForum, indexOfLastForum);
   const totalPages = Math.ceil(forums.length / ForumsPerPage);
 
-  if (loading) {
-    return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
-  }
-
-  if (forums.length === 0) {
-    return <div className="text-center py-5">No forums available</div>;
-  }
+  // Loading spinner
+  if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
 
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
@@ -89,7 +84,7 @@ const TopForumsTable = () => {
             <h5 className="text-sm font-medium uppercase xsm:text-base">Posts</h5>
           </div>
           <div className="hidden p-2.5 text-center sm:block xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">Growth</h5>
+            <h5 className="text-sm font-medium uppercase xsm:text-base">Joiners (%)</h5>
           </div>
         </div>
 
@@ -98,14 +93,17 @@ const TopForumsTable = () => {
             <div className="flex items-center gap-3 p-2.5 xl:p-5">
               <p className="hidden text-black dark:text-white sm:block">{forum.title}</p>
             </div>
+
             <div className="flex items-center justify-center p-2.5 xl:p-5">
               <p className="text-black dark:text-white">{forum.totalMembers}</p>
             </div>
+
             <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
               <p className="text-black dark:text-white">{forum.totalPosts}</p>
             </div>
+
             <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-              <p className="text-meta-5">{forum.growthRate}%</p>
+              <p className="text-meta-5">{forum.joinerPercentage.toFixed(1)}%</p>
             </div>
           </div>
         ))}
@@ -124,7 +122,7 @@ const TopForumsTable = () => {
         </div>
         <button
           onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-          disabled={currentPage === totalPages || totalPages === 0}
+          disabled={currentPage === totalPages}
           className="py-2 px-4 bg-gray-300 rounded-md disabled:opacity-50"
         >
           Next

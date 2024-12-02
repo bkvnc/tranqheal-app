@@ -365,6 +365,7 @@ const Settings = () => {
                       />
                     </div>
                   </div>
+                  {userData.userType === 'organization' && (
                   <div className="mb-5.5 mt-5">
                     <label className="mb-3 block text-sm font-medium text-black dark:text-white"  htmlFor="facebookLink" >
                       Facebook Link
@@ -381,6 +382,7 @@ const Settings = () => {
                       />
                     </div>
                   </div>
+                   )}
 
                   {/* Submit Button */}
                   <button type="submit" className="mt-3 rounded bg-primary py-2 px-5 text-white">

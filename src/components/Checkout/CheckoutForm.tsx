@@ -1,12 +1,12 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PaymongoService } from '../../service/paymongoService';
-import type { Plan } from '../../hooks/types';
+import type { Plan, UserData, Organization } from '../../hooks/types';
 import type { SourceCreateParams } from '../../hooks/types';
 import { isValidEmail, isContentNotEmpty, isContentLengthValid } from '../utils/validationUtils';
 import {sendNotification} from '../../hooks/useNotification';
 import {auth, db} from '../../config/firebase';
-import { setDoc, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { setDoc, serverTimestamp, doc, getDoc, updateDoc,query, where, collection, getDocs } from 'firebase/firestore';
 import { NotificationTypes, NotificationType } from '../../hooks/notificationTypes';
 
 interface CheckoutFormProps {
@@ -18,7 +18,9 @@ interface CheckoutFormProps {
 const CheckoutForm: FC<CheckoutFormProps> = ({ plan, onSuccess, onError }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [organizationName, setOrganizationName] = useState('');
+  const [organization, setOrganization ] = useState<Organization[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'gcash'>('card');
   const [formData, setFormData] = useState({
     cardNumber: '',
@@ -168,6 +170,43 @@ const CheckoutForm: FC<CheckoutFormProps> = ({ plan, onSuccess, onError }) => {
     }
   };
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+        const user = auth.currentUser;
+        if (user) {
+            const userDocRef = doc(db, 'organizations', user.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                setUserData(userDoc.data() as UserData);
+            } else {
+                console.log('No such document!');
+            }
+        }
+    };
+    fetchUserData();
+}, []);
+
+
+useEffect(() => {
+  const fetchOrganizations = async () => {
+    const user = auth.currentUser;
+    if (user && userData) {
+      const organizationsCollectionRef = collection(db, 'forums');
+      const organizationsQuery = query(organizationsCollectionRef, where("authorName", "==", userData.organizationName));
+      const organizationsSnapshot = await getDocs(organizationsQuery);
+      const organizationsData = organizationsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+      } as Organization));
+      setOrganization(organizationsData);
+  }
+};
+
+if (userData) {
+  fetchOrganizations();
+}
+}, [userData]);
+
   async function saveSubscription(paymentIntentId: string, plan: Plan) {
     const user = auth.currentUser;
     if (!user) {
@@ -175,25 +214,26 @@ const CheckoutForm: FC<CheckoutFormProps> = ({ plan, onSuccess, onError }) => {
       return;
   }
 
+  const organizationsRef = collection(db,"organizations");
+  const q = query(organizationsRef, where("organizationName", "==", userData.organizationName));
   const orgDocRef = doc(db, 'organizations', user.uid);
-  const orgDoc = await getDoc(orgDocRef);
+ 
+  const organizationDocs = await getDocs (q);
 
-  if (orgDoc.exists()) {
-    const orgData = orgDoc.data();
-    const organizationName = orgData.organizationName;
-
+  if (!organizationDocs.empty) {
+    const orgDoc = organizationDocs.docs[0];
+    const orgData = orgDoc.data()
+    const organizationName  = orgData.organizationName;
     setOrganizationName(organizationName);
-    console.log("Organization name:", organizationName);
-  } else {
-    console.error("Organization document not found");
   }
-  console.log("Authenticated user:", user);
+
+
 
     const subscriptionData = {
         paymentIntentId,
         userId: user.uid,
         paymentMethodId: paymentMethod,
-        organizationName: organizationName, 
+        organizationName: userData?.organizationName,
         planId: plan.id,
         planName: plan.name,
         price: plan.price,
@@ -395,7 +435,7 @@ const handleRedirectPayment = async () => {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-blue-600 text-black hover:text-white py-2 px-4 rounded-lg hover:bg-[#9F4FDD] transition-colors disabled:bg-blue-300"
+        className="w-full bg-blue-600 text-[#9F4FDD] hover:text-white py-2 px-4 rounded-lg hover:bg-[#9F4FDD] transition-colors disabled:bg-blue-300"
       >
         {loading ? 'Processing...' : `Pay ₱${plan.price.toLocaleString()}`}
       </button>

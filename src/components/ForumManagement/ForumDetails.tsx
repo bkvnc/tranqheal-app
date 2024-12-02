@@ -120,7 +120,7 @@ const ForumDetailsPage: React.FC = () => {
             </div>
 
             <div className="mt-4">
-                <p className="text-lg text-gray-700">{forum?.description}</p>
+                <p className="text-lg text-gray-700">{forum?.content}</p>
             </div>
 
             <div className="mt-8">
