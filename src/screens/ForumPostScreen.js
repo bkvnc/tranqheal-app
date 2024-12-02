@@ -15,7 +15,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc, increment, setDoc, serverTimestamp, FieldValue } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc, deleteDoc, updateDoc, increment, setDoc, serverTimestamp, FieldValue, arrayUnion } from 'firebase/firestore';
 import { auth, firestore, storage } from 'src/config';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -192,6 +192,7 @@ export const ForumPostScreen = ({ route, navigation }) => {
 
       await updateDoc(forumRef, {
         totalMembers: increment(1),
+        members: arrayUnion(auth.currentUser.uid),
       });
 
 
@@ -429,6 +430,7 @@ const handleSaveForumEdits = async () => {
             await deleteDoc(doc.ref);
             await updateDoc(forumRef, {
               totalMembers: increment(-1),
+              members: arrayRemove(auth.currentUser.uid),
             });
           });
          
