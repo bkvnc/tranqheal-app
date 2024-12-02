@@ -46,11 +46,7 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
         requestedAt: serverTimestamp(),
       };
 
-    
-
-      
       const notificationRef = doc(collection(firestore, `notifications/${bestMatch.id}/messages`));
-
 
       await setDoc(notificationRef, {
         recipientId: bestMatch.id,
@@ -61,7 +57,6 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
         isRead: false,
       });
 
-    
       const notificationDoc = await getDoc(notificationRef);
       const notificationData = notificationDoc.data();
 
@@ -70,7 +65,6 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
         console.log("Notification createdAt:", createdAtDate);
       }
 
-  
       await setDoc(requestDocRef, requestData); 
       console.log('Request sent successfully!');
       navigation.navigate('Success');
@@ -79,7 +73,6 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
     }
   };
   
-
   const handleToggleViewProfessional = () => {
     setViewDetails(prevState => {
       if (prevState) {

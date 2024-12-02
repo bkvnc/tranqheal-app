@@ -63,7 +63,7 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
   const handleApplyOrganization = () => {
     navigation.navigate('UploadCredentials', {
       isRegistered: true,
-      organization,
+      organizationId: organization,
       organizationName: organizationData?.organizationName,
       userType,
       userStatus: profileData?.status,
