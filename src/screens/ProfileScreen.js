@@ -63,7 +63,6 @@ export const ProfileScreen = () => {
     try {
       const docSnap = await getDoc(userRef);
       if(docSnap.exists()) {
-        console.log('Profile Data Fetched Successfully: ', docSnap.data());
         setProfileData(docSnap.data());
       } else{
         console.log('No such document!');
@@ -101,7 +100,7 @@ export const ProfileScreen = () => {
           {/* Profile Image with Camera Icon */}
           <View style={styles.imageContainer}>
             <Image
-              source={ {uri: profileData?.profileImage} || require('../assets/testprofile.jpg')} // Display selected image
+              source={ {uri: profileData?.profileImage} || require('../assets/testprofile.jpg')} 
               style={styles.profileImage}
             />
             <TouchableOpacity style={styles.cameraIcon} onPress={pickImage}>
