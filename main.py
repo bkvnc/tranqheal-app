@@ -1,11 +1,18 @@
 import os
 import json
+import random
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import numpy as np
+from heapq import nsmallest 
 from pydantic import BaseModel
 from firebase_admin import credentials, firestore, initialize_app
+from dotenv import load_dotenv
 
-service_account_info = json.loads(os.getenv("FIREBASE_SERVICE_ACCOUNT"))
+load_dotenv()
+service_account_path = os.getenv("FIREBASE_SERVICE_ACCOUNT")
+with open(service_account_path) as f:
+    service_account_info = json.load(f)
 cred = credentials.Certificate(service_account_info)
 initialize_app(cred)
 db = firestore.client()
@@ -19,6 +26,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Enhanced normalize function with handling for missing values
+def normalize_feature(value, min_value, max_value):
+    if value is None:
+        return 0  # Default for missing values
+    return (value - min_value) / (max_value - min_value)
 
 class UserPreferences(BaseModel):
     preferredProfAge: str 
@@ -39,84 +52,68 @@ class MoodRequest(BaseModel):
 
 # Main matching endpoint
 @app.post("/match-professionals/")
-def match_professionals(assessment: AssessmentData):
+def match_professionals(assessment: AssessmentData, k: int = 5):
     professionals_ref = db.collection("professionals")
     professionals_docs = professionals_ref.stream()
     
-    # Extract professionals' data and calculate match scores
-    scored_professionals = []
-    for doc in professionals_docs:
-        data = doc.to_dict()
-        first_name = data.get("firstName", "")
-        middle_name = data.get("middleName", "").strip()
-        last_name = data.get("lastName", "")
-        full_name = f"{first_name} {middle_name + ' ' if middle_name else ''}{last_name}"
-        profile_image = data.get("profileImage", None)
-        
-        professional_info = {
-            "id": doc.id,
-            "name": full_name if full_name.strip() else "Unknown",
-            "age": data.get("age", "Unknown"),
-            "availability": data.get("availability", {}),
-            "gender": data.get("gender", "Unknown"),
-            "specialization": data.get("specialization", {}),
-            "rating": data.get("rating", 0),
-            "profileImage": profile_image
-        }
-
-        # Calculate match score
-        score = calculate_match_score(professional_info, assessment)
-
-        if score > 0:  # Only consider professionals with a positive match score
-            professional_info['matchScore'] = score
-            scored_professionals.append(professional_info)
-
-    # Sort professionals by match score in descending order
-    scored_professionals = sorted(scored_professionals, key=lambda x: x['matchScore'], reverse=True)
-    
-    if not scored_professionals:
-        raise HTTPException(status_code=404, detail="No professionals match the user preferences and needs.")
-
-    return {"matches": scored_professionals}
-
-
-def calculate_match_score(professional, assessment):
-    score = 0
+    min_age, max_age = 18, 80  # Age range for normalization
     preferences = assessment.preferences
     scores = assessment.selfAssessmentScores
     
-    # Age scoring (5 points for close match, 2 points for farther match)
-    preferred_age = int(preferences.preferredProfAge)
-    professional_age = int(professional['age'])
-    if preferred_age - 5 <= professional_age <= preferred_age + 5:
-        score += 5
-    elif preferred_age - 10 <= professional_age <= preferred_age + 10:
-        score += 2
-
-    # Gender scoring (3 points for exact match)
-    if professional['gender'].lower() == preferences.preferredProfGender:
-        score += 3
-
-    # Availability scoring (3 points if preferred time matches)
-    if professional['availability'].get(preferences.preferredProfAvailability, False):
-        score += 3
-
-    # Specialization scoring (4 points for each matching need)
-    need_specializations = {
-        "anxiety": scores.gad7Interpretation != "Minimal or no anxiety",
-        "depress": scores.phq9Interpretation != "Minimal or no depression",
-        "stress": scores.pssInterpretation != "Low stress"
-    }
-    for specialization, needed in need_specializations.items():
-        if needed and professional['specialization'].get(specialization, False):
-            score += 4
-
-    return score
+    # User feature vector
+    user_vector = np.array([
+        normalize_feature(int(preferences.preferredProfAge), min_age, max_age),
+        1 if preferences.preferredProfGender.lower() == "male" else 0,
+        1 if preferences.preferredProfAvailability else 0,
+        1 if scores.gad7Interpretation != "Minimal or no anxiety" else 0,
+        1 if scores.phq9Interpretation != "Minimal or no depression" else 0,
+        1 if scores.pssInterpretation != "Low stress" else 0,
+    ])
+    
+    # Weights for features
+    feature_weights = np.array([0.4, 0.2, 0.2, 0.6, 0.6, 0.6])  # Adjust these weights as needed
+    
+    professional_distances = []
+    for doc in professionals_docs:
+        data = doc.to_dict()
+        
+        # Professional feature vector
+        professional_vector = np.array([
+            normalize_feature(int(data.get("age", min_age)), min_age, max_age),
+            1 if data.get("gender", "").lower() == "male" else 0,
+            1 if data.get("availability", {}).get(preferences.preferredProfAvailability, False) else 0,
+            1 if data.get("specialization", {}).get("anxiety", False) else 0,
+            1 if data.get("specialization", {}).get("depression", False) else 0,
+            1 if data.get("specialization", {}).get("stress", False) else 0,
+        ])
+        
+        # Compute weighted distance
+        distance = np.sqrt(np.sum(((user_vector - professional_vector) * feature_weights) ** 2))
+        
+        professional_info = {
+            "id": doc.id,
+            "name": f"{data.get('firstName', '')} {data.get('lastName', '')}",
+            "distance": distance,
+            "rating": data.get("rating", 0),
+            "profileImage": data.get("profileImage", None)
+        }
+        
+        professional_distances.append(professional_info)
+    
+    # Find K nearest neighbors
+    k_nearest_neighbors = nsmallest(k, professional_distances, key=lambda x: x["distance"])
+    
+    if not k_nearest_neighbors:
+        raise HTTPException(status_code=404, detail="No professionals match the user preferences and needs.")
+    
+    return {"matches": k_nearest_neighbors}
 
 @app.post("/get-mood-suggestions/")
 def get_mood_suggestions(mood_request: MoodRequest):
     mood = mood_request.mood
     mood_suggestions_ref = db.collection("moodSuggestions")
+
+    possible_suggestions = []
 
     for quadrant in ["redQuadrant", "blueQuadrant", "positiveQuadrant"]:
         mood_data = mood_suggestions_ref.document(quadrant).get()
@@ -125,21 +122,21 @@ def get_mood_suggestions(mood_request: MoodRequest):
 
             # Check if the mood is present in the 'moods' field (individual moods)
             if mood in data.get("moods", {}):
-                return {"mood": mood, "suggestions": data["moods"][mood]}
+                possible_suggestions.extend(data["moods"][mood])
 
             # If not in 'moods', check the 'categories' for relevant category
             for category, moods in data.get("categories", {}).items():
                 if mood in moods:
-                    # Check if the 'suggestions' field has corresponding suggestions for the category
                     if category in data.get("suggestions", {}):
-                        return {
-                            "mood": mood,
-                            "category": category,
-                            "suggestions": data["suggestions"][category]
-                        }
+                        possible_suggestions.extend(data["suggestions"][category])
 
-    # If mood not found in any categories or moods
-    raise HTTPException(status_code=404, detail=f"No suggestions found for mood: {mood}")
+    if not possible_suggestions:
+        raise HTTPException(status_code=404, detail=f"No suggestions found for mood: {mood}")
+
+    # Randomly select one suggestion
+    selected_suggestion = random.choice(possible_suggestions)
+
+    return {"mood": mood, "suggestion": selected_suggestion}
 
 @app.get("/")
 def read_root():
