@@ -11,7 +11,7 @@ export interface Forum {
     totalPosts: number | null;
     tags: string[];
     status: string;
-    description: string;
+    content: string;
     authorName: string;
     authorType: string;
     authorId: string;

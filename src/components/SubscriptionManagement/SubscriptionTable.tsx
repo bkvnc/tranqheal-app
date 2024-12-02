@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import dayjs from 'dayjs'; // Import Day.js
 import { db } from '../../config/firebase';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
@@ -85,10 +86,14 @@ const SubscriptionTable = () => {
                                         <p className="text-black dark:text-white">{subscription.planName}</p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <p className="text-black dark:text-white">{new Date(subscription.startDate).toLocaleDateString()}</p>
+                                        <p className="text-black dark:text-white">
+                                            {subscription.startDate ? dayjs(subscription.startDate.toDate()).format('MMM DD, YYYY') : 'N/A'}
+                                        </p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <p className="text-black dark:text-white">{new Date(subscription.endDate).toLocaleDateString()}</p>
+                                        <p className="text-black dark:text-white">
+                                            {subscription.endDate ? dayjs(subscription.endDate.toDate()).format('MMM DD, YYYY') : 'N/A'}
+                                        </p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <p className={`inline-flex rounded-full ${subscription.status === 'active' ? 'bg-success' : 'bg-danger'} bg-opacity-10 py-1 px-3 text-sm font-medium text-${subscription.status === 'active' ? 'success' : 'danger'}`}>
@@ -97,7 +102,6 @@ const SubscriptionTable = () => {
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <div className="flex items-center space-x-3.5">
-                                            {/* <button className="hover:text-primary">Edit</button> */}
                                             <button 
                                                 className="text-danger hover:text-white hover:bg-danger hover:shadow-lg hover:shadow-danger/50 rounded-md py-1 px-3  transition flex items-center" 
                                                 onClick={() => handleDelete(subscription.id)} // Delete button

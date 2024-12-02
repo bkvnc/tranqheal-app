@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../../config/firebase'; 
+import { db } from '../../config/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 
-// Define the interface for forum data
 interface Forum {
   id: string;
   title: string;
   totalMembers: number;
   totalPosts: number;
-  growthRate: number;
-  dateCreated: { seconds: number };  // Assuming createdAt is stored in Firestore as a timestamp
+  joinerPercentage: number; // Renamed field to represent joiner percentage
+  dateCreated: { seconds: number }; // Firestore timestamp
 }
 
 const TopForumsTable = () => {
@@ -17,6 +16,18 @@ const TopForumsTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [ForumsPerPage] = useState(5);
+
+  // Calculate Joiner Percentage
+  const calculateJoinerPercentage = (data: any): number => {
+    const currentMembers = data.totalMembers || 0; // Total current members
+    const targetMembers = 100; // Hypothetical maximum capacity (adjustable)
+
+    // Calculate joiner percentage
+    const joinerPercentage = (currentMembers / targetMembers) * 100;
+
+    // Ensure percentage does not exceed 100%
+    return Math.min(joinerPercentage, 100);
+  };
 
   useEffect(() => {
     const fetchForums = async () => {
@@ -29,12 +40,12 @@ const TopForumsTable = () => {
             title: data.title,
             totalMembers: data.totalMembers || 0,
             totalPosts: data.totalPosts || 0,
-            dateCreated: data.dateCreated, // Assuming createdAt is stored as a timestamp
-            growthRate: calculateGrowthRate(data), // Calculate growth rate based on available data
+            dateCreated: data.dateCreated,
+            joinerPercentage: calculateJoinerPercentage(data), // Calculate joiner percentage
           };
         });
 
-        // Sort forums by member count and post count
+        // Sort forums by total members and posts (descending order)
         fetchedForums.sort((a, b) => b.totalMembers - a.totalMembers || b.totalPosts - a.totalPosts);
         setForums(fetchedForums);
         setLoading(false);
@@ -46,31 +57,14 @@ const TopForumsTable = () => {
     fetchForums();
   }, []);
 
-  const calculateGrowthRate = (data: any): number => {
-    const currentCount = data.totalMembers || 0;
-    const dateCreated = data.dateCreated?.seconds ? data.dateCreated.seconds : 0; // Assuming the timestamp is in seconds
-    const currentTime = Math.floor(Date.now() / 1000); // Get current time in seconds
-
-    // Calculate the time difference in days
-    const timeDifference = (currentTime - dateCreated) / (60 * 60 * 24); // Convert to days
-
-    if (timeDifference > 0) {
-      // Use the time difference to estimate growth
-      return (currentCount / timeDifference) * 100; // Growth rate per day (can be adjusted as needed)
-    }
-
-    return 0;
-  };
-
-  
-
+  // Pagination logic
   const indexOfLastForum = currentPage * ForumsPerPage;
   const indexOfFirstForum = indexOfLastForum - ForumsPerPage;
   const currentForums = forums.slice(indexOfFirstForum, indexOfLastForum);
   const totalPages = Math.ceil(forums.length / ForumsPerPage);
-  
-  if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
 
+  // Loading spinner
+  if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
 
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
@@ -90,7 +84,7 @@ const TopForumsTable = () => {
             <h5 className="text-sm font-medium uppercase xsm:text-base">Posts</h5>
           </div>
           <div className="hidden p-2.5 text-center sm:block xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">Growth</h5>
+            <h5 className="text-sm font-medium uppercase xsm:text-base">Joiners (%)</h5>
           </div>
         </div>
 
@@ -109,7 +103,7 @@ const TopForumsTable = () => {
             </div>
 
             <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-              <p className="text-meta-5">{forum.growthRate.toFixed(1)}%</p>
+              <p className="text-meta-5">{forum.joinerPercentage.toFixed(1)}%</p>
             </div>
           </div>
         ))}

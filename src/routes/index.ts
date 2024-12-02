@@ -32,6 +32,8 @@ const LatestCalls = lazy(() => import('../pages/CustomPages/ListCalls'));
 
 //SUBSCRIPTION MANAGEMENT
 const ViewAllSubscriptions = lazy(() => import('../pages/CustomPages/SubscriptionManagement/ViewAllSubscriptions'));
+const ViewMySubscription = lazy(() => import('../pages/CustomPages/SubscriptionManagement/ViewMySubscription'));
+
 //const ViewSubscriptionComponent = lazy(() => import('../pages/CustomPages/SubscriptionManagement/ViewSubscriptionComponent'));
 const CheckoutPage = lazy(() => import('../pages/CustomPages/SubscriptionManagement/CheckoutPage'));
 const CheckoutSuccess = lazy(() => import('../pages/CustomPages/SubscriptionManagement/CheckoutSuccess'));
@@ -113,6 +115,11 @@ const coreRoutes = [
     path: '/subscriptions',
     title: 'Subscriptions',
     component: ViewAllSubscriptions,
+  },
+  {
+    path: '/my-subscription',
+    title: 'My Subscription',
+    component: ViewMySubscription,
   },
   // {
   //   path: '/subscriptionComponent',

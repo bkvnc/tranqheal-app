@@ -41,7 +41,7 @@ const SubscriptionPlans: React.FC = () => {
           </ul> */}
           <button
             onClick={() => handleSubscribe(plan.id)}
-            className="w-full bg-[#9F4FDD]  hover:shadow-lg hover:shadow-[#9F4FDD]/50  text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full bg-[#9F4FDD]   hover:shadow-lg hover:shadow-[#9F4FDD]/50  text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Subscribe Now
           </button>

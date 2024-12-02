@@ -14,7 +14,7 @@ const MyForumTable: React.FC = () => {
     const [forums, setForums] = useState<Forum[]>([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
+    const [content, setContent] = useState('');
     const [tags, setTags] = useState<string[]>([]);
     const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -45,7 +45,7 @@ const MyForumTable: React.FC = () => {
     const handleModalClose = () => {
         setIsCreateModalOpen(false);
         setTitle('');
-        setDescription('');
+        setContent('');
         setTags([]);
     };
 
@@ -60,23 +60,23 @@ const MyForumTable: React.FC = () => {
     useEffect(() => {
         const fetchForums = async () => {
             const user = auth.currentUser;
-            if (user && userData) {
-                const forumsCollectionRef = collection(db, 'forums');
-                const forumsQuery = query(forumsCollectionRef, where("authorName", "==", userData.organizationName));
-                const forumsSnapshot = await getDocs(forumsQuery);
-                const forumsData = forumsSnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    dateCreated: doc.data().dateCreated?.toDate(), 
-                } as Forum));
-                setForums(forumsData);
-            }
-        };
+                if (user && userData) {
+                    const forumsCollectionRef = collection(db, 'forums');
+                    const forumsQuery = query(forumsCollectionRef, where("authorName", "==", userData.organizationName));
+                    const forumsSnapshot = await getDocs(forumsQuery);
+                    const forumsData = forumsSnapshot.docs.map((doc) => ({
+                        id: doc.id,
+                        ...doc.data(),
+                        dateCreated: doc.data().dateCreated?.toDate(), 
+                    } as Forum));
+                    setForums(forumsData);
+                }
+            };
 
-        if (userData) {
-            fetchForums();
-        }
-    }, [userData]);
+            if (userData) {
+                fetchForums();
+            }
+        }, [userData]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -92,7 +92,7 @@ const MyForumTable: React.FC = () => {
 
             await addDoc(forumRef, {
                 title,
-                description,
+                content,
                 dateCreated: currentDate,
                 totalComments: 0,
                 tags,
@@ -100,7 +100,6 @@ const MyForumTable: React.FC = () => {
                 authorId: user.uid, 
                 authorName: userData?.organizationName || 'Anonymous',
                 authorType: userData?.userType || 'user',
-                reports: [],
             });
 
             
@@ -173,7 +172,6 @@ const MyForumTable: React.FC = () => {
                                 <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">Date Posted</th>
                                 <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">Members</th>
                                 <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">Total Posts</th>
-                                <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">Status</th>
                                 <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
                             </tr>
                         </thead>
@@ -194,14 +192,6 @@ const MyForumTable: React.FC = () => {
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <p className="text-black dark:text-white">{forum.totalPosts|| 0}</p>
-                                    </td>
-                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <p className={`inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium 
-                                            ${forum.status === 'inactive' ? 'bg-danger text-danger' : 
-                                            forum.status === 'pending' ? 'bg-warning text-warning' : 
-                                            forum.status === 'active' ? 'bg-success text-success' : ''}`}>
-                                            {forum.status}
-                                        </p>
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <button className="mr-2 text-sm ">
@@ -259,10 +249,10 @@ const MyForumTable: React.FC = () => {
                                 />
                             </div>
                             <div className="mb-4">
-                                <label className="block text-sm font-medium mb-2">Description</label>
+                                <label className="block text-sm font-medium mb-2">Content</label>
                                 <textarea
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
                                     required
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                 />

@@ -117,15 +117,15 @@ const Register: React.FC = () => {
             );
             const user = userCredential.user;
 
-            // Send email verification
+            
             await sendEmailVerification(user);
 
-            // User data to be stored in Firestore
+            
             const userData: UserData = {
                 email: formData.email,
                 userType: formData.userType,
                 createdAt: serverTimestamp(),
-                profilePicture: profilePictureUrl || '', // Use the fetched profile picture URL
+                profilePicture: profilePictureUrl || '', 
                 backgroundPicture: DEFAULT_BACKGROUD_PICTURE,
             };
 

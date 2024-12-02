@@ -18,8 +18,6 @@ import {
     Timestamp,
     serverTimestamp,
 } from 'firebase/firestore';
-import { sendNotification } from './useNotification';
-import { NotificationTypes } from './notificationTypes';
 import { containsBlacklistedWords } from '../components/utils/validationUtils';
 import { Forum, Post, UserData } from './types';
 import { toast } from 'react-toastify'; 
