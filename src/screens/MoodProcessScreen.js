@@ -2,30 +2,55 @@ import React, { useEffect, useState, useContext } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { Colors } from '../config';
+import { Colors, firestore, auth } from '../config';
+import { collection, updateDoc, doc, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 
 export const MoodProcessScreen = ({ route, navigation }) => {
   const { selectedMood } = route.params;
   const { userType } = useContext(AuthenticatedUserContext);
   const [isloading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [suggestion, setSuggestion] = useState(null);
 
   useEffect(() => {
     const fetchSuggestion = async () => {
       try {
-        const response = await fetch('https://tranqheal-api.onrender.com/get-mood-suggestion', {
+        const response = await fetch('https://tranqheal-api.onrender.com/get-mood-suggestions/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mood: selectedMood }),
         });
 
         const data = await response.json();
-        setSuggestion(data.suggestion); // Assuming the API response contains a `suggestion` field
-        setIsLoading(false);
+        console.log('Response:', data);
 
-        // Navigate to MoodResults with the suggestion
-        navigation.replace('MoodResult', { selectedMood, suggestion: data.suggestion });
+        if (data.suggestion) {
+          const user = auth.currentUser;
+          if (user) {
+            const userId = user.uid;
+            const userRef = doc(firestore, 'users', userId);
+            const moodTrackRef = collection(userRef, 'moodTrackings');
+
+            const moodTrackQuery = query(
+              moodTrackRef,
+              orderBy('createdAt', 'desc'), 
+              limit(1) 
+            );
+            const querySnapshot = await getDocs(moodTrackQuery);
+            const latestDoc = querySnapshot.docs[0];
+
+            const moodTrackDocRef = doc(firestore, 'users', userId, 'moodTrackings', latestDoc.id);
+            await updateDoc(moodTrackDocRef, {
+              suggestion: data.suggestion
+            });
+            console.log('Suggestion added in firestore successfully');
+          } else {
+            console.log('User is not authenticated');
+            throw new Error('User is not authenticated');
+          }
+          navigation.replace('MoodResult', { selectedMood, suggestion: data.suggestion });
+        } else {
+          throw new Error('Invalid response structure');
+        }
       } catch (error) {
         console.error('Error fetching suggestion:', error);
         setError('There was an issue processing your request.');
@@ -38,7 +63,7 @@ export const MoodProcessScreen = ({ route, navigation }) => {
 
   if (isloading) {
     return (
-      <RootLayout screenName={'MoodProcess'} navigation={navigation} userType={userType}>
+      <RootLayout screenName={'Mood'} navigation={navigation} userType={userType}>
         <View style={styles.container}>
             <ActivityIndicator size="large" color={Colors.purple} />
             <Text style={styles.text}>Processing your mood...</Text>

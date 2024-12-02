@@ -10,6 +10,7 @@ import { assessmentStates } from 'src/utils/assessmentStates';
 export const SAScreen2 = ({navigation}) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const [answers, setAnswers] = useState(assessmentStates.FirstSet);
+  const radioOptions = assessmentStates.firstRadioOptions;
 
   const handleSelectOption = (key, selectedId) => {
     setAnswers((prevAnswers) => ({ ...prevAnswers, [key]: selectedId }));

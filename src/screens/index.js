@@ -5,6 +5,9 @@ import { SignupScreen } from './SignupScreen';
 import { ProfessionalRegisterScreen } from './ProfessionalRegisterScreen';
 import { UploadCredentialsScreen } from './UploadCredentialsScreen';
 
+import { MenuScreen } from './MenuScreen';
+import { ForgotPassword } from './ForgotPassword';
+
 import { HomeScreen } from './HomeScreen';
 import { ForumsScreen } from './ForumsScreen';
 import { ViewProfScreen } from './ViewProfScreen';
@@ -12,7 +15,6 @@ import { ViewOrgScreen } from './ViewOrgScreen';
 import { MoodScreen } from './MoodScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { NotificationScreen } from './NotificationScreen';
-import { MenuScreen } from './MenuScreen';
 
 import { SAScreen } from './SAScreen';
 import { SelfAssessmentLogs } from './SelfAssessmentLogs';
@@ -50,7 +52,6 @@ export { WelcomeScreen, RegisterAsScreen, LoginScreen,
     ProfileScreen, NotificationScreen, MenuScreen,
     SAPreferenceScreen, SAResultScreen, PostDetailsScreen,
     ForumPostScreen, OrganizationDetailsScreen, ProfessionalDetailsScreen,
-    EditProfileScreen, ProfessionalHomeScreen, ViewRequestScreen,
-
+    EditProfileScreen, ProfessionalHomeScreen, ViewRequestScreen, ForgotPassword,
     ViewRequestHistoryScreen, MoodMeterScreen, MoodResultScreen, MoodProcessScreen, ViewAcceptedRequestsScreen, SuccessScreen,
     EditProfessionalProfileScreen, ProfessionalProfileScreen, SeekProfessionalScreen, MoodLogsScreen, MatchingScreen, SelfAssessmentLogs };

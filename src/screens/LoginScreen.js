@@ -24,7 +24,6 @@ export const LoginScreen = ({ navigation }) => {
     scopes: ['profile', 'email', 'openid'],
   });
 
-  
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
