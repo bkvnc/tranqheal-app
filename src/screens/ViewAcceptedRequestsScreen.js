@@ -7,7 +7,7 @@ import { firestore } from '../config';
 import { collection, query, getDocs } from 'firebase/firestore';
 
 export const ViewAcceptedRequestsScreen = ({ navigation }) => {
-  const { user } = useContext(AuthenticatedUserContext);
+  const { user, userType } = useContext(AuthenticatedUserContext);
   const [acceptedRequests, setAcceptedRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,7 +63,7 @@ export const ViewAcceptedRequestsScreen = ({ navigation }) => {
   };
 
   return (
-    <RootLayout screenName={'ViewAcceptedRequests'} navigation={navigation} userType={user?.type}>
+    <RootLayout screenName={'ViewAcceptedRequests'} navigation={navigation} userType={userType}>
       <View style={styles.container}>
         <Text style={styles.title}>View Accepted Requests</Text>
 
