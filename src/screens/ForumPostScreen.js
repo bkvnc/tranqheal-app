@@ -427,10 +427,11 @@ const handleSaveForumEdits = async () => {
           // Delete each membership document found (should be only one)
           snapshot.forEach(async (doc) => {
             await deleteDoc(doc.ref);
+            await updateDoc(forumRef, {
+              totalMembers: increment(-1),
+            });
           });
-          await updateDoc(forumRef, {
-            totalMembers: increment(-1),
-          });
+         
 
           setIsMember(false); // Update UI state to reflect leave status
           Alert.alert('Success', 'You have left the forum.');

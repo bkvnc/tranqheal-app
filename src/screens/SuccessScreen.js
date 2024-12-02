@@ -39,11 +39,10 @@ export const SuccessScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
     padding: 20,
-    justifyContent: 'space-between', 
-  },
-  bottomContainer: {
-    alignItems: 'center', 
   },
   successImage: {
     width: 150,
@@ -53,7 +52,7 @@ const styles = StyleSheet.create({
   successText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#9F4FDD',
+    color: Colors.green,
     textAlign: 'center',
     marginBottom: 15,
   },
@@ -65,10 +64,15 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   button: {
-   backgroundColor: Colors.purple,  
+    backgroundColor: Colors.purple,
     paddingVertical: 15,
-    paddingHorizontal: 100,
+    paddingHorizontal: 40,
     borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   buttonText: {
     fontSize: 18,

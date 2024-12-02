@@ -23,10 +23,9 @@ import { SAResultScreen } from './SAResultScreen';
 import { SAScreen2 } from './SAScreen2';
 import { SAScreen3 } from './SAScreen3';
 
-import { MoodMeterScreen } from './MoodMeterScreen';
 import { MoodResultScreen } from './MoodResultScreen';
 import { MoodLogsScreen } from './MoodLogsScreen';
-
+import { MoodMeterScreen } from './MoodMeterScreen';
 import { MoodProcessScreen } from './MoodProcessScreen';
 import { MatchingScreen } from './MatchingScreen';
 import { SuccessScreen } from './SuccessScreen';
