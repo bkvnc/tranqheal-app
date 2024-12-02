@@ -101,7 +101,7 @@ export const ViewRequestScreen = ({ navigation }) => {
       );
 
       const requestDocRef = doc(requestHistoryRef, selectedRequest.id);
-      await addDoc(requestDocRef, {
+      await setDoc(requestDocRef, {
         ...selectedRequest,
         status: 'declined',
         declinedReason: reason,
@@ -316,6 +316,7 @@ const styles = StyleSheet.create({
   icons: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
   modalContainer: {
     flex: 1,

@@ -15,16 +15,31 @@ export const MenuScreen = ({ navigation }) => {
     });
   };
 
+  const handleAboutUs = () => {
+    navigation.navigate('AboutUs');
+  };
+
   return (
     <RootLayout screenName="Menu" navigation={navigation} userType={userType}>
       <View style={styles.container}>
         <View style={styles.divider} />
-          <View style={styles.menuOption}>
-            <TouchableOpacity style={styles.menuOption} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={30} color="black" />
-              <Text style={styles.menuText}>Logout</Text>
-            </TouchableOpacity>
-          </View>
+
+        <View style={styles.menuOption}>
+          <TouchableOpacity style={styles.menuOption} onPress={handleAboutUs}>
+            <Ionicons name="information-circle-outline" size={30} color="black" />
+            <Text style={styles.menuText}>About Us</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.menuOption}>
+          <TouchableOpacity style={styles.menuOption} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={30} color="black" />
+            <Text style={styles.menuText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.divider} />
       </View>
     </RootLayout>
@@ -55,7 +70,6 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     width: '100%',
     marginTop: 5,
-    marginBottom: 5 ,
-
+    marginBottom: 5,
   },
 });
