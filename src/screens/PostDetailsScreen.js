@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import moment from 'moment';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, Timestamp} from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, getDoc, doc, setDoc, updateDoc, deleteDoc,serverTimestamp, Timestamp} from 'firebase/firestore';
 import { auth, Colors, firestore } from 'src/config';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -275,8 +275,6 @@ const handleDeletePost = () => {
       authorId: user.uid,
       isAnonymous: anonymous,
     };
-    
-
   
     try {
       const docRef = await addDoc(
@@ -284,40 +282,39 @@ const handleDeletePost = () => {
         newCommentObj
       );
       const commentRef = doc(firestore, `forums/${forumId}/posts/${postId}/comments`, docRef.id);
-      const notificationRef = doc(collection(firestore, `notifications/${postSnap.data().authorId}/messages`));
-
-     // Check if the comment's author is the same as the post's author
-        const commentAuthorId = commentRef.data().authorId; // Comment's author
-        const postAuthorId = newPostId.authorId; // Post's author (update as necessary to fetch the post's author)
-        const commentSnap = await getDoc(commentRef);
-
-        if (commentAuthorId !== postAuthorId) {
-          // Set the notification document with the new post ID
-          await setDoc(notificationRef, {
-            recipientId: postAuthorId,
-            recipientType: commentSnap.data().authorType,  
-            message: `${commentSnap.data().authorName} commented on your post.`,
-            type: `comment`,
-            createdAt: serverTimestamp(), 
-            isRead: false,
-            additionalData: {
-              postId: newPostId,  
-              forumId: forumId,
-            },
-          });
-
-          // Fetch and log the notification to check the createdAt field
-          const notificationDoc = await getDoc(notificationRef);
-          const notificationData = notificationDoc.data();
-
-          if (notificationData && notificationData.createdAt) {
-            const createdAtDate = notificationData.createdAt.toDate();
-            console.log("Notification createdAt:", createdAtDate); // For debugging
-          }
-        } else {
-          console.log("No notification created: User commented on their own post.");
-        }
-
+  
+      // Fetch the post data to check the author's ID
+      const postRef = doc(firestore, `forums/${forumId}/posts`, postId);
+      const postSnap = await getDoc(postRef);
+  
+      if (!postSnap.exists()) {
+        Alert.alert('Error', 'Post not found.');
+        return;
+      }
+  
+      const postAuthorId = postSnap.data().authorId; // Post author's ID
+  
+      // If the comment's author is not the same as the post's author, send a notification
+      if (newCommentObj.authorId !== postAuthorId) {
+        const notificationRef = doc(collection(firestore, `notifications/${postAuthorId}/messages`));
+        await setDoc(notificationRef, {
+          recipientId: postAuthorId,
+          recipientType: newCommentObj.authorType,
+          message: `${newCommentObj.authorName} commented on your post.`,
+          type: 'comment',
+          createdAt: serverTimestamp(),
+          isRead: false,
+          additionalData: {
+            postId: postId,
+            forumId: forumId,
+          },
+        });
+  
+        console.log("Notification sent to post author.");
+      } else {
+        console.log("No notification created: User commented on their own post.");
+      }
+  
       setComments([{ ...newCommentObj, id: docRef.id }, ...comments]);
       setNewComment(''); // Clear the input field
       setIsAnonymousModalVisible(false);
@@ -327,7 +324,7 @@ const handleDeletePost = () => {
       Alert.alert('Error', 'Could not add comment.');
     }
   };
-
+  
 
   //Edit Comment Handle
   const handleEditComment = async () => {
@@ -1218,8 +1215,8 @@ saveButtonText: {
     flexDirection: 'row',
     justifyContent: 'space-around',  
     alignItems: 'center',
-    marginTop: 20,  
-    gap: 15,  
+    marginTop: 10,  
+    gap: 30,  
   },
 
   // Image Modal

@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   iconContainer: {
-    marginTop: 10,
+    marginTop: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
