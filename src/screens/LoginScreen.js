@@ -6,7 +6,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import Constants from 'expo-constants';
 import { GoogleAuthProvider } from 'firebase/auth';
 import * as Google from 'expo-auth-session/providers/google';
-import { googleAuth } from '../config'; 
+import { googleAuth, auth } from '../config'; 
 import { makeRedirectUri } from 'expo-auth-session';
 
 import { View, TextInput, Button, FormErrorMessage } from '../components';
@@ -24,7 +24,6 @@ export const LoginScreen = ({ navigation }) => {
     scopes: ['profile', 'email', 'openid'],
   });
 
-  
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;

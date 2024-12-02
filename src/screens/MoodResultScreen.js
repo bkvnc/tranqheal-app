@@ -1,17 +1,28 @@
-import React from 'react';
+import React, { useContext, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons'; // For icons
-import { RootLayout } from '../navigation/RootLayout'; // Assuming RootLayout exists
+import { RootLayout } from '../navigation/RootLayout';
+import { AuthenticatedUserContext } from 'src/providers';
 
 export const MoodResultScreen = ({ navigation, route }) => {
-  const { selectedMood, suggestion } = route.params;
+  const { userType } = useContext(AuthenticatedUserContext);
+  const { selectedMood, suggestions } = route.params;
+
+  useEffect(() => {
+    console.log('Selected Mood:', selectedMood);
+    console.log('Suggestion:', suggestions);
+  }, [selectedMood, suggestions]);
+
   return (
-    <RootLayout screenName={'MoodResultScreen'} navigation={navigation}>
+    <RootLayout screenName={'Mood'} navigation={navigation} userType={userType}>
       <View style={styles.container}>
        
         {/* Message Box */}
         <View style={styles.messageBox}>
-          <Text style={styles.messageText}>Based on your input, we recommend... ({suggestion})</Text>
+          <Text style={styles.messageText}>Based on your input, we recommend:</Text>
+          {suggestions.map((item, index) => (
+            <Text key={index} style={styles.suggestionText}>{item}</Text>
+          ))}
         </View>
 
         {/* Mood Emoji */}
@@ -67,10 +78,10 @@ const styles = StyleSheet.create({
   },
   emojiImage: {
     width: 100,
-    height: 100, // Adjust size of the emoji
+    height: 100,
   },
   button: {
-    backgroundColor: '#6A0DAD', // Purple button
+    backgroundColor: '#6A0DAD',
     paddingVertical: 15,
     borderRadius: 30,
     alignItems: 'center',
@@ -80,5 +91,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  suggestionText: {
+    fontSize: 16,
+    marginVertical: 5,
+    color: '#333',
   },
 });

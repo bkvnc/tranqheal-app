@@ -14,18 +14,19 @@ export const MoodProcessScreen = ({ route, navigation }) => {
   useEffect(() => {
     const fetchSuggestion = async () => {
       try {
-        const response = await fetch('https://tranqheal-api.onrender.com/get-mood-suggestion', {
+        const response = await fetch('https://tranqheal-api.onrender.com/get-mood-suggestions/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mood: selectedMood }),
         });
 
         const data = await response.json();
-        setSuggestion(data.suggestion); // Assuming the API response contains a `suggestion` field
-        setIsLoading(false);
-
-        // Navigate to MoodResults with the suggestion
-        navigation.replace('MoodResult', { selectedMood, suggestion: data.suggestion });
+        if (data.suggestions && Array.isArray(data.suggestions)) {
+          setSuggestion(data.suggestions);
+          navigation.replace('MoodResult', { selectedMood, suggestions: data.suggestions });
+        } else {
+          throw new Error('Invalid response structure');
+        }
       } catch (error) {
         console.error('Error fetching suggestion:', error);
         setError('There was an issue processing your request.');
@@ -38,7 +39,7 @@ export const MoodProcessScreen = ({ route, navigation }) => {
 
   if (isloading) {
     return (
-      <RootLayout screenName={'MoodProcess'} navigation={navigation} userType={userType}>
+      <RootLayout screenName={'Mood'} navigation={navigation} userType={userType}>
         <View style={styles.container}>
             <ActivityIndicator size="large" color={Colors.purple} />
             <Text style={styles.text}>Processing your mood...</Text>
