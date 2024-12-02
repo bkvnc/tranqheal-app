@@ -3,15 +3,16 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons'; // For icons
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from 'src/providers';
+import { Colors } from 'src/config';
 
 export const MoodResultScreen = ({ navigation, route }) => {
   const { userType } = useContext(AuthenticatedUserContext);
-  const { selectedMood, suggestions } = route.params;
+  const { selectedMood, suggestion } = route.params;
 
   useEffect(() => {
     console.log('Selected Mood:', selectedMood);
-    console.log('Suggestion:', suggestions);
-  }, [selectedMood, suggestions]);
+    console.log('Suggestion:', suggestion);
+  }, [selectedMood, suggestion]);
 
   return (
     <RootLayout screenName={'Mood'} navigation={navigation} userType={userType}>
@@ -19,10 +20,7 @@ export const MoodResultScreen = ({ navigation, route }) => {
        
         {/* Message Box */}
         <View style={styles.messageBox}>
-          <Text style={styles.messageText}>Based on your input, we recommend:</Text>
-          {suggestions.map((item, index) => (
-            <Text key={index} style={styles.suggestionText}>{item}</Text>
-          ))}
+          <Text style={styles.suggestionText}>{suggestion}</Text>
         </View>
 
         {/* Mood Emoji */}
@@ -47,7 +45,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: Colors.white,
   },
   header: {
     flexDirection: 'row',
@@ -61,10 +59,6 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 24,
-  },
-  messageBox: {
-    alignItems: 'center',
-    marginBottom: 20,
   },
   messageText: {
     fontSize: 18,
@@ -81,7 +75,7 @@ const styles = StyleSheet.create({
     height: 100,
   },
   button: {
-    backgroundColor: '#6A0DAD',
+    backgroundColor: Colors.purple,
     paddingVertical: 15,
     borderRadius: 30,
     alignItems: 'center',
@@ -92,9 +86,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  messageBox: {
+    backgroundColor: '#F9F9F9', 
+    padding: 20, 
+    borderRadius: 15, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.1, 
+    shadowRadius: 8, 
+    elevation: 5, 
+    alignItems: 'center', 
+    marginBottom: 20, 
+  },
   suggestionText: {
-    fontSize: 16,
-    marginVertical: 5,
-    color: '#333',
+    fontSize: 18, 
+    textAlign: 'justify', 
+    fontWeight: '600', 
+    color: '#333', 
+    lineHeight: 24, 
   },
 });
