@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons'; // For icons
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
+import { Colors } from '../config';
 
 export const MoodScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
@@ -29,7 +30,7 @@ export const MoodScreen = ({ navigation }) => {
           <Text style={styles.buttonText}>LET'S DO IT</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.button}>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('MoodLogs')}>
           <Text style={styles.buttonText}>Show Mood Logs</Text>
         </TouchableOpacity>
       </View>
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
     height: 100, // Adjust size of the emoji
   },
   button: {
-    backgroundColor: '#6A0DAD', // Purple button
+    backgroundColor: Colors.purple,
     paddingVertical: 15,
     borderRadius: 30,
     alignItems: 'center',

@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useEffect, useContext } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { AuthenticatedUserContext } from '../providers';
 import { RootLayout } from 'src/navigation/RootLayout';
 import { LoadingIndicator } from '../components';
 import { colorPalette, moodData } from '../utils/moodConstants';
-import { Colors } from '../config';
+import { Colors, firestore, auth } from '../config';
+import { doc, addDoc, collection } from 'firebase/firestore';
 
 const { width } = Dimensions.get('window');
 const GRID_SIZE = 10;
@@ -95,10 +96,7 @@ export const MoodMeterScreen = ({ navigation }) => {
       setSelectedMood(mood);
       setSelectedColor(color);
     }
-  };
-  
-  
-  
+  }; 
 
   const renderMoodGrid = () => {
     const dots = [];
@@ -128,6 +126,33 @@ export const MoodMeterScreen = ({ navigation }) => {
     return dots;
   };
 
+  const handleNext = async () => {
+    if (!selectedMood) {
+      Alert.alert('Error', 'Please select a mood.');
+      return;
+    }
+
+    const user = auth.currentUser;
+
+    if (user) {
+      try {
+        const userId = user.uid;
+        
+        const userRef = doc(firestore, 'users', userId);
+        const moodTrackRef = collection(userRef, 'moodTrackings');
+        await addDoc(moodTrackRef, {
+          mood: selectedMood,
+          createdAt: new Date(),
+        });
+        navigation.navigate('MoodProcess', { selectedMood });
+      } catch (error) {
+        console.error('Error adding mood tracking:', error);
+      }
+    } else {
+      console.error('User is not authenticated');
+    }
+  };
+
   if (loading) {
     return <LoadingIndicator />;
   }
@@ -155,7 +180,7 @@ export const MoodMeterScreen = ({ navigation }) => {
         </View>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: selectedColor || Colors.purple }]}
-          onPress={() => navigation.navigate('MoodProcess', { selectedMood })}
+          onPress={handleNext}
         >
           <Text style={styles.buttonText}>Next</Text>
         </TouchableOpacity>
