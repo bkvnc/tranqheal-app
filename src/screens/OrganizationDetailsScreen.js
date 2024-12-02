@@ -124,32 +124,38 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
       <ScrollView contentContainerStyle={styles.container}>
         <Image source={{ uri: profilePicture }} style={styles.orgImage} />
         <Text style={styles.orgName}>{organizationName}</Text>
+        <TouchableOpacity style={styles.iconContainer} onPress={() => console.log('Facebook icon clicked')}>
+            <Ionicons name="logo-facebook" size={28} color="#3b5998" />
+        </TouchableOpacity>
         <View style={styles.divider} />
         <Text style={styles.detailsText}>Email: {email || 'N/A'}</Text>
         <Text style={styles.detailsText}>Phone: {phoneNumber || 'N/A'}</Text>
-
-        <Text style={styles.detailsTitle}>Services Offered:</Text>
-        {formatBulletedList(servicesOffered, 3)}
-
-        <Text style={styles.detailsTitle}>Hours Available:</Text>
-        <Text style={styles.detailsText}>
-          {timeStart12 && timeEnd12 ? `${timeStart12} - ${timeEnd12}` : 'N/A'}
-        </Text>
-
-        <Text style={styles.detailsTitle}>Days Available:</Text>
-        {formatBulletedList(daysArray, 4)}
-
         <Text style={styles.detailsTitle}>Address:</Text>
         <Text style={styles.detailsText}>{address || 'N/A'}</Text>
 
+        <View style={styles.card}>
+          <Text style={styles.detailsTitle}>Services Offered:</Text>
+          {formatBulletedList(servicesOffered, 3)}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.detailsTitle}>Hours Available:</Text>
+          <Text style={styles.detailsText}>
+            {timeStart12 && timeEnd12 ? `${timeStart12} - ${timeEnd12}` : 'N/A'}
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.detailsTitle}>Days Available:</Text>
+          {formatBulletedList(daysArray, 4)}
+        </View>
+        
         {userType === 'professional' && (
           <TouchableOpacity style={styles.applyButton} onPress={handleApplyOrganization}>
             <Text style={styles.applyButtonText}>Apply Organization</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={styles.iconContainer} onPress={() => console.log('Facebook icon clicked')}>
-            <Ionicons name="logo-facebook" size={28} color="#3b5998" />
-        </TouchableOpacity>
+       
       </ScrollView>
     </RootLayout>
   );
@@ -158,59 +164,86 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: Colors.white,
+    paddingHorizontal: 20,
+    paddingVertical: 30,
   },
   orgImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120, 
+    height: 120,
+    borderRadius: 60, 
     alignSelf: 'center',
-    marginBottom: 5,
+    marginBottom: 10,
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5, 
   },
   orgName: {
-    fontSize: 24,
+    fontSize: 28, 
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 5,
+    color: '#333', 
+    marginBottom: 10,
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.grey,
+    backgroundColor: '#e0e0e0', 
     marginVertical: 20,
-    marginTop: 5,
-    marginBottom: 5,
   },
   detailsTitle: {
-    fontSize: 18,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333', 
     marginTop: 10,
     marginBottom: 5,
   },
   detailsText: {
     fontSize: 16,
+    color: '#555', 
+    lineHeight: 22, 
     marginBottom: 5,
   },
   bulletItem: {
     fontSize: 16,
+    color: '#555',
     marginBottom: 5,
-    marginLeft: 10,
+    marginLeft: 15, 
+  },
+  card: {
+    backgroundColor: '#fff',
+    padding: 15,
+    marginVertical: 10,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3, 
   },
   applyButton: {
-    backgroundColor: Colors.purple,
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: '#6A0DAD',
+    paddingVertical: 15,
+    paddingHorizontal: 25,
+    borderRadius: 50, 
     alignItems: 'center',
     marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 2,
   },
   applyButtonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: 1, 
   },
   iconContainer: {
-    marginTop: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
   },
 });
+

@@ -90,46 +90,53 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
 
   return (
     <RootLayout navigation={navigation} screenName="ProfessionalDetails" userType={userType}>
-      <ScrollView>
-        <View style={styles.imageContainer}>
-          <Image
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.centerContent}>
+          <Image 
             source={{ uri: professional.profileImage }} 
-            style={styles.image}
+            style={styles.image} 
           />
-        </View>
-        <View style={styles.detailsContainer}>
-          <Text style={{ fontSize: 30, fontWeight: 'bold' }}>{professional.fullName}</Text>
+          <Text style={styles.profileName}>
+            {professional.fullName}
+          </Text>
           <View style={styles.ratingRow}>
             <Text style={{ fontWeight: 'bold', marginRight: 5 }}>
               {professional.rating?.toFixed(1) || 'N/A'}
             </Text>
             <View style={styles.starContainer}>{renderStars(professional.rating || 0)}</View>
           </View>
-          <View style={styles.divider} />
+          <TouchableOpacity 
+            style={styles.iconContainer} 
+            onPress={() => console.log('Facebook icon clicked')}>
+            <Ionicons name="logo-facebook" size={28} color="#3b5998" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.card}>
           <Text style={styles.detailsTitle}>Profile Details</Text>
           <Text style={styles.detailsText}>Age: {professional.age || 'N/A'}</Text>
           <Text style={styles.detailsText}>Gender: {professional.gender || 'N/A'}</Text>
-          <View style={styles.divider} />
+        </View>
+        <View style={styles.card}>
           <Text style={styles.detailsTitle}>Availability</Text>
           <Text style={styles.detailsText}>
             {professional.availability.length > 0
               ? professional.availability.join('    ')
               : 'Not available'}
           </Text>
-          <View style={styles.divider} />
+        </View>
+        <View style={styles.card}>
           <Text style={styles.detailsTitle}>Specialization</Text>
           <Text style={styles.detailsText}>
             {professional.specialization.length > 0
               ? professional.specialization.join('    ')
               : 'None'}
           </Text>
-          <View style={styles.divider} />
+        </View>
+        <View style={styles.card}>
           <Text style={styles.detailsTitle}>Contact Details</Text>
           <Text style={styles.detailsText}>Phone: {professional.mobileNumber || 'N/A'}</Text>
           <Text style={styles.detailsText}>Email: {professional.email || 'N/A'}</Text>
-          <TouchableOpacity style={styles.iconContainer} onPress={() => console.log('Facebook icon clicked')}>
-            <Ionicons name="logo-facebook" size={28} color="#3b5998" />
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </RootLayout>
@@ -137,49 +144,91 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  imageContainer: {
-    alignItems: 'center',
-    marginBottom: 5,
-    marginTop: 5,
+  container: {
+    paddingVertical: 30,
+  },
+  centerContent: {
+    alignItems: 'center', 
+    justifyContent: 'center', 
   },
   image: {
     width: 150,
     height: 150,
-    borderRadius: 100,
+    borderRadius: 75,
+    borderWidth: 2,
+    borderColor: '#d1d1d1',
+    backgroundColor: '#f8f8f8',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
-  detailsContainer: {
-    alignItems: 'center',
-  },
-  detailsTitle: {
-    fontSize: 24,
+  profileName: {
+    fontSize: 30,
     fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  detailsText: {
-    fontSize: 16,
-  
     textAlign: 'center',
+    marginVertical: 10,
   },
   starContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    marginTop: 5,
-    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#ddd',
-    marginVertical: 20,
-    width: '90%',
-    marginBottom: 10 ,
+    alignItems: 'center',
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-
+    marginVertical: 10,
+    marginTop: 5,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    borderRadius: 20,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    padding: 15,
+    marginVertical: 10,
+    marginTop: 5,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#eaeaea',
+    width: '90%',
+    alignSelf: 'center',
+  },
+  detailsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  detailsText: {
+    fontSize: 16,
+    color: '#555',
+    lineHeight: 22,
+    marginBottom: 5,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+    marginVertical: 20,
+    marginTop: 5,
+    marginBottom : 10,
+    width: '90%',
+    alignSelf: 'center',
   },
 });
+
+
+
+
+
+
+
