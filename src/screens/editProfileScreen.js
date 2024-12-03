@@ -21,20 +21,24 @@ export const EditProfileScreen = ({ navigation }) => {
   const fetchProfileData = async () => {
     const user = auth.currentUser;
     if (!user) return;
-
-    const userRef = doc(firestore, 'users', user.uid);
-    const userDoc = await getDoc(userRef);
-
-    if (userDoc.exists()) {
-      const data = userDoc.data();
-      // Set to existing data if available
-      setFirstName(data.firstName || '');
-      setMiddleName(data.middleName || '');
-      setLastName(data.lastName || '');
-      setAge(data.age || '');
-      setGender(data.gender || '');
-      setMobileNumber(data.mobileNumber || '');
-      setFacebookLink(data.facebookLink || '');
+    try {
+      const userRef = doc(firestore, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        // Set to existing data if available
+        setFirstName(data.firstName || '');
+        setMiddleName(data.middleName || '');
+        setLastName(data.lastName || '');
+        setAge(data.age || '');
+        setGender(data.gender || '');
+        setMobileNumber(data.mobileNumber || '');
+        setFacebookLink(data.facebookLink || '');
+      } else {
+        console.log('No such document!');
+      }
+    } catch (error) {
+      console.log('Error fetching profile data:', error.message);
     }
     setIsLoading(false);
   };
