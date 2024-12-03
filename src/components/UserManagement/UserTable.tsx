@@ -299,7 +299,7 @@ const UserTable = () => {
             const uniqueKey = `${report.contentType}-${report.id}-${report.forumId}${report.postId ? `-${report.postId}` : ''}${report.commentId ? `-${report.commentId}` : ''}`;
             
             return (
-              <tr key={uniqueKey} className="border-b dark:border-strokedark">
+              <tr key={uniqueKey} >
                 <td>{report.authorName}</td>
                 <td>{report.reportedBy}</td>
                 <td>{report.reason}</td>

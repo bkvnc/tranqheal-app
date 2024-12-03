@@ -16,7 +16,7 @@ const RemoveOrganization = lazy(() => import('../pages/CustomPages/OrganizationM
 const PendingApplications = lazy(() => import('../pages/CustomPages/ProfessionalManagement/PendingApplications'));
 
 
-
+const DashboardForums = lazy(() => import('../pages/CustomPages/ForumsTrends'));  
 
 
 
@@ -63,6 +63,11 @@ const coreRoutes = [
       path: '/forums/:forumId/posts/:postId',
       title: 'Post Details',
       component: PostDetailsPage,
+  },
+  {
+    path: '/dashboardforums',
+    title: 'Dashboard Forums',
+    component: DashboardForums,
   },
   {
     path: '/users/:userId',
