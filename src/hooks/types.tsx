@@ -57,6 +57,7 @@ export interface Post {
     authorName: string;
     authorType: string;
     imageUrl?: string;
+    reportCount: number;
 }
 
 
@@ -72,7 +73,7 @@ export interface Comment {
     reactedBy?: string[];
     reacted?: number;
     replies?: Comment[]
-    
+    reportCount: number;
 }
 
 
