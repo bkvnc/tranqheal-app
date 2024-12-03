@@ -40,6 +40,7 @@ export const EditProfileScreen = ({ navigation }) => {
   };
   
   useEffect(() => {
+    setIsLoading(true);
     fetchProfileData();
   }, []);
 
