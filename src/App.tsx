@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import { Route, Routes, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from "react-toastify";
 import SignIn from './pages/Authentication/SignIn';
-import SignUp from './pages/Authentication/SignUp';
+import ForgotPassword from './pages/Authentication/ForgotPassword';
 import Loader from './common/Loader';
 import routes from './routes';
 import Dashboard from './pages/CustomPages/ForumsTrends';
@@ -53,14 +53,15 @@ function App() {
   useEffect(() => {
     const checkAuth = () => {
       const user = auth.currentUser;
-      if (user) {
-        setIsAuthenticated(true);
-      } else {
+      const isForgotPasswordRoute = window.location.pathname === '/forgot-password';
+      if (!user && !isForgotPasswordRoute) {
         setIsAuthenticated(false);
         navigate('/auth/signin');
+      } else if (user) {
+        setIsAuthenticated(true);
       }
     };
-
+  
     setTimeout(() => {
       setLoading(false);
       checkAuth();
@@ -83,7 +84,7 @@ function App() {
       <ToastContainer />
         <Routes>
           <Route path="/auth/signin" element={<SignIn />} />
-          <Route path="/auth/signup" element={<SignUp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           {isAuthenticated ? (
             <Route element={<DefaultLayout />}>
               <Route index element={<Dashboard />} />

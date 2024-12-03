@@ -452,15 +452,20 @@ const PostDetailsPage: React.FC = () => {
    
 
     return (
-        <div className="container mx-auto bg-white rounded-lg p-6 shadow-lg dark:bg-boxdark">
+        <div className="container mx-auto bg-white rounded-lg p-6 shadow-lg dark:bg-boxdark relative">
+                <div className=" absolute top-4 right-4  text-black dark:text-white text-sm font-semibold px-3 rounded-full shadow">
+                    {post.reportCount} {post.reportCount=== 1 ? 'Report' : 'Reports'}
+                </div>
             <div className="mb-6">
+            
                 <h1 className="text-4xl font-bold mb-2">{post.title}</h1>
                 <p className="text-sm text-gray-500">
                     By <a href={`/profile/${post.authorId}`} className="text-blue-500 hover:underline">{post.authorName}</a> on {dayjs(post.dateCreated.toDate()).format('MMM D, YYYY')}
                 </p>
+                
                 <p className="text-gray-700">{post.content}</p>
             </div>
-
+                
               {/* Add image display */}
                 {post.imageUrl && (
                     <div className="mt-4 mb-4">
@@ -528,6 +533,10 @@ const PostDetailsPage: React.FC = () => {
                         <ul className="space-y-4">
                             {comments.map(comment => (
                                 <li key={comment.id} className="p-6 bg-white shadow-md rounded-lg border border-gray-200 transition-transform transform hover:scale-105">
+                                    
+                                            <p className=" absolute top-4 right-4  text-black text-sm  ">
+                                            {comment.reportCount} {comment.reportCount=== 1 ? 'Report' : 'Reports'}
+                                            </p>
                                     <p className="text-gray-800">{comment.content}</p>
                                     <p className="text-sm text-black">
                                         By <a href={`/profile/${comment.authorId}`} className="text-blue-500 hover:underline">{comment.authorName}</a> on {formattedDate(comment.dateCreated)}

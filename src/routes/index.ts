@@ -57,10 +57,13 @@ const ForumDetails = lazy(() => import('../pages/CustomPages/ForumManagement/For
 const PostDetailsPage = lazy(() => import('../pages/CustomPages/ForumManagement/PostDetailsPage'));
 const ViewUserProfile = lazy(() => import('../pages/CustomPages/UserManagement/UserProfilePage'));
 const ViewPendingPosts = lazy(() => import('../pages/CustomPages/ForumManagement/ViewPendingPosts'));
+const ViewForumReports = lazy(() => import('../pages/CustomPages/ForumManagement/ViewForumReports'));
 
 
 
 const  BannedSuspendedUsers = lazy(() => import('../pages/CustomPages/BannedSuspendedUsers'));
+
+
 
 
 
@@ -84,6 +87,11 @@ const coreRoutes = [
     path: '/pending-posts',
     title: 'Pending Posts',
     component: ViewPendingPosts,
+  },
+  {
+    path: '/forum-reports',
+    title: 'Forum Reports',
+    component: ViewForumReports,
   },
   {
     path: '/forums/:forumId',
