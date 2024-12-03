@@ -8,12 +8,6 @@ const Settings = lazy(() => import('../pages/Settings'));
 
 
 
-const CallerFeedback = lazy(() => import('../pages/CustomPages/CallerFeedback'));
-const CallerRating = lazy(() => import('../pages/CustomPages/CallerRating'));
-const CallerConcerns = lazy(() => import('../pages/CustomPages/CallerConcerns'));
-const ForumTrends = lazy(() => import('../pages/CustomPages/ForumsTrends'));
-const LibraryTrends = lazy(() => import('../pages/CustomPages/LibraryTrends'));
-const ResponderPerformance = lazy(() => import('../pages/CustomPages/ResponderPerformance'));
 
 // ORGANIZATION MANAGEMENT
 const RegisterOrganization = lazy(() => import('../pages/CustomPages/OrganizationManagement/RegisterNewOrganization'));
@@ -21,13 +15,9 @@ const RemoveOrganization = lazy(() => import('../pages/CustomPages/OrganizationM
 
 const PendingApplications = lazy(() => import('../pages/CustomPages/ProfessionalManagement/PendingApplications'));
 
-// LIBRARY MANAGEMENT
-const ViewAllResources = lazy(() => import('../pages/CustomPages/LibraryManagement/ViewAllResources'));
-const AddResources = lazy(() => import('../pages/CustomPages/LibraryManagement/AddResource'));
 
 
-// LATEST CALLS
-const LatestCalls = lazy(() => import('../pages/CustomPages/ListCalls'));
+
 
 
 //SUBSCRIPTION MANAGEMENT
@@ -68,11 +58,7 @@ const  BannedSuspendedUsers = lazy(() => import('../pages/CustomPages/BannedSusp
 
 
 const coreRoutes = [
-  {
-    path: '/calls',
-    title: 'calls',
-    component: LatestCalls,
-  },
+ 
     {
       path: '/forums/:forumId/posts/:postId',
       title: 'Post Details',
@@ -164,16 +150,7 @@ const coreRoutes = [
     title: 'Checkout Failed',
     component: CheckoutFailed,
   },
-  {
-    path: '/add-resources',
-    title: 'Resource Library',
-    component: AddResources,
-  },
-  {
-    path: '/view-resources',
-    title: 'Resource Library',
-    component: ViewAllResources,
-  },
+
   {
     path: '/pending-applications',
     title: 'Pending Applications',
@@ -190,36 +167,7 @@ const coreRoutes = [
     title: 'Register Mental Health Organization',
     component: RegisterOrganization,
   },
-  {
-    path: '/performance',
-    title: 'Hotline Responder Performance',
-    component: ResponderPerformance,
-  },
-  {
-    path: '/library',
-    title: 'Resource Library Trends',
-    component: LibraryTrends,
-  },
-  {
-    path: '/dashboardforums',
-    title: 'Forum Trends',
-    component: ForumTrends,
-  },
-  {
-    path: '/concerns',
-    title: 'Caller Concerns',
-    component: CallerConcerns,
-  },
-  {
-    path: '/rating',
-    title: 'Caller Rating',
-    component: CallerRating,
-  },
-  {
-    path: '/feedback',
-    title: 'Caller Feedback',
-    component: CallerFeedback,
-  },
+  
   
   {
     path: '/profile/:authorId',
