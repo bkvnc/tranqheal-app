@@ -8,11 +8,11 @@ import routes from './routes';
 import Dashboard from './pages/CustomPages/ForumsTrends';
 import { auth } from './config/firebase';
 import 'tailwindcss/tailwind.css';
-import { onMessage } from "firebase/messaging";
-import { messaging } from "./config/firebase";
-import { getToken } from 'firebase/messaging';
-import Message from "./components/Messaage";
-import { saveTokenToFirestore } from './service/fcmService';
+// import { onMessage } from "firebase/messaging";
+// import { messaging } from "./config/firebase";
+// import { getToken } from 'firebase/messaging';
+// import Message from "./components/Messaage";
+// import { saveTokenToFirestore } from './service/fcmService';
 import "react-toastify/dist/ReactToastify.css";
 
 const DefaultLayout = lazy(() => import('./layout/DefaultLayout'));
@@ -68,12 +68,12 @@ function App() {
     }, 1000);
   }, [navigate]);
 
-  useEffect(() => {
-    const unsubscribe = onMessage(messaging, (payload) => {
-      toast(<Message notification={payload.notification} />);
-    });
-    return unsubscribe;
-  }, []);
+  // useEffect(() => {
+  //   const unsubscribe = onMessage(messaging, (payload) => {
+  //     toast(<Message notification={payload.notification} />);
+  //   });
+  //   return unsubscribe;
+  // }, []);
 
   if (loading) {
     return <Loader />;
