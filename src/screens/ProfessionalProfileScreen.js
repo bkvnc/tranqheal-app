@@ -106,9 +106,6 @@ export const ProfessionalProfileScreen = () => {
 
           {/* Specialty and Rating */}
           <View style={styles.additionalInfo}>
-            <Text style={styles.specialtyText}>
-              Specialty: {profileData ? profileData.specialty || 'N/A' : 'Loading...'}
-            </Text>
             <Text style={styles.ratingText}>
               Rating: {profileData ? `${profileData.rating || 'N/A'} / 5` : 'Loading...'}
             </Text>

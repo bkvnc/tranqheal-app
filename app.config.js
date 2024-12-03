@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { version } from "react";
 
 export default {
   expo: {
@@ -19,7 +20,9 @@ export default {
     updates: {
       fallbackToCacheTimeout: 0,
     },
-    assetBundlePatterns: ["**/*"],
+    assetBundlePatterns: [
+      "assets/**/*",
+    ],
     ios: {
       supportsTablet: true,
     },
@@ -37,8 +40,10 @@ export default {
       redirectUri: "https://auth.expo.io/@bkvnc/tranqheal-mobile",
     },
     android: {
-      permissions: ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
+      permissions: ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "INTERNET", "CAMERA"],
       package: "com.tranqheal.app",
+      versionCode: 1,
+      googleServicesFile: "./google-services.json",
     },
     "newArchEnabled": true
   },
