@@ -14,14 +14,19 @@ export const ProfessionalRegisterScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     const fetchOrganizations = async () => {
-      const orgsSnapshot = await getDocs(collection(firestore, 'organizations'));
-      const orgList = orgsSnapshot.docs.map(doc => ({
-        label: doc.data().organizationName,
-        value: doc.id,
-        key: doc.id,
-      }));
-      setOrganizations(orgList);
-      setIsLoading(false);
+
+      try {
+        const orgsSnapshot = await getDocs(collection(firestore, 'organizations'));
+        const orgList = orgsSnapshot.docs.map(doc => ({
+          label: doc.data().organizationName,
+          value: doc.id,
+          key: doc.id,
+        }));
+        setOrganizations(orgList);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching organizations:', error.message);
+      }
     };
     fetchOrganizations();
   }, []);

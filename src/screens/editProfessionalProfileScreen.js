@@ -5,6 +5,7 @@ import { RootLayout } from '../navigation/RootLayout';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, firestore, Colors } from '../config';
 import { AuthenticatedUserContext } from '../providers';
+import { LoadingIndicator } from 'src/components';
 
 export const EditProfessionalProfileScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
@@ -17,27 +18,33 @@ export const EditProfessionalProfileScreen = ({ navigation }) => {
   const [facebookLink, setFacebookLink] = useState('');
   const [availability, setAvailability] = useState({ morning: false, afternoon: false, evening: false });
   const [specialization, setSpecialization] = useState({ depress: false, anxiety: false, stress: false });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchProfileData = async () => {
       const user = auth.currentUser;
       if (!user) return;
 
-      const userRef = doc(firestore, 'professionals', user.uid);
-      const userDoc = await getDoc(userRef);
+      try {
+        const userRef = doc(firestore, 'professionals', user.uid);
+        const userDoc = await getDoc(userRef);
 
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        // Set to existing data if available
-        setFirstName(data.firstName || '');
-        setMiddleName(data.middleName || '');
-        setLastName(data.lastName || '');
-        setAge(data.age || '');
-        setGender(data.gender || '');
-        setMobileNumber(data.mobileNumber || '');
-        setFacebookLink(data.facebookLink || '');
-        setAvailability(data.availability || { morning: false, afternoon: false, evening: false });
-        setSpecialization(data.specialization || { depress: false, anxiety: false, stress: false });
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          // Set to existing data if available
+          setFirstName(data.firstName || '');
+          setMiddleName(data.middleName || '');
+          setLastName(data.lastName || '');
+          setAge(data.age || '');
+          setGender(data.gender || '');
+          setMobileNumber(data.mobileNumber || '');
+          setFacebookLink(data.facebookLink || '');
+          setAvailability(data.availability || { morning: false, afternoon: false, evening: false });
+          setSpecialization(data.specialization || { depress: false, anxiety: false, stress: false });
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.log('Error fetching profile data:', error.message);
       }
     };
 
@@ -87,6 +94,10 @@ export const EditProfessionalProfileScreen = ({ navigation }) => {
       alert('Failed to update profile. Please try again.');
     }
   };
+
+  if (isLoading) {
+    return <LoadingIndicator />;
+  }
 
   return (
     <RootLayout navigation={navigation} screenName="EditProfessionalProfile" userType={userType}>
