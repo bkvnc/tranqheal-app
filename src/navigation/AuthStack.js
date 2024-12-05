@@ -14,6 +14,7 @@ export const AuthStack = () => {
             <Stack.Screen name="Signup" component={SignupScreen} initialParams={{ userType: 'seeker' }} />
             <Stack.Screen name="ProfessionalRegister" component={ProfessionalRegisterScreen} initialParams={{ userType: 'professional' }} />
             <Stack.Screen name="UploadCredentials" component={UploadCredentialsScreen} />
+            
         </Stack.Navigator>
     );
 }
