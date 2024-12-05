@@ -169,7 +169,18 @@ export interface Professional {
     createdAt: any;
     lastLogin: any;
     dateApproved: any;
+    mobileNumber: string;
+    professionalId: string; 
+    specialization: string;
+    description: string;
+    facebookLink: string;
+    linkedInLink: string;
+    instagramLink: string;
+    twitterLink: string;
+    profilePicture: string;
+    profileImage: string;
     status: string;
+    availability:[];
 }
 
 export interface Subscription {

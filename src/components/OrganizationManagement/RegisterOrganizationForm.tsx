@@ -10,7 +10,7 @@ const db = getFirestore();
 const storage = getStorage();
 
 const DEFAULT_PROFILE_PICTURE_PATH = '/defaultImages/defaultAva.png'; // Path in Firestore storage
-const DEFAULT_BACKGROUD_PICTURE = 'src/images/cover/cover-01.png';
+const DEFAULT_BACKGROUD_PICTURE = '/defaultImages/cover-01.png';
 
 type UserType = 'organization' | 'admin';
 
@@ -55,6 +55,7 @@ const Register: React.FC = () => {
 
     const [loading, setLoading] = useState<boolean>(false);
     const [profilePictureUrl, setProfilePictureUrl] = useState<string>('');
+    const [backgroundPictureUrl, setBackgroundPictureUrl] = useState<string>('');
 
 
     useEffect(() => {
@@ -70,6 +71,21 @@ const Register: React.FC = () => {
         };
 
         fetchDefaultProfilePicture();
+    }, []);
+
+    useEffect(() => {
+        const fetchDefaultBackgroundPicture = async () => {
+            try {
+                const backgroundPictureRef = ref(storage, DEFAULT_BACKGROUD_PICTURE);
+                const url = await getDownloadURL(backgroundPictureRef);
+                setBackgroundPictureUrl(url); 
+            } catch (error) {
+                console.error('Error fetching background picture:', error);
+                toast.error('Error fetching default background picture.');
+            }
+        };
+
+        fetchDefaultBackgroundPicture();
     }, []);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -126,7 +142,7 @@ const Register: React.FC = () => {
                 userType: formData.userType,
                 createdAt: serverTimestamp(),
                 profilePicture: profilePictureUrl || '', 
-                backgroundPicture: DEFAULT_BACKGROUD_PICTURE,
+                backgroundPicture: backgroundPictureUrl || '',
                 status: 'Unverified',
             };
 
