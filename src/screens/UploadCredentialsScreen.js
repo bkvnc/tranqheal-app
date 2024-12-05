@@ -9,7 +9,7 @@ import { collection, addDoc, setDoc, doc, getDoc } from 'firebase/firestore';
 
 export const UploadCredentialsScreen = ({ navigation, route }) => {
   const { isRegistered, organizationId, organizationName, userType, userStatus } = route.params;
-  const [file, setFile] = useState(null); // To store the file chosen
+  const [file, setFile] = useState(null); 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [fetchedFirstName, setFetchedFirstName] = useState('');
@@ -104,6 +104,8 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
 
       console.log('userType:', userType);
       console.log('userStatus:', userStatus);
+      console.log('organizationId:', organizationId);
+      console.log('organizationName:', organizationName);
 
       await setDoc(doc(firestore, 'professionals', user.uid), { firstName: submitFirstName, lastName: submitLastName }, { merge: true });
       console.log('Professional name added successfully!');

@@ -4,24 +4,36 @@ import RNPickerSelect from 'react-native-picker-select';
 import { firestore } from '../config';
 import { collection, getDocs } from 'firebase/firestore';
 import { Alert } from 'react-native';
+import { LoadingIndicator } from 'src/components';
 
 export const ProfessionalRegisterScreen = ({ navigation, route }) => {
   const { userType } = route.params;
   const [organizations, setOrganizations] = useState([]);
   const [selectedOrg, setSelectedOrg] = useState(null);
+  const [ isLoading, setIsLoading ] = useState(true);
 
   useEffect(() => {
     const fetchOrganizations = async () => {
-      const orgsSnapshot = await getDocs(collection(firestore, 'organizations'));
-      const orgList = orgsSnapshot.docs.map(doc => ({
-        label: doc.data().organizationName,
-        value: doc.id,
-        key: doc.id,
-      }));
-      setOrganizations(orgList);
+
+      try {
+        const orgsSnapshot = await getDocs(collection(firestore, 'organizations'));
+        const orgList = orgsSnapshot.docs.map(doc => ({
+          label: doc.data().organizationName,
+          value: doc.id,
+          key: doc.id,
+        }));
+        setOrganizations(orgList);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching organizations:', error.message);
+      }
     };
     fetchOrganizations();
   }, []);
+
+  if (isLoading) {
+    return <LoadingIndicator />;
+  }
 
   return (
     <View style={styles.container}>

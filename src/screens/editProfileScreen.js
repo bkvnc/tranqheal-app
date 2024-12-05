@@ -7,40 +7,22 @@ import { RootLayout } from '../navigation/RootLayout';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, firestore } from '../config';
 
-export const EditProfileScreen = ({ navigation }) => {
+export const EditProfileScreen = ({ navigation, route }) => {
   const { userType} = useContext(AuthenticatedUserContext);
+  const { profileData } = route.params;
   const [isLoading, setIsLoading] = useState(true);
-  const [firstName, setFirstName] = useState('');
-  const [middleName, setMiddleName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [age, setAge] = useState('');
-  const [gender, setGender] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [facebookLink, setFacebookLink] = useState('');
-
+  
+  const [firstName, setFirstName] = useState(profileData?.firstName || '');
+  const [lastName, setLastName] = useState(profileData?.lastName || '');
+  const [middleName, setMiddleName] = useState(profileData?.middleName || '');
+  const [age, setAge] = useState(profileData?.age || '');
+  const [gender, setGender] = useState(profileData?.gender || '');
+  const [mobileNumber, setMobileNumber] = useState(profileData?.mobileNumber || '');
+  const [facebookLink, setFacebookLink] = useState(profileData?.facebookLink || '');
+  
   useEffect(() => {
-    const fetchProfileData = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const userRef = doc(firestore, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        // Set to existing data if available
-        setFirstName(data.firstName || '');
-        setMiddleName(data.middleName || '');
-        setLastName(data.lastName || '');
-        setAge(data.age || '');
-        setGender(data.gender || '');
-        setMobileNumber(data.mobileNumber || '');
-        setFacebookLink(data.facebookLink || '');
-      }
-      setIsLoading(false);
-    };
-
-    fetchProfileData();
+    const timeout = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timeout);
   }, []);
 
   const handleSubmit = async () => {

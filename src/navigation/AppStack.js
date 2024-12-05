@@ -5,7 +5,7 @@ import { HomeScreen, MenuScreen, NotificationScreen, ProfileScreen, EditProfileS
     ViewProfScreen, ProfessionalDetailsScreen, ViewOrgScreen, OrganizationDetailsScreen,
     SAPreferenceScreen, SAScreen, SelfAssessmentLogs, SAScreen2, SAScreen3, SAResultScreen, 
     MoodScreen, MoodProcessScreen, MoodMeterScreen, MoodResultScreen, MoodLogsScreen, MatchingScreen, 
-    SeekProfessionalScreen, SuccessScreen
+    SeekProfessionalScreen, SuccessScreen, AboutUs
 } from '../screens';
 
 
@@ -18,6 +18,7 @@ export const AppStack = () => {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Menu" component={MenuScreen} />
+            <Stack.Screen name="AboutUs" component={AboutUs} />
             <Stack.Screen name="ForumMain" component={ForumStack} /> 
             <Stack.Screen name="Notifications" component={NotificationScreen} /> 
             <Stack.Screen name="Profile" component={ProfileScreen} /> 

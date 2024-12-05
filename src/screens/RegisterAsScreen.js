@@ -4,29 +4,25 @@ import { View, Image, StyleSheet, TouchableOpacity, Text } from 'react-native';
 export const RegisterAsScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
-      {/* Logo Image */}
       <Image 
-        source={require('../assets/tranqheal-logo.png')}  // Replace with the actual path to your logo file
+        source={require('../assets/tranqheal-logo.png')}
         style={styles.logo}
         resizeMode="contain"
       />
 
       <View style={styles.centerContent}>
-                {/* Register As Text */}
-                <Text style={styles.textStyle}>Register as?</Text>
-        
-        {/* Seeker Button */}
+        <Text style={styles.textStyle}>Register as?</Text>
+
         <TouchableOpacity 
           style={styles.button}
-          onPress={() => navigation.navigate('Signup', { userType: 'seeker' })} // Adjust navigation
+          onPress={() => navigation.navigate('Signup', { userType: 'seeker' })}
         >
           <Text style={styles.buttonText}>Seeker</Text>
         </TouchableOpacity>
-        
-        {/* Professional Button */}
+
         <TouchableOpacity 
           style={styles.button}
-          onPress={() => navigation.navigate('ProfessionalRegister', { userType: 'professional' })} // Adjust navigation
+          onPress={() => navigation.navigate('ProfessionalRegister', { userType: 'professional' })} 
         >
           <Text style={styles.buttonText}>Professional</Text>
         </TouchableOpacity>
@@ -34,7 +30,7 @@ export const RegisterAsScreen = ({ navigation }) => {
         <Text style={styles.textStyle}>Already Have an Account?</Text>
         <TouchableOpacity 
           style={styles.button}
-          onPress={() => navigation.navigate('Login')} // Adjust navigation
+          onPress={() => navigation.navigate('Login')} 
         >
           <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>
@@ -48,12 +44,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    backgroundColor: '#fff',  // White background
+    backgroundColor: '#fff', 
   },
   logo: {
-    width: 300,   // Adjust the size of the logo as needed
-    height: 300,  // Adjust the size of the logo as needed
-    marginTop: 50,  // Space between logo and text/buttons
+    width: 300,  
+    height: 300, 
+    marginTop: 50,  
   },
   centerContent: {
     flex: 1,
@@ -69,16 +65,16 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   button: {
-    backgroundColor: '#9B51E0', // Purple button color
-    borderRadius: 25,  // Rounded button
+    backgroundColor: '#9B51E0',
+    borderRadius: 25,  
     paddingVertical: 15,
     paddingHorizontal: 30,
-    marginVertical: 10,  // Space between the two buttons
-    width: 250,  // Adjust button width as needed
+    marginVertical: 10,  
+    width: 250,  
     alignItems: 'center',
   },
   buttonText: {
-    color: '#fff',  // White text color
+    color: '#fff',  
     fontSize: 18,
     fontWeight: 'bold',
   }

@@ -106,9 +106,6 @@ export const ProfessionalProfileScreen = () => {
 
           {/* Specialty and Rating */}
           <View style={styles.additionalInfo}>
-            <Text style={styles.specialtyText}>
-              Specialty: {profileData ? profileData.specialty || 'N/A' : 'Loading...'}
-            </Text>
             <Text style={styles.ratingText}>
               Rating: {profileData ? `${profileData.rating || 'N/A'} / 5` : 'Loading...'}
             </Text>
@@ -120,7 +117,7 @@ export const ProfessionalProfileScreen = () => {
             </Text>
             <TouchableOpacity
               style={styles.editButton}
-              onPress={() => navigation.navigate('EditProfessionalProfile')}
+              onPress={() => navigation.navigate('EditProfessionalProfile', { profileData })}
             >
               <Ionicons name="pencil-outline" size={20} color="black" />
             </TouchableOpacity>

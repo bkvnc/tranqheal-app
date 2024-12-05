@@ -17,58 +17,77 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
   const { professionalId } = route.params || {}; 
   const { userType } = useContext(AuthenticatedUserContext);
   const [professional, setProfessional] = useState(null);
+  const [organizationData, setOrganizationData] = useState(null);
   const [isloading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProfessionalDetails = async () => {
+    const fetchDetails = async () => {
       try {
         if (!professionalId) {
           throw new Error('No professionalId provided in route params.');
         }
-
+  
+        // Fetch professional details
         const professionalRef = doc(firestore, 'professionals', professionalId);
         const docSnap = await getDoc(professionalRef);
-
+  
         if (docSnap.exists()) {
           const data = docSnap.data();
-
+  
           const fullName = [
             data.firstName,
             data.middleName,
             data.lastName
           ].filter(Boolean).join(' ');
-
+  
           const availability = data.availability
             ? Object.entries(data.availability)
                 .filter(([_, value]) => value) 
                 .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1)) 
             : [];
-
+  
           const specialization = data.specialization
             ? Object.entries(data.specialization)
                 .filter(([_, value]) => value) 
                 .map(([key]) => SPECIALIZATION_MAPPING[key] || key) 
             : [];
-
-          setProfessional({
+  
+          const professionalData = {
             ...data,
             fullName,
             availability,
             specialization,
-          });
+            underOrg: data.underOrg || null,
+          };
+  
+          setProfessional(professionalData);
+  
+          // Fetch organization details if `underOrg` exists
+          if (professionalData.underOrg) {
+            const organizationRef = doc(firestore, 'organizations', professionalData.underOrg);
+            const orgDocSnap = await getDoc(organizationRef);
+  
+            if (orgDocSnap.exists()) {
+              setOrganizationData(orgDocSnap.data());
+            } else {
+              console.warn('Organization document not found.');
+            }
+          }
         } else {
           console.warn('Professional document not found.');
         }
       } catch (error) {
-        console.error('Error fetching professional details:', error.message);
+        console.error('Error fetching details:', error.message);
       } finally {
         setIsLoading(false);
       }
     };
-
-    fetchProfessionalDetails();
+  
+    fetchDetails();
   }, [professionalId]);
+  
 
+  
   const renderStars = (rating = 0) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -138,6 +157,12 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
           <Text style={styles.detailsText}>Phone: {professional.mobileNumber || 'N/A'}</Text>
           <Text style={styles.detailsText}>Email: {professional.email || 'N/A'}</Text>
         </View>
+        {professional.underOrg && organizationData && (
+          <View style={styles.card}>
+            <Text style={styles.detailsTitle}>Affiliated Organization</Text>
+            <Text style={styles.detailsText}>{organizationData.organizationName || 'N/A'}</Text>
+          </View>
+        )}
       </ScrollView>
     </RootLayout>
   );

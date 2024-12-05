@@ -4,7 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { ProfessionalHomeScreen, MenuScreen, NotificationScreen, 
     ProfessionalProfileScreen, EditProfessionalProfileScreen, 
     ViewRequestScreen, ViewRequestHistoryScreen, ViewOrgScreen, 
-    OrganizationDetailsScreen, ViewAcceptedRequestsScreen, ViewSkillsSelfAssessmentScreen, ProfSAScreen2
+    OrganizationDetailsScreen, ViewAcceptedRequestsScreen, AboutUs, ViewSkillsSelfAssessmentScreen, ProfSAScreen2
 } from '../screens';
 
 
@@ -21,6 +21,7 @@ export const ProfessionalStack = () => {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="ProfessionalHome" component={ProfessionalHomeScreen} />
             <Stack.Screen name="Menu" component={MenuScreen} />
+            <Stack.Screen name="AboutUs" component={AboutUs} />
             <Stack.Screen name="ForumMain" component={ForumStack} />
             <Stack.Screen name="Notifications" component={NotificationScreen} /> 
             <Stack.Screen name='ProfessionalProfile' component={ProfessionalProfileScreen} />
