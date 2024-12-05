@@ -117,7 +117,7 @@ export const ProfessionalProfileScreen = () => {
             </Text>
             <TouchableOpacity
               style={styles.editButton}
-              onPress={() => navigation.navigate('EditProfessionalProfile')}
+              onPress={() => navigation.navigate('EditProfessionalProfile', { profileData })}
             >
               <Ionicons name="pencil-outline" size={20} color="black" />
             </TouchableOpacity>
