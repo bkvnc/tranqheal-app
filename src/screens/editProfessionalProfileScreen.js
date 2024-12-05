@@ -7,51 +7,24 @@ import { auth, firestore, Colors } from '../config';
 import { AuthenticatedUserContext } from '../providers';
 import { LoadingIndicator } from 'src/components';
 
-export const EditProfessionalProfileScreen = ({ navigation }) => {
+export const EditProfessionalProfileScreen = ({ navigation, route }) => {
   const { userType } = useContext(AuthenticatedUserContext);
-  const [firstName, setFirstName] = useState('');
-  const [middleName, setMiddleName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [age, setAge] = useState('');
-  const [gender, setGender] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [facebookLink, setFacebookLink] = useState('');
-  const [availability, setAvailability] = useState({ morning: false, afternoon: false, evening: false });
-  const [specialization, setSpecialization] = useState({ depress: false, anxiety: false, stress: false });
+  const { profileData } = route.params;
+
+  const [firstName, setFirstName] = useState(profileData?.firstName || '');
+  const [lastName, setLastName] = useState(profileData?.lastName || '');
+  const [middleName, setMiddleName] = useState(profileData?.middleName || '');
+  const [age, setAge] = useState(profileData?.age || '');
+  const [gender, setGender] = useState(profileData?.gender || '');
+  const [mobileNumber, setMobileNumber] = useState(profileData?.mobileNumber || '');
+  const [facebookLink, setFacebookLink] = useState(profileData?.facebookLink || '');
+  const [availability, setAvailability] = useState(profileData?.availability || { morning: false, afternoon: false, evening: false });
+  const [specialization, setSpecialization] = useState(profileData?.specialization || { depress: false, anxiety: false, stress: false });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProfileData = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      try {
-        const userRef = doc(firestore, 'professionals', user.uid);
-        const userDoc = await getDoc(userRef);
-
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          // Set to existing data if available
-          setFirstName(data.firstName || '');
-          setMiddleName(data.middleName || '');
-          setLastName(data.lastName || '');
-          setAge(data.age || '');
-          setGender(data.gender || '');
-          setMobileNumber(data.mobileNumber || '');
-          setFacebookLink(data.facebookLink || '');
-          setAvailability(data.availability || { morning: false, afternoon: false, evening: false });
-          setSpecialization(data.specialization || { depress: false, anxiety: false, stress: false });
-          setIsLoading(false);
-        } else {
-          console.log('No such document!');
-        }
-      } catch (error) {
-        console.log('Error fetching profile data:', error.message);
-      }
-      setIsLoading(false);
-    };
-
-    fetchProfileData();
+    const timeout = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timeout);
   }, []);
 
   const handleAvailabilityToggle = (period) => {
