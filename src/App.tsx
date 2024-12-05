@@ -6,6 +6,7 @@ import ForgotPassword from './pages/Authentication/ForgotPassword';
 import Loader from './common/Loader';
 import routes from './routes';
 import Dashboard from './pages/CustomPages/ForumsTrends';
+import EmailVerificationListener from './components/utils/EmailVerificationListener';
 import { auth } from './config/firebase';
 import 'tailwindcss/tailwind.css';
 // import { onMessage } from "firebase/messaging";
@@ -81,7 +82,9 @@ function App() {
 
   return (
     <>
+    <EmailVerificationListener />
       <ToastContainer />
+      
         <Routes>
           <Route path="/auth/signin" element={<SignIn />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

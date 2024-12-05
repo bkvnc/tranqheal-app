@@ -56,13 +56,13 @@ const Register: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [profilePictureUrl, setProfilePictureUrl] = useState<string>('');
 
-    // Fetch the default profile picture URL from Firebase Storage
+
     useEffect(() => {
         const fetchDefaultProfilePicture = async () => {
             try {
                 const profilePictureRef = ref(storage, DEFAULT_PROFILE_PICTURE_PATH);
                 const url = await getDownloadURL(profilePictureRef);
-                setProfilePictureUrl(url); // Store the URL in state
+                setProfilePictureUrl(url); 
             } catch (error) {
                 console.error('Error fetching profile picture:', error);
                 toast.error('Error fetching default profile picture.');
@@ -84,7 +84,7 @@ const Register: React.FC = () => {
         e.preventDefault();
         setLoading(true);
 
-        // Validation checks
+     
         if (formData.password !== formData.confirmPassword) {
             toast.error("Passwords don't match");
             setLoading(false);
@@ -127,6 +127,7 @@ const Register: React.FC = () => {
                 createdAt: serverTimestamp(),
                 profilePicture: profilePictureUrl || '', 
                 backgroundPicture: DEFAULT_BACKGROUD_PICTURE,
+                status: 'Unverified',
             };
 
             if (formData.userType === 'organization') {
@@ -135,17 +136,17 @@ const Register: React.FC = () => {
                 userData.adminName = formData.adminName;
             }
 
-            // Determine the collection name based on user type
+       
             const collectionName: 'organizations' | 'admins' =
                 formData.userType === 'organization' ? 'organizations' : 'admins';
 
-            // Save the user data to Firestore
+         
             await setDoc(doc(db, collectionName, user.uid), userData);
 
-            // Show success toast
+           
             toast.success('Registration successful! Please check your email to verify your account.');
 
-            // Optionally, redirect user to login page or show additional instructions
+         
         } catch (error: any) {
             let errorMessage = 'An unknown error occurred';
 
