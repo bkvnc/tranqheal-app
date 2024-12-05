@@ -141,7 +141,7 @@ export const ViewAcceptedRequestsScreen = ({ navigation }) => {
               ) : (
                 <Text style={styles.noDataText}>Unable to load details.</Text>
               )}
-              <Button title="Close" onPress={() => setModalVisible(false)} />
+              <Button title="Close" color="#6A0DAD" onPress={() => setModalVisible(false)} />
             </View>
           </View>
         </Modal>

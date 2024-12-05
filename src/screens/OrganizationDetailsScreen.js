@@ -150,12 +150,12 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
           {formatBulletedList(daysArray, 4)}
         </View>
         
-        {userType === 'professional' && (
+        {userType === 'professional' && !profileData?.underOrg && (
           <TouchableOpacity style={styles.applyButton} onPress={handleApplyOrganization}>
             <Text style={styles.applyButtonText}>Apply Organization</Text>
           </TouchableOpacity>
         )}
-       
+
       </ScrollView>
     </RootLayout>
   );
