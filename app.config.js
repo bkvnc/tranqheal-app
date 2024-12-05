@@ -44,6 +44,7 @@ export default {
       package: "com.tranqheal.app",
       versionCode: 1,
     },
-    "newArchEnabled": true
+    "newArchEnabled": true,
+    "minify": false
   },
 };

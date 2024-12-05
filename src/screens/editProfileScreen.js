@@ -35,12 +35,13 @@ export const EditProfileScreen = ({ navigation }) => {
         setMobileNumber(data.mobileNumber || '');
         setFacebookLink(data.facebookLink || '');
       } else {
-        console.log('No such document!');
+        console.error('No such document!');
       }
     } catch (error) {
-      console.log('Error fetching profile data:', error.message);
+      console.error('Error fetching profile data:', error.message);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
   
   useEffect(() => {

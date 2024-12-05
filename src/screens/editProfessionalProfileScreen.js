@@ -42,10 +42,13 @@ export const EditProfessionalProfileScreen = ({ navigation }) => {
           setAvailability(data.availability || { morning: false, afternoon: false, evening: false });
           setSpecialization(data.specialization || { depress: false, anxiety: false, stress: false });
           setIsLoading(false);
+        } else {
+          console.log('No such document!');
         }
       } catch (error) {
         console.log('Error fetching profile data:', error.message);
       }
+      setIsLoading(false);
     };
 
     fetchProfileData();
