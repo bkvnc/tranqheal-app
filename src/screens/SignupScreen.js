@@ -12,7 +12,7 @@ import { sendEmailVerification } from 'firebase/auth';
 export const SignupScreen = ({ navigation, route }) => {
   const [errorState, setErrorState] = useState('');
 
-  const { isRegistered, organizationId, organizationName, userType } = route.params;
+  const { isRegistered, organizationId, organizationName, userType } = route.params; 
 
   const {
     passwordVisibility,

@@ -108,7 +108,7 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
   }
 
   return (
-    <RootLayout navigation={navigation} screenName="ProfessionalDetails" userType={userType}>
+    <RootLayout navigation={navigation} screenName="ProfessionalDetails" userType={userType}> 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.centerContent}>
           <Image 
@@ -162,7 +162,7 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
             <Text style={styles.detailsTitle}>Affiliated Organization</Text>
             <Text style={styles.detailsText}>{organizationData.organizationName || 'N/A'}</Text>
           </View>
-        )}
+        )} 
       </ScrollView>
     </RootLayout>
   );
