@@ -43,7 +43,7 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
           const availability = data.availability
             ? Object.entries(data.availability)
                 .filter(([_, value]) => value) 
-                .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1)) 
+                .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))  
             : [];
   
           const specialization = data.specialization
