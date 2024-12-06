@@ -281,6 +281,15 @@ const handleDeletePost = () => {
       Alert.alert('Error', 'Your comment contains blacklisted words. Please remove them and try again.');
       return;
     }
+
+    let status = null;
+    if (authorType === 'professional') {
+      const userRef = doc(firestore, 'professionals', user.uid);
+      const userSnapshot = await getDoc(userRef);
+      if (userSnapshot.exists()) {
+        status = userSnapshot.data().status; // Set the status (Verified/Unverified)
+      }
+    }
   
     console.log("Adding comment with isAnonymous:", anonymous);
     // Proceed to add the comment if no blacklisted words are found
@@ -290,6 +299,7 @@ const handleDeletePost = () => {
       authorName: authorName,
       authorType: authorType,
       authorId: user.uid,
+      status: status,
       isAnonymous: anonymous,
     };
   
@@ -672,21 +682,21 @@ const renderCommentItem = ({ item }) => (
   <View style={styles.commentItem}>
     {/* Author and Status Row */}
     <View style={styles.authorRow}>
-  <Text style={styles.commentAuthor}>
-    {item.isAnonymous ? 'Anonymous' : item.authorName}
-  </Text>
+      <Text style={styles.commentAuthor}>
+        {item.isAnonymous ? 'Anonymous' : item.authorName}
+      </Text>
 
-  {/* Conditionally render the status tag only if it exists (i.e., only for professionals) */}
-  {item.status && (
-    <Text
-      style={[
-        styles.statusText,
-        item.status === 'Verified' ? styles.verifiedStatus : styles.unverifiedStatus,
-      ]}
-    >
-      {item.status}
-    </Text>
-  )}
+      {/* Conditionally render the status tag only if it exists (i.e., only for professionals) */}
+      {item.status && (
+        <Text
+          style={[
+            styles.statusText,
+            item.status === 'Verified' ? styles.verifiedStatus : styles.unverifiedStatus,
+          ]}
+        >
+          {item.status}
+        </Text>
+      )}
     </View>
 
     {/* Comment Content */}
@@ -1100,32 +1110,33 @@ commentAuthor: {
   color: '#333', 
 },
 authorRow: {
-  flexDirection: 'row',         // Align items horizontally
-  alignItems: 'center',         // Vertically center the items
-  justifyContent: 'flex-start', // Ensure they are aligned at the start of the row
-  gap: 8,                       // Provide space between the name and the status tag
+  flexDirection: 'row',         
+  alignItems: 'center',         
+  justifyContent: 'flex-start', 
+  gap: 8,                       
 },
 
 statusText: {
-  fontSize: 12, 
+  fontSize: 10, 
   fontWeight: '400',
-  paddingHorizontal: 10, // Horizontal padding to make it look like a tag
-  borderRadius: 15,
-  backgroundColor: '#B9A2F1', // Tag background color
-  color: '#fff', // Text color for the tag
-  flexShrink: 1, // Prevent overflow
+  paddingHorizontal: 8, 
+  paddingVertical: 3,
+  borderRadius: 20,
+  backgroundColor: '#B9A2F1', 
+  color: '#fff', 
+  flexShrink: 1, 
 },
 
 verifiedStatus: {
-  backgroundColor: '#B9A2F1',  // Use a purple shade for "Verified"
+  backgroundColor: '#B9A2F1',  
   color: '#fff', 
-  maxWidth: 80, // Limit the tag's width to ensure it wraps correctly
+  maxWidth: 80, 
 },
 
 unverifiedStatus: {
-  backgroundColor: '#B9A2F1',  // Light grey for "Unverified"
+  backgroundColor: '#B9A2F1',  
   color: '#fff', 
-  maxWidth: 80, // Same width restriction
+  maxWidth: 80, 
 },
 
 
