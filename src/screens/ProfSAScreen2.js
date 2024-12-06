@@ -84,7 +84,6 @@ export const ProfSAScreen2 = ({ navigation }) => {
 
         {/* Questions */}
         <Text style={styles.sectionTitle}>Exploration Skills:</Text>
-
         {profassessmentQuestions.Exploration.map((question) => (
           <View style={styles.inputSection} key={question.key}>
             <Text style={styles.label}>{question.label}</Text>
