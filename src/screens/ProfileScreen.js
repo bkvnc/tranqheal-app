@@ -121,36 +121,19 @@ export const ProfileScreen = () => {
 
             {/* Personal Details */}
             <View style={styles.card}>
-              <Text style={styles.detailsTitle}>Full Name</Text>
-              <Text style={styles.detailsText}>
-                {`${profileData?.firstName || ''} ${profileData?.middleName || ''} ${profileData?.lastName || ''}`.trim() || 'N/A'}
+              <Text style={styles.detailsTitle}>Personal Details</Text>
+              <Text style={styles.detailsText}>Name: {`${profileData?.firstName || ''} ${profileData?.middleName || ''} ${profileData?.lastName || ''}`.trim() || 'N/A'}
               </Text>
-              <Text style={styles.detailsTitle}>Age</Text>
-              <Text style={styles.detailsText}>{profileData?.age || 'N/A'}</Text>
-              <Text style={styles.detailsTitle}>Gender</Text>
-              <Text style={styles.detailsText}>{profileData?.gender || 'N/A'}</Text>
-              <Text style={styles.detailsTitle}>Contact</Text>
-              <Text style={styles.detailsText}>{profileData?.mobileNumber || 'N/A'}</Text>
-            </View>
-
-            {/* Specialization */}
-            <View style={styles.card}>
-              
-            </View>
-
-            {/* Availability */}
-            <View style={styles.card}>
-              
+              <Text style={styles.detailsText}>Age: {profileData?.age || 'N/A'}</Text>
+              <Text style={styles.detailsText}>Gender: {profileData?.gender || 'N/A'}</Text>
             </View>
 
             {/* Contact Details */}
             <View style={styles.card}>
-              <Text style={styles.detailsTitle}>Mobile</Text>
-              <Text style={styles.detailsText}>{profileData?.mobileNumber || 'N/A'}</Text>
-              <Text style={styles.detailsTitle}>Email</Text>
-              <Text style={styles.detailsText}>{profileData?.email || 'N/A'}</Text>
-              <Text style={styles.detailsTitle}>Facebook</Text>
-              <Text style={styles.detailsText}>{profileData?.facebookLink || 'N/A'}</Text>
+              <Text style={styles.detailsTitle}>Contact Details</Text>
+              <Text style={styles.detailsText}>Mobile: {profileData?.mobileNumber || 'N/A'}</Text>
+              <Text style={styles.detailsText}>Email: {profileData?.email || 'N/A'}</Text>
+              <Text style={styles.detailsText}>Facebook: {profileData?.facebookLink || 'N/A'}</Text>
             </View>
           </View>
         </ScrollView>
@@ -268,7 +251,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#555',
     lineHeight: 22,
-    marginBottom: 10,
+    marginBottom: 5,
   },
   personalDetails: {
     marginVertical: 10,

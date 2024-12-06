@@ -25,7 +25,8 @@ export const ViewOrgScreen = ({ navigation }) => {
       const organizationList = organizationSnapshot.docs.map(doc => {
         const data = doc.data();
         return { id: doc.id, ...data, organizationName: data.organizationName, servicesOffered: data.servicesOffered || [] };
-      });
+      })
+      .filter((organization) => organization.subscriptionStatus === 'Subscribed');
 
       setOrganizations(organizationList);
     } catch (error) {

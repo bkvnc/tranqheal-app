@@ -111,27 +111,44 @@ export const PostDetailsScreen = ({ route, navigation }) => {
       const snapshot = await getDocs(commentsRef);
   
       if (!snapshot.empty) {
-        const fetchedComments = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            dateCreated: data.dateCreated ? data.dateCreated.toDate() : null,
-            userReacted: data.commentReactedBy && data.commentReactedBy.includes(user.uid), // Check if the user has reacted to this comment
-          };
-        });
+        const fetchedComments = await Promise.all(
+          snapshot.docs.map(async (docSnap) => {
+            const data = docSnap.data();
+            let status = null;
+  
+            // Fetch the status for professionals or organizations
+            if (data.authorType === 'professional') {
+              const userRef = doc(firestore, 'professionals', data.authorId);
+              const userSnapshot = await getDoc(userRef);
+  
+              if (userSnapshot.exists()) {
+                const userData = userSnapshot.data();
+                status = userData.status; // Set verified/unverified
+              }
+            }
+  
+            return {
+              id: docSnap.id,
+              ...data,
+              status, // Add status to the comment object
+              dateCreated: data.dateCreated ? data.dateCreated.toDate() : null,
+              userReacted: Array.isArray(data.commentReactedBy) && data.commentReactedBy.includes(user.uid),
+            };
+          })
+        );
+  
         setComments(fetchedComments);
       } else {
         console.log('No comments found for this post.');
-        setComments([]); // Clear the comments if none exist
+        setComments([]);
       }
     } catch (error) {
-      console.error("Error fetching comments: ", error.message);
+      console.error('Error fetching comments: ', error.message);
       Alert.alert('Error', 'Could not fetch comments.');
     }
   };
   
-
+  
   // Function to handle the delete post action
 const handleDeletePost = () => {
   Alert.alert(
@@ -655,7 +672,15 @@ const renderCommentItem = ({ item }) => (
   <View style={styles.commentItem}>
     <Text style={styles.commentAuthor}>
       {item.isAnonymous ? 'Anonymous' : item.authorName}
+      {item.status !== undefined && (
+        
+          <Text style={styles.statusText, item.status === 'Verified' ? styles.statusText : null}>{item.status}</Text>
+        
+       
+   )}
     </Text>
+
+  
     <Text style={styles.commentContent}>{item.content}</Text>
     <Text style={styles.commentDate}>
       {item.dateCreated ? moment(item.dateCreated).fromNow() : 'Unknown date'}
@@ -1064,8 +1089,30 @@ commentAuthor: {
   fontWeight: '600', 
   fontSize: 14, 
   color: '#333', 
+  marginRight: 8,
+},
+tagsContainer: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  marginBottom: 12, 
+  backgroundColor: '#7f4dff',
+},
+statusBadge: {
+  
 },
 
+statusText: {
+  color: '#fff', 
+  fontSize: 12,  
+  fontWeight: '300',
+  backgroundColor: '#B9A2F1',
+  marginLeft: 10, // Adds space between the author name and badge
+  paddingHorizontal: 10, // Horizontal padding for oval shape
+  paddingVertical: 5, // Vertical padding for oval shape
+  borderRadius: 15, // Makes the container oval
+  justifyContent: 'center',
+  alignItems: 'center',
+},
 commentContent: {
   marginVertical: 6, 
   fontSize: 14, 

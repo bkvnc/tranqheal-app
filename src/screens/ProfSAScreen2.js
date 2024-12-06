@@ -179,8 +179,8 @@ export const ProfSAScreen2 = ({ navigation }) => {
 
         {/* Next Button */}
         <TouchableOpacity style={styles.button} onPress={handleFinish}>
-        <Text style={styles.buttonText}>Finish</Text>
-      </TouchableOpacity>
+          <Text style={styles.buttonText}>Finish</Text>
+        </TouchableOpacity>
       </ScrollView>
     </RootLayout>
   );
