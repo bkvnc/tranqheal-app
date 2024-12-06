@@ -45,6 +45,8 @@ export const ForumPostScreen = ({ route, navigation }) => {
   const [forumData, setForumData] = useState(null);
   const [ hasImage, setHasImage ] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [suspendReason , setSuspendReason] = useState('');
+  const [isSuspended, setIsSuspended] = useState(false);
 
   const predefinedTags = [
     'Support', 'Awareness', 'Stress', 'Self-care', 'Motivation', 'Wellness', 'Mental Health'
@@ -76,6 +78,58 @@ export const ForumPostScreen = ({ route, navigation }) => {
       console.error('Error while checking ban status:', error);
     }
   };
+
+  const checkSuspendStatus = async () => {
+    try {
+      if (!auth.currentUser) {
+        console.warn('User is not authenticated.');
+        return;
+      }
+  
+      console.log('Checking suspend status for user:', auth.currentUser.uid);
+  
+      const suspendedUsersRef = collection(firestore, `forums/${forumId}/suspendedUsers`);
+      const q = query(suspendedUsersRef, where('userId', '==', auth.currentUser.uid));
+      const snapshot = await getDocs(q);
+  
+      if (!snapshot.empty) {
+        const suspendData = snapshot.docs[0].data();
+  
+        // Extract suspension details
+        const reason = suspendData.reason ?? 'No reason provided';
+        const suspendedUntil = suspendData.suspendedUntil?.toDate(); // Convert Firestore timestamp to Date
+        const currentDate = new Date();
+  
+        setIsSuspended(true);
+        setSuspendReason(reason);
+  
+        if (suspendedUntil && suspendedUntil > currentDate) {
+          const banEndDate = suspendedUntil.toLocaleString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+  
+          // Show alert with suspension details
+          Alert.alert(
+            'Action Blocked',
+            `You are suspended from this forum due to: ${reason}, until ${banEndDate}.`
+          );
+        } else if (suspendedUntil && suspendedUntil <= currentDate) {
+          console.log('Suspension has expired.');
+          setIsSuspended(false); // Reset suspension state if expired
+        }
+      } else {
+        setIsSuspended(false);
+      }
+    } catch (error) {
+      console.error('Error while checking suspend status:', error);
+    }
+  };
+  
   
   // Fetch user data, forum details, posts, and membership status on mount
   useEffect(() => { 
@@ -123,6 +177,7 @@ export const ForumPostScreen = ({ route, navigation }) => {
     }
     };
     checkBanStatus();
+    checkSuspendStatus();
     fetchUserData();
     fetchPosts();
     checkMembership();
@@ -296,6 +351,11 @@ const handleSaveForumEdits = async () => {
   const handleAddPost = async () => {
     if (isBanned) {
       Alert.alert('Action Blocked', `You are banned from this forum due to: ${banReason}`);
+      return;
+    }
+
+    if (isSuspended) {
+      Alert.alert('Action Blocked', `You are suspended from this forum due to: ${suspendReason}`);
       return;
     }
 

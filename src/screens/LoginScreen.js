@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Text, StyleSheet, Image } from 'react-native';
 import { Formik } from 'formik';
-import { signInWithEmailAndPassword, signInWithCredential } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import Constants from 'expo-constants';
-import { GoogleAuthProvider } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
 import * as Google from 'expo-auth-session/providers/google';
-import { googleAuth, auth } from '../config'; 
 import { makeRedirectUri } from 'expo-auth-session';
 
 import { View, TextInput, Button, FormErrorMessage } from '../components';
-import { Images, Colors } from '../config';
+import { Images, Colors, googleAuth, auth, firestore } from '../config';
 import { useTogglePasswordVisibility } from '../hooks';
 import { loginValidationSchema } from '../utils';
 
@@ -46,12 +45,22 @@ export const LoginScreen = ({ navigation }) => {
     
 
   // Handle email and password login
-  const handleLogin = (values) => {
+  const handleLogin = async (values) => {
     const { email, password } = values;
-    signInWithEmailAndPassword(auth, email, password)
-      .catch((error) => {
-        setErrorState(error.message);
-      });
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      if (!user.emailVerified) {
+        setErrorState("Email is not verified. Please check your inbox for a verification link.");
+        const userDocRef = doc(firestore, "users", user.uid);
+        await updateDoc(userDocRef, { emailStatus: "Unverified" });
+        return;
+      }
+      const userDocRef = doc(firestore, "users", user.uid);
+      await updateDoc(userDocRef, { emailStatus: "Verified" });
+    } catch (error) {
+      setErrorState(error.message);
+    }
   };
 
   return (
