@@ -670,29 +670,38 @@ if (loading) {
 //Render Comments  
 const renderCommentItem = ({ item }) => (
   <View style={styles.commentItem}>
-    <Text style={styles.commentAuthor}>
-      {item.isAnonymous ? 'Anonymous' : item.authorName}
-      {item.status !== undefined && (
-        
-          <Text style={styles.statusText, item.status === 'Verified' ? styles.statusText : null}>{item.status}</Text>
-        
-       
-   )}
-    </Text>
+    {/* Author and Status Row */}
+    <View style={styles.authorRow}>
+  <Text style={styles.commentAuthor}>
+    {item.isAnonymous ? 'Anonymous' : item.authorName}
+  </Text>
 
-  
+  {/* Conditionally render the status tag only if it exists (i.e., only for professionals) */}
+  {item.status && (
+    <Text
+      style={[
+        styles.statusText,
+        item.status === 'Verified' ? styles.verifiedStatus : styles.unverifiedStatus,
+      ]}
+    >
+      {item.status}
+    </Text>
+  )}
+    </View>
+
+    {/* Comment Content */}
     <Text style={styles.commentContent}>{item.content}</Text>
     <Text style={styles.commentDate}>
       {item.dateCreated ? moment(item.dateCreated).fromNow() : 'Unknown date'}
     </Text>
-    
+
+    {/* Action Icons */}
     <View style={styles.iconRow}>
-      {/* Edit and Delete Options for the Comment Author */}
+      {/* Edit and Delete Options */}
       {item.authorId === user.uid ? (
         <>
           <TouchableOpacity
             onPress={() => {
-              console.log("Editing comment:", item);
               setCommentToEdit(item);
               setEditCommentText(item.content);
               setIsEditCommentModalVisible(true);
@@ -709,20 +718,20 @@ const renderCommentItem = ({ item }) => (
           <Ionicons name="alert-circle-outline" size={20} color="#000" />
         </TouchableOpacity>
       )}
-      
-      {/* Reaction (Heart) Icon and Count */}
+
+      {/* Reaction Icon */}
       <TouchableOpacity onPress={() => handleCommentReact(item.id)} style={styles.reactionIconContainer}>
         <Ionicons
-          name={item.userReacted ? "heart" : "heart-outline"} 
-          style={[styles.reactionIcon, { color: item.userReacted ? 'red' : '#333' }]}  
+          name={item.userReacted ? 'heart' : 'heart-outline'}
+          style={[styles.reactionIcon, { color: item.userReacted ? 'red' : '#333' }]}
         />
-        <Text style={styles.reactionCount}>
-          {item.commentReacted || 0}
-        </Text>
+        <Text style={styles.reactionCount}>{item.commentReacted || 0}</Text>
       </TouchableOpacity>
     </View>
   </View>
 );
+
+
 
  return (
     <RootLayout navigation={navigation} screenName="Post Details" userType={userType}>
@@ -1089,30 +1098,37 @@ commentAuthor: {
   fontWeight: '600', 
   fontSize: 14, 
   color: '#333', 
-  marginRight: 8,
 },
-tagsContainer: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  marginBottom: 12, 
-  backgroundColor: '#7f4dff',
-},
-statusBadge: {
-  
+authorRow: {
+  flexDirection: 'row',         // Align items horizontally
+  alignItems: 'center',         // Vertically center the items
+  justifyContent: 'flex-start', // Ensure they are aligned at the start of the row
+  gap: 8,                       // Provide space between the name and the status tag
 },
 
 statusText: {
-  color: '#fff', 
-  fontSize: 12,  
-  fontWeight: '300',
-  backgroundColor: '#B9A2F1',
-  marginLeft: 10, // Adds space between the author name and badge
-  paddingHorizontal: 10, // Horizontal padding for oval shape
-  paddingVertical: 5, // Vertical padding for oval shape
-  borderRadius: 15, // Makes the container oval
-  justifyContent: 'center',
-  alignItems: 'center',
+  fontSize: 12, 
+  fontWeight: '400',
+  paddingHorizontal: 10, // Horizontal padding to make it look like a tag
+  borderRadius: 15,
+  backgroundColor: '#B9A2F1', // Tag background color
+  color: '#fff', // Text color for the tag
+  flexShrink: 1, // Prevent overflow
 },
+
+verifiedStatus: {
+  backgroundColor: '#B9A2F1',  // Use a purple shade for "Verified"
+  color: '#fff', 
+  maxWidth: 80, // Limit the tag's width to ensure it wraps correctly
+},
+
+unverifiedStatus: {
+  backgroundColor: '#B9A2F1',  // Light grey for "Unverified"
+  color: '#fff', 
+  maxWidth: 80, // Same width restriction
+},
+
+
 commentContent: {
   marginVertical: 6, 
   fontSize: 14, 
