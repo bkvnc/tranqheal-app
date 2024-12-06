@@ -28,10 +28,10 @@ export const profassessmentStates = {
         CaseFormulation5: null,
     },
     firstRadioOptions: [
-        { id: '1', label: 'Not at all Confident', value: '0' }, 
-        { id: '2', label: 'A little Confident', value: '1' },
-        { id: '3', label: 'Somewhat Confident', value: '2' },
-        { id: '4', label: 'Very Confident', value: '3' },
-        { id: '5', label: 'Extremely Confident', value: '4' },
+        { id: '1', label: 'Not at all Confident', value: '1' }, 
+        { id: '2', label: 'A little Confident', value: '2' },
+        { id: '3', label: 'Somewhat Confident', value: '3' },
+        { id: '4', label: 'Very Confident', value: '4' },
+        { id: '5', label: 'Extremely Confident', value: '5' },
     ],  
 }

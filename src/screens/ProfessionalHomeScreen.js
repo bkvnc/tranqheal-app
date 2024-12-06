@@ -71,20 +71,20 @@ export const ProfessionalHomeScreen = ({ navigation }) => {
           
        
         {!profileData?.selfAssessmentStatus  && (
-    <TouchableOpacity
-      onPress={() => navigation.navigate('ViewProfSelfAssessment')}
-      style={styles.todoItem}
-    >
-      <View style={styles.circle}>
-        <Ionicons name="clipboard-outline" size={24} color="white" />
-      </View>
-      <Text style={styles.todoText}>Take Skills Self Assessment</Text>
-      <Image
-        source={require('../assets/selfassessmentpic.jpg')}
-        style={styles.todoImage}
-      />
-    </TouchableOpacity>
-  )}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('ViewProfSelfAssessment')}
+          style={styles.todoItem}
+        >
+          <View style={styles.circle}>
+            <Ionicons name="clipboard-outline" size={24} color="white" />
+          </View>
+          <Text style={styles.todoText}>Take Skills Self Assessment</Text>
+          <Image
+            source={require('../assets/selfassessmentpic.jpg')}
+            style={styles.todoImage}
+          />
+        </TouchableOpacity>
+      )}
 
 
         

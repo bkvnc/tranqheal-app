@@ -2,11 +2,11 @@ import React, { useState, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import RadioGroup from 'react-native-radio-buttons-group';
 import { RootLayout } from '../navigation/RootLayout';
-import { Colors } from '../config';
+import { Colors, auth, firestore } from '../config';
 import { AuthenticatedUserContext } from '../providers';
 import { profassessmentQuestions } from 'src/utils/profassessmentQuestions';
 import { profassessmentStates } from 'src/utils/profassessmentStates';
-import { getFirestore, collection,setDoc } from 'firebase/firestore';
+import { updateDoc,doc } from 'firebase/firestore';
 
 export const ProfSAScreen2 = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
@@ -22,15 +22,26 @@ export const ProfSAScreen2 = ({ navigation }) => {
     return selectedOption ? parseInt(selectedOption.value, 10) : 0;
   };
 
-  const calculateGAD7Score = () => {
-    const gad7Keys = ['feelingNervous', 'controlWorrying', 'tooMuchWorrying', 'troubleRelaxing', 'restlessness', 'irritable', 'afraid'];
-    return gad7Keys.reduce((total, key) => total + getOptionValue(answers[key]), 0); // Sum up the GAD-7 scores
+  const calculateDepressionScore = () => {
+    const depKeys = ['InsightBuilding', 'InsightBuilding2', 'InsightBuilding3', 'InsightBuilding4', 'InsightBuilding5','ActionStrategies','ActionStrategies2','ActionStrategies3','ActionStrategies4','ActionStrategies5'];
+    const deptotalScore = depKeys.reduce((total, key) => total + getOptionValue(answers[key]), 0);
+    return deptotalScore / 2;
   };
 
-  const calculatePHQ9Score = () => {
-    const phq9Keys = ['interest', 'feelingDown', 'sleepIssues', 'tiredness', 'appetite', 'feelingBad', 'concentration', 'movingSlowly', 'thoughts'];
-    return phq9Keys.reduce((total, key) => total + getOptionValue(answers[key]), 0);  // Sum up the PHQ-9 scores
+  const calculateAnxietyScore = () => {
+    const anxKeys = ['ActionStrategies','ActionStrategies2','ActionStrategies3','ActionStrategies4','ActionStrategies5','TherapeuticAlliance','TherapeuticAlliance2','TherapeuticAlliance3','TherapeuticAlliance4','TherapeuticAlliance5'];
+    const anxtotalScore = anxKeys.reduce((total, key) => total + getOptionValue(answers[key]), 0);
+    return anxtotalScore / 2 ;
   };
+
+  const calculateStressScore = () => {
+    const stressKeys = ['Exploration', 'Exploration2', 'Exploration3', 'Exploration4', 'Exploration5','TherapeuticAlliance','TherapeuticAlliance2','TherapeuticAlliance3','TherapeuticAlliance4','TherapeuticAlliance5'];
+    const stresstotalScore = stressKeys.reduce((total, key) => total + getOptionValue(answers[key]), 0);
+    return stresstotalScore / 2;
+  };
+
+
+
 
   const handleFinish = async () => {
     const unansweredQuestions = Object.keys(answers).filter((key) => answers[key] === null);
@@ -41,29 +52,29 @@ export const ProfSAScreen2 = ({ navigation }) => {
     }
 
     const user = auth.currentUser;
-    const pssTotal = calculatePSSTotalScore();
-    // const phq9Interpretation = interpretPHQ9(phq9Total);
-    // const gad7Interpretation = interpretGAD7(gad7Total);
-    // const pssInterpretation = interpretPSS(pssTotal);
+
+    const depTotal = calculateDepressionScore();
+    const anxTotal = calculateAnxietyScore();
+    const stressTotal = calculateStressScore();
 
     if (user) {
       try {
         const userId = user.uid;
 
         const userAssessmentRef = doc(firestore, 'professionals', userId);
+        const selfAssessment = {
+          depTotal,
+          anxTotal,
+          stressTotal,
+
+        };
       
-        await addDoc(userAssessmentRef, {
-        //   phq9Total,
-        //   gad7Total,
-        //   pssTotal,
-        //   phq9Interpretation,
-        //   gad7Interpretation,
-        //   pssInterpretation,
-        //   createdAt: new Date(),
+        await updateDoc(userAssessmentRef, {
+        selfAssessment,
         selfAssessmentStatus : 'completed',
         });
 
-        navigation.navigate('professionalHome');
+        navigation.navigate('ProfessionalHome');
       } catch (error) {
         console.error('Error saving assessment:', error);
       }
@@ -91,7 +102,9 @@ export const ProfSAScreen2 = ({ navigation }) => {
             <View style={styles.radioGroup}>
               <RadioGroup
                 radioButtons={radioOptions}
-                onPress={(selectedId) => handleSelectOption(question.key, selectedId)}
+                onPress={(selectedId) => {
+                  console.log('Selected button: ', selectedId);
+                  handleSelectOption(question.key, selectedId);}}
                 selectedId={answers[question.key]}
                 containerStyle={styles.radioGroupContainer}
               />
@@ -105,7 +118,9 @@ export const ProfSAScreen2 = ({ navigation }) => {
             <View style={styles.radioGroup}>
               <RadioGroup
                 radioButtons={radioOptions}
-                onPress={(selectedId) => handleSelectOption(question.key, selectedId)}
+                onPress={(selectedId) => {
+                  console.log('Selected button: ', selectedId);
+                  handleSelectOption(question.key, selectedId);}}
                 selectedId={answers[question.key]}
                 containerStyle={styles.radioGroupContainer}
               />
@@ -119,7 +134,9 @@ export const ProfSAScreen2 = ({ navigation }) => {
             <View style={styles.radioGroup}>
               <RadioGroup
                 radioButtons={radioOptions}
-                onPress={(selectedId) => handleSelectOption(question.key, selectedId)}
+                onPress={(selectedId) => {
+                  console.log('Selected button: ', selectedId);
+                  handleSelectOption(question.key, selectedId);}}
                 selectedId={answers[question.key]}
                 containerStyle={styles.radioGroupContainer}
               />
@@ -133,7 +150,9 @@ export const ProfSAScreen2 = ({ navigation }) => {
             <View style={styles.radioGroup}>
               <RadioGroup
                 radioButtons={radioOptions}
-                onPress={(selectedId) => handleSelectOption(question.key, selectedId)}
+                onPress={(selectedId) => {
+                  console.log('Selected button: ', selectedId);
+                  handleSelectOption(question.key, selectedId);}}
                 selectedId={answers[question.key]}
                 containerStyle={styles.radioGroupContainer}
               />
@@ -147,7 +166,9 @@ export const ProfSAScreen2 = ({ navigation }) => {
             <View style={styles.radioGroup}>
               <RadioGroup
                 radioButtons={radioOptions}
-                onPress={(selectedId) => handleSelectOption(question.key, selectedId)}
+                onPress={(selectedId) => {
+                  console.log('Selected button: ', selectedId);
+                  handleSelectOption(question.key, selectedId);}}
                 selectedId={answers[question.key]}
                 containerStyle={styles.radioGroupContainer}
               />
