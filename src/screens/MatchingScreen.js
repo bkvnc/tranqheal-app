@@ -41,15 +41,16 @@ export const MatchingScreen = ({ route, navigation }) => {
 
         // Combine assessment data and preferences
         const requestData = {
+          userId: userId,
           preferences: {
             preferredProfAge: preferences.preferredProfAge,
             preferredProfGender: preferences.preferredProfGender,
             preferredProfAvailability: preferences.preferredProfAvailability,
           },
           selfAssessmentScores: {
-            gad7Interpretation: assessmentData.gad7Interpretation,
-            phq9Interpretation: assessmentData.phq9Interpretation,
-            pssInterpretation: assessmentData.pssInterpretation,
+            gad7: assessmentData.gad7Total,
+            phq9: assessmentData.phq9Total,
+            pss: assessmentData.pssTotal,
           },
         };
 
