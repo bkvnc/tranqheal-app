@@ -4,13 +4,15 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { ProfessionalHomeScreen, MenuScreen, NotificationScreen, 
     ProfessionalProfileScreen, EditProfessionalProfileScreen, 
     ViewRequestScreen, ViewRequestHistoryScreen, ViewOrgScreen, 
-    OrganizationDetailsScreen, ViewAcceptedRequestsScreen, AboutUs
+    OrganizationDetailsScreen, ViewAcceptedRequestsScreen, AboutUs, ViewSkillsSelfAssessmentScreen, ProfSAScreen2
 } from '../screens';
 
 
 
 
+
 import { ForumStack } from './ForumStack';
+
 
 const Stack = createStackNavigator();
 
@@ -29,6 +31,8 @@ export const ProfessionalStack = () => {
             <Stack.Screen name="ViewOrganizations" component={ViewOrgScreen} />
             <Stack.Screen name="OrganizationDetails" component={OrganizationDetailsScreen} />
             <Stack.Screen name="ViewAcceptedRequests" component={ViewAcceptedRequestsScreen} />
+            <Stack.Screen name="ViewProfSelfAssessment" component={ViewSkillsSelfAssessmentScreen} />
+            <Stack.Screen name="ProfSelfAssessment2" component={ProfSAScreen2} />
         </Stack.Navigator>
     );
 }
