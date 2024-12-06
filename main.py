@@ -10,9 +10,7 @@ from firebase_admin import credentials, firestore, initialize_app
 from dotenv import load_dotenv
 
 load_dotenv()
-service_account_path = os.getenv("FIREBASE_SERVICE_ACCOUNT")
-with open(service_account_path, 'r') as file:
-    service_account_info = json.load(file)
+service_account_info = json.loads(os.getenv("FIREBASE_SERVICE_ACCOUNT"))
 cred = credentials.Certificate(service_account_info)
 initialize_app(cred)
 db = firestore.client()
