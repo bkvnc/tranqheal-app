@@ -129,29 +129,63 @@ export const ProfessionalProfileScreen = () => {
   
           {/* Personal Details */}
           <View style={styles.card}>
-            <Text style={styles.detailsTitle}>Full Name</Text>
-            <Text style={styles.detailsText}>
+            <Text style={styles.detailsTitle}>Profile Details</Text>
+            <Text style={styles.detailsText}>Name:
               {profileData
-                ? `${profileData.firstName || ''} ${profileData.middleName || ''} ${profileData.lastName || ''}`.trim() ||
+                ? " " +` ${profileData.firstName || ''} ${profileData.middleName || ''} ${profileData.lastName || ''}`.trim() ||
                   'N/A'
                 : 'Loading...'}
             </Text>
-            <Text style={styles.detailsTitle}>Age</Text>
-            <Text style={styles.detailsText}>{profileData?.age || 'N/A'}</Text>
-            <Text style={styles.detailsTitle}>Gender</Text>
-            <Text style={styles.detailsText}>{profileData?.gender || 'N/A'}</Text>
-            <Text style={styles.detailsTitle}>Contact</Text>
-            <Text style={styles.detailsText}>{profileData?.mobileNumber || 'N/A'}</Text>
+            <Text style={styles.detailsText}>Age: {profileData?.age || 'N/A'}</Text>
+            <Text style={styles.detailsText}>Gender: {profileData?.gender || 'N/A'}</Text>
           </View>
+
+           {/* Specialization */}
+           <View style={styles.card}>
+              <Text style={styles.detailsTitle}>Specialization</Text>
+              {profileData?.specialization ? (
+                <View style={styles.specializationContainer}>
+                  {Object.entries(profileData.specialization)
+                    .filter(([key, value]) => value) // Show only the ones set to true
+                    .map(([key]) => (
+                      <View key={key} style={styles.specializationItem}>
+                        <Text style={styles.detailsText}>
+                          {key.charAt(0).toUpperCase() + key.slice(1)} {/* Capitalize */}
+                        </Text>
+                      </View>
+                    ))}
+                </View>
+              ) : (
+                <Text style={styles.detailsText}>N/A</Text>
+              )}
+            </View>
   
+           {/* Availability */}
+            <View style={styles.card}>
+              <Text style={styles.detailsTitle}>Availability</Text>
+              {profileData?.availability ? (
+                <View style={styles.specializationContainer}>
+                  {Object.entries(profileData.availability)
+                    .filter(([key, value]) => value) // Show only the ones set to true
+                    .map(([key]) => (
+                      <View key={key} style={styles.specializationItem}>
+                        <Text style={styles.detailsText}>
+                          {key.charAt(0).toUpperCase() + key.slice(1)} {/* Capitalize */}
+                        </Text>
+                      </View>
+                    ))}
+                </View>
+              ) : (
+                <Text style={styles.detailsText}>N/A</Text>
+              )}
+            </View>
+
           {/* Contact Details */}
           <View style={styles.card}>
-            <Text style={styles.detailsTitle}>Mobile</Text>
-            <Text style={styles.detailsText}>{profileData?.mobileNumber || 'N/A'}</Text>
-            <Text style={styles.detailsTitle}>Email</Text>
-            <Text style={styles.detailsText}>{profileData?.email || 'N/A'}</Text>
-            <Text style={styles.detailsTitle}>Facebook</Text>
-            <Text style={styles.detailsText}>{profileData?.facebookLink || 'N/A'}</Text>
+            <Text style={styles.detailsTitle}>Contact Details</Text>
+            <Text style={styles.detailsText}>Mobile: {profileData?.mobileNumber || 'N/A'}</Text>
+            <Text style={styles.detailsText}>Email: {profileData?.email || 'N/A'}</Text>
+            <Text style={styles.detailsText}>Facebook: {profileData?.facebookLink || 'N/A'}</Text>
           </View>
         </View>
       </ScrollView>
@@ -169,6 +203,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
   textContainer: {
     flex: 1,
@@ -213,6 +248,7 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 16,
     color: 'gray',
+    marginBottom: 5,
   },
   card: {
     backgroundColor: '#ffffff',
@@ -248,13 +284,21 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 5,
+    marginBottom: 10,
   },
   detailsText: {
     fontSize: 16,
     color: '#555',
     lineHeight: 22,
-    marginBottom: 10,
+    marginBottom: 5,
+  },
+  specializationContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',  
+    gap: 5, 
+  },
+  specializationItem: {
+    marginRight: 8, 
   },
 });
 

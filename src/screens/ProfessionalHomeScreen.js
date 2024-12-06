@@ -4,9 +4,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { RootLayout } from '../navigation/RootLayout';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, firestore } from '../config';
-import { AuthenticatedUserContext } from '../providers';  
+import { AuthenticatedUserContext } from '../providers'; 
+import { useFocusEffect } from '@react-navigation/native';
 
-export const ProfessionalHomeScreen = ({ navigation }) => {
+export const ProfessionalHomeScreen = ({navigation, route }) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const [profileData, setProfileData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);  
@@ -35,6 +36,16 @@ export const ProfessionalHomeScreen = ({ navigation }) => {
     await fetchProfileData();
     setRefreshing(false);
   };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (route.params?.refresh) {
+        fetchProfileData();
+      
+        navigation.setParams({ refresh: false });
+      }
+    }, [route.params?.refresh])
+  );
 
   useEffect(() => {
     fetchProfileData();

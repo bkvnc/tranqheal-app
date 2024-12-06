@@ -57,7 +57,7 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
             fullName,
             availability,
             specialization,
-            underOrg: data.underOrg || null,
+            underOrg: data.underOrg,
           };
   
           setProfessional(professionalData);
@@ -115,9 +115,23 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
             source={{ uri: professional.profileImage }} 
             style={styles.image} 
           />
+
           <Text style={styles.profileName}>
             {professional.fullName}
           </Text>
+
+           {/* Status Oval */}
+          <View 
+            style={[
+              styles.statusBadge, 
+              professional.status === 'Verified' ? styles.verified : styles.unverified,
+            ]}
+          >
+            <Text style={styles.statusText}>
+              {professional.status === 'Verified' ? 'Verified' : 'Unverified'}
+            </Text>
+          </View>
+
           <View style={styles.ratingRow}>
             <Text style={{ fontWeight: 'bold', marginRight: 5 }}>
               {professional.rating?.toFixed(1) || 'N/A'}
@@ -189,6 +203,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
   },
+  statusBadge: {
+    paddingVertical: 5,
+    paddingHorizontal: 15,
+    borderRadius: 20,  
+    borderWidth: 2,
+    marginVertical: 10, 
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verified: {
+   
+  },
+  unverified: {
+  },
+  statusText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+  },  
   profileName: {
     fontSize: 30,
     fontWeight: 'bold',

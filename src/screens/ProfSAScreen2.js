@@ -2,11 +2,11 @@ import React, { useState, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import RadioGroup from 'react-native-radio-buttons-group';
 import { RootLayout } from '../navigation/RootLayout';
-import { Colors } from '../config';
+import { Colors, firestore, auth } from '../config';
 import { AuthenticatedUserContext } from '../providers';
 import { profassessmentQuestions } from 'src/utils/profassessmentQuestions';
 import { profassessmentStates } from 'src/utils/profassessmentStates';
-import { getFirestore, collection,setDoc } from 'firebase/firestore';
+import {  doc, updateDoc} from 'firebase/firestore';
 
 export const ProfSAScreen2 = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
@@ -16,22 +16,6 @@ export const ProfSAScreen2 = ({ navigation }) => {
   const handleSelectOption = (key, selectedId) => {
     setAnswers((prevAnswers) => ({ ...prevAnswers, [key]: selectedId }));
   };
-
-  const getOptionValue = (selectedId) => {
-    const selectedOption = radioOptions.find((option) => option.id === selectedId);
-    return selectedOption ? parseInt(selectedOption.value, 10) : 0;
-  };
-
-  const calculateGAD7Score = () => {
-    const gad7Keys = ['feelingNervous', 'controlWorrying', 'tooMuchWorrying', 'troubleRelaxing', 'restlessness', 'irritable', 'afraid'];
-    return gad7Keys.reduce((total, key) => total + getOptionValue(answers[key]), 0); // Sum up the GAD-7 scores
-  };
-
-  const calculatePHQ9Score = () => {
-    const phq9Keys = ['interest', 'feelingDown', 'sleepIssues', 'tiredness', 'appetite', 'feelingBad', 'concentration', 'movingSlowly', 'thoughts'];
-    return phq9Keys.reduce((total, key) => total + getOptionValue(answers[key]), 0);  // Sum up the PHQ-9 scores
-  };
-
   const handleFinish = async () => {
     const unansweredQuestions = Object.keys(answers).filter((key) => answers[key] === null);
 
@@ -41,29 +25,18 @@ export const ProfSAScreen2 = ({ navigation }) => {
     }
 
     const user = auth.currentUser;
-    const pssTotal = calculatePSSTotalScore();
-    // const phq9Interpretation = interpretPHQ9(phq9Total);
-    // const gad7Interpretation = interpretGAD7(gad7Total);
-    // const pssInterpretation = interpretPSS(pssTotal);
-
+    console.log('User Authenticated:');
     if (user) {
       try {
         const userId = user.uid;
 
         const userAssessmentRef = doc(firestore, 'professionals', userId);
       
-        await addDoc(userAssessmentRef, {
-        //   phq9Total,
-        //   gad7Total,
-        //   pssTotal,
-        //   phq9Interpretation,
-        //   gad7Interpretation,
-        //   pssInterpretation,
-        //   createdAt: new Date(),
+        await updateDoc(userAssessmentRef, {
         selfAssessmentStatus : 'completed',
         });
-
-        navigation.navigate('professionalHome');
+        console.log('Assessment saved successfully!');
+        navigation.navigate('professionalHome', { refresh: true });
       } catch (error) {
         console.error('Error saving assessment:', error);
       }
@@ -159,8 +132,8 @@ export const ProfSAScreen2 = ({ navigation }) => {
 
         {/* Next Button */}
         <TouchableOpacity style={styles.button} onPress={handleFinish}>
-        <Text style={styles.buttonText}>Finish</Text>
-      </TouchableOpacity>
+          <Text style={styles.buttonText}>Finish</Text>
+        </TouchableOpacity>
       </ScrollView>
     </RootLayout>
   );
