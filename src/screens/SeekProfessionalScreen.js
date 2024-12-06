@@ -46,7 +46,7 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
         requestedAt: serverTimestamp(),
       };
 
-      const notificationRef = doc(collection(firestore, `notifications/${bestMatch.id}/messages`));
+      const notificationRef = doc(collection(firestore, `notifications/${bestMatch.id}/messages`)); 
 
       await setDoc(notificationRef, {
         recipientId: bestMatch.id,

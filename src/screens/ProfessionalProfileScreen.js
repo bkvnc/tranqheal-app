@@ -90,70 +90,79 @@ export const ProfessionalProfileScreen = () => {
               <Text style={styles.ProfileTitle}>Profile</Text>
             </View>
           </View>
-
+  
           <View style={styles.divider} />
-
+  
           {/* Profile Image with Camera Icon */}
           <View style={styles.imageContainer}>
             <Image
-              source={ {uri: profileData?.profileImage} || require('../assets/testprofile.jpg')} 
+              source={{ uri: profileData?.profileImage } || require('../assets/testprofile.jpg')}
               style={styles.profileImage}
             />
             <TouchableOpacity style={styles.cameraIcon} onPress={pickImage}>
               <Ionicons name="camera-outline" size={24} color="white" />
             </TouchableOpacity>
           </View>
-
+  
           {/* Specialty and Rating */}
           <View style={styles.additionalInfo}>
             <Text style={styles.ratingText}>
               Rating: {profileData ? `${profileData.rating || 'N/A'} / 5` : 'Loading...'}
             </Text>
           </View>
-
-          <View style={styles.usernameContainer}>
-            <Text style={styles.username}>
-              Username: {profileData ? profileData.username : 'Loading...'}
-            </Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => navigation.navigate('EditProfessionalProfile', { profileData })}
-            >
-              <Ionicons name="pencil-outline" size={20} color="black" />
-            </TouchableOpacity>
+  
+          {/* Username */}
+          <View style={styles.card}>
+            <View style={styles.usernameContainer}>
+              <Text style={styles.detailsTitle}>Username</Text>
+              <Text style={styles.detailsText}>
+                {profileData?.username || 'N/A'}
+              </Text>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => navigation.navigate('EditProfessionalProfile', { profileData })}
+              >
+                <Ionicons name="pencil-outline" size={20} color="black" />
+              </TouchableOpacity>
+            </View>
           </View>
-
+  
           {/* Personal Details */}
-          <View style={styles.divider} />
-          <View style={styles.personalDetails}>
-            <Text style={styles.detailTitle}>
-              Full Name: {profileData 
-                ? `${profileData.firstName || ''} ${profileData.middleName || ''} ${profileData.lastName || ''}`.trim() || 'N/A'
+          <View style={styles.card}>
+            <Text style={styles.detailsTitle}>Full Name</Text>
+            <Text style={styles.detailsText}>
+              {profileData
+                ? `${profileData.firstName || ''} ${profileData.middleName || ''} ${profileData.lastName || ''}`.trim() ||
+                  'N/A'
                 : 'Loading...'}
             </Text>
-            <Text style={styles.detailTitle}>Age: {profileData ? profileData.age || 'N/A' : 'Loading...'}</Text>
-            <Text style={styles.detailTitle}>Gender: {profileData ? profileData.gender || 'N/A' : 'Loading...'}</Text>
-            <Text style={styles.detailTitle}>Contact: {profileData ? profileData.mobileNumber || 'N/A' : 'Loading...'}</Text>
+            <Text style={styles.detailsTitle}>Age</Text>
+            <Text style={styles.detailsText}>{profileData?.age || 'N/A'}</Text>
+            <Text style={styles.detailsTitle}>Gender</Text>
+            <Text style={styles.detailsText}>{profileData?.gender || 'N/A'}</Text>
+            <Text style={styles.detailsTitle}>Contact</Text>
+            <Text style={styles.detailsText}>{profileData?.mobileNumber || 'N/A'}</Text>
           </View>
-
-          <View style={styles.divider} />
-
+  
           {/* Contact Details */}
-          <View style={styles.contactDetails}>
-            <Text style={styles.detailTitle}>Mobile: {profileData ? profileData.mobileNumber || 'N/A' : 'Loading...'}</Text>
-            <Text style={styles.detailTitle}>Email: {profileData ? profileData.email || 'N/A' : 'Loading...'}</Text>
-            <Text style={styles.detailTitle}>Facebook: {profileData ? profileData.facebookLink || 'N/A' : 'Loading...'}</Text>
+          <View style={styles.card}>
+            <Text style={styles.detailsTitle}>Mobile</Text>
+            <Text style={styles.detailsText}>{profileData?.mobileNumber || 'N/A'}</Text>
+            <Text style={styles.detailsTitle}>Email</Text>
+            <Text style={styles.detailsText}>{profileData?.email || 'N/A'}</Text>
+            <Text style={styles.detailsTitle}>Facebook</Text>
+            <Text style={styles.detailsText}>{profileData?.facebookLink || 'N/A'}</Text>
           </View>
         </View>
       </ScrollView>
     </RootLayout>
-  );
+  );  
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingVertical: 30,
     backgroundColor: 'white',
   },
   header: {
@@ -168,6 +177,7 @@ const styles = StyleSheet.create({
   ProfileTitle: {
     fontSize: 40,
     fontWeight: 'bold',
+    marginLeft: 10,
   },
   divider: {
     height: 1,
@@ -183,6 +193,8 @@ const styles = StyleSheet.create({
     width: 165,
     height: 165,
     borderRadius: 100,
+    borderWidth: 2,
+    borderColor: '#d1d1d1',
   },
   cameraIcon: {
     position: 'absolute',
@@ -193,20 +205,37 @@ const styles = StyleSheet.create({
     zIndex: 1,
     elevation: 5,
   },
+  additionalInfo: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  ratingText: {
+    fontSize: 16,
+    color: 'gray',
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    padding: 15,
+    marginVertical: 10,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#eaeaea',
+    width: '90%',
+    alignSelf: 'center',
+  },
   usernameContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
-    position: 'relative',
-  },
-  username: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    marginVertical: 10,
   },
   editButton: {
-    position: 'absolute',
-    right: 2,
     backgroundColor: '#ECE6F0',
     width: 40,
     height: 40,
@@ -214,35 +243,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 10,
     elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 2,
   },
-  additionalInfo: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  specialtyText: {
-    fontSize: 18,
+  detailsTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-  },
-  ratingText: {
-    fontSize: 16,
-    color: 'gray',
-  },
-  personalDetails: {
-    marginTop: 20,
-  },
-  contactDetails: {
-    marginTop: 10,
-  },
-  detailTitle: {
-    fontSize: 18,
     color: '#333',
+    marginBottom: 5,
+  },
+  detailsText: {
+    fontSize: 16,
+    color: '#555',
+    lineHeight: 22,
     marginBottom: 10,
   },
 });
 
-export default ProfessionalProfileScreen;
+
+
+
