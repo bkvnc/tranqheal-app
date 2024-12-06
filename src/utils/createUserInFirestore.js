@@ -14,10 +14,7 @@ export const createUserInFirestore = async (userId, username, email, collectionN
       profileImage: profileImageUrl,
       createdAt: serverTimestamp(),
       userType: userType,
-    }
-
-    if (userType === 'professional') {
-      userData.status = 'Unverified';
+      emailStatus: 'Unverified',
     }
 
     await setDoc(userRef, userData);

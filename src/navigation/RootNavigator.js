@@ -22,49 +22,57 @@ export const RootNavigator = () => {
   
     useEffect(() => {
       const unsubscribeAuthStateChanged = onAuthStateChanged(auth, async (authenticatedUser) => {
-        if (authenticatedUser) {
-          setUser(authenticatedUser);
-
-          const userId = authenticatedUser.uid;
-          const userDocRef = doc(firestore, "users", userId);
-          const profDocRef = doc(firestore, "professionals", userId);
-
-          const userDoc = await getDoc(userDocRef);
-          const profDoc = await getDoc(profDocRef);
-
-          if (userDoc.exists()) {
-            setUserType("user");
-          } else if (profDoc.exists()) {
-            const profData = profDoc.data();
-            setUserType("professional");
-
-            setIsNewProfessional(profData.isNew || false);
-          } else {
-            setUserType(null);
-          }
-        } else {
-          setUser(null);
-          setUserType(null);
-          setIsNewProfessional(false);
-        }
-
-        setIsLoading(false);
-      });
-  
-      // unsubscribe auth listener on unmount
-      return unsubscribeAuthStateChanged;
-    }, [setUser, setUserType]);
+        setIsLoading(true);
+        try {
+          if (authenticatedUser) {
+            await authenticatedUser.reload();
+            const userId = authenticatedUser.uid;
     
-    useEffect(() => {
-      const logNavigationState = () => {
-        const currentNavigationState = navigationRef.current?.getRootState();
-        console.log("Navigation State:", currentNavigationState);
-      };
-
-      if (navigationRef.current) {
-        logNavigationState();
-      }
-    }, [user, userType])
+            const userDocRef = doc(firestore, "users", userId);
+            const profDocRef = doc(firestore, "professionals", userId);
+    
+            const userDoc = await getDoc(userDocRef);
+            const profDoc = await getDoc(profDocRef);
+    
+            if (!authenticatedUser.emailVerified) {
+              if (userDoc.exists() && userDoc.data().emailStatus !== "Unverified") {
+                await updateDoc(userDocRef, { emailStatus: "Unverified" });
+              }
+              setUser(null); 
+              setUserType(null);
+              setIsLoading(false);
+              return;
+            }
+    
+            if (userDoc.exists() && userDoc.data().emailStatus !== "Verified") {
+              await updateDoc(userDocRef, { emailStatus: "Verified" });
+            }
+    
+            setUser(authenticatedUser);
+    
+            if (userDoc.exists()) {
+              setUserType("user");
+            } else if (profDoc.exists()) {
+              const profData = profDoc.data();
+              setUserType("professional");
+              setIsNewProfessional(profData.isNew || false);
+            } else {
+              setUserType(null);
+            }
+          } else {
+            setUser(null);
+            setUserType(null);
+            setIsNewProfessional(false);
+          }
+        } catch (error) {
+          console.error("Error during auth state change:", error);
+        } finally {
+          setIsLoading(false); 
+        }
+      });
+    
+      return unsubscribeAuthStateChanged;
+    }, [setUser, setUserType]);    
 
     if (isLoading) {
       return <LoadingIndicator />;

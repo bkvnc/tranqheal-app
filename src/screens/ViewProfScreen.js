@@ -33,7 +33,7 @@ export const ViewProfScreen = ({ navigation }) => {
           const data = doc.data();
           return { id: doc.id, ...data };
         })
-        .filter((professional) => professional.status === 'Verified');
+        //.filter((professional) => professional.status === 'Verified');
 
       setProfessionals(professionalList);
     } catch (error) {
