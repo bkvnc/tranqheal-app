@@ -48,7 +48,7 @@ export const ProfessionalRegisterScreen = ({ navigation, route }) => {
       <Text style={styles.mainText}>Are you part on any of this organizations?</Text>
       
       {/* Organization List */}
-      <RNPickerSelect
+      {/* <RNPickerSelect 
         onValueChange={(value) => {
           const selectedOrganization = organizations.find(org => org.value === value);
           setSelectedOrg(selectedOrganization);
@@ -58,7 +58,24 @@ export const ProfessionalRegisterScreen = ({ navigation, route }) => {
         style={{
           inputAndroid: styles.dropdown
         }}
+      /> */}
+      <RNPickerSelect
+        onValueChange={(value) => {
+          console.log('Selected Value:', value);
+          if (!value) {
+            setSelectedOrg(null);
+          } else {
+            const selectedOrganization = organizations.find((org) => org.value === value);
+            setSelectedOrg(selectedOrganization || null);
+          }
+        }}
+        items={organizations.length > 0 ? organizations : [{ label: 'No organizations available', value: null }]}
+        placeholder={{ label: 'Select an organization', value: null }}
+        style={{
+          inputAndroid: styles.dropdown,
+        }}
       />
+
       {/* Yes Button */}
       <TouchableOpacity 
         style={styles.button}
