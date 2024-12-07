@@ -543,6 +543,8 @@ const handleReportPost = async (postId) => {
               const authorName = postDoc.data().authorName;
               const authorId = postDoc.data().authorId;
               const currentReportCount = postDoc.data().reportCount || 0;
+              const title = postDoc.data().title;
+              const content = postDoc.data().content;
               await updateDoc(postRef, {
                 reportCount: currentReportCount + 1,
               });
@@ -550,6 +552,8 @@ const handleReportPost = async (postId) => {
 
               // Add a new report document in the 'reports' subcollection
               await addDoc(collection(postRef, "reports"), {
+                title: title,
+                content: content,
                 authorName: authorName,
                 authorType: authorType,
                 authorId: authorId,
@@ -595,6 +599,8 @@ const handleReportComment = async (commentId) => {
               // Increment the reportCount field
               const authorName = commentDoc.data().authorName;
               const authorId = commentDoc.data().authorId;
+              const title = commentDoc.data().title;
+              const content = commentDoc.data().content;
 
               const currentReportCount = commentDoc.data().reportCount || 0;
               await updateDoc(commentRef, {
@@ -602,6 +608,8 @@ const handleReportComment = async (commentId) => {
               });
 
               await addDoc(collection(commentRef, "reports"), {
+                title: title,
+                content: content,
                 authorName: authorName,
                 authorId: authorId,
                 reporterName: reporterName,

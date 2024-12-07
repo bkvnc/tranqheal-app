@@ -596,6 +596,8 @@ const handleReportForum = async () => {
                 authorName: forumDoc.data().authorName,
                 authorType: forumDoc.data().authorType,
                 authorId: forumDoc.data().authorId,
+                title: forumDoc.data().title,
+                content: forumDoc.data().content,
                 reporterName: reporterName,
                 reportedBy: auth.currentUser.uid,
                 reason: "Inappropriate content",
