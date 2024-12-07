@@ -25,6 +25,7 @@ const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose
             <p><strong>Author of the {report.contentType}:</strong> {report.authorName}</p>
             <p><strong>Reason:</strong> {report.reason}</p>
             <p><strong>Type:</strong> {report.contentType}</p>
+            <p><strong>Title of the {report.contentType}:</strong> {report.title}</p>
             <p><strong>Report Count:</strong> {report.reportCount}</p>
             <p><strong> {report.contentType} ID: {report.forumId || report.postId || report.commentId}</strong></p>
             <p><strong>Reported By:</strong> {report.reportedBy}</p>
@@ -111,6 +112,8 @@ const UserTable = () => {
               const forumReports: Report[] = forumReportsSnapshot.docs.map((doc) => ({
                 id: doc.id,
                 authorName: doc.data().authorName || '',
+                title: doc.data().title || '',
+                content: doc.data().content || '',
                 contentType: 'Forum' as const,
                 forumId,
                 reason: doc.data().reason || '',
@@ -146,6 +149,8 @@ const UserTable = () => {
                   onSnapshot(collection(db, `forums/${forumId}/posts/${postId}/reports`), (postReportsSnapshot) => {
                     const postReports: Report[] = postReportsSnapshot.docs.map((doc) => ({
                       id: doc.id,
+                      title: doc.data().title || '',
+                      content: doc.data().content || '',
                       authorName: doc.data().authorName || '',
                       contentType: 'Post' as const,
                       forumId,
@@ -183,6 +188,8 @@ const UserTable = () => {
                         onSnapshot(collection(db, `forums/${forumId}/posts/${postId}/comments/${commentId}/reports`), (commentReportsSnapshot) => {
                           const commentReports: Report[] = commentReportsSnapshot.docs.map((doc) => ({
                             id: doc.id,
+                            content: doc.data().content || '',
+                            title: doc.data().title || '',
                             authorName: doc.data().authorName || '',
                             contentType: 'Comment' as const,
                             forumId,

@@ -34,6 +34,8 @@ export interface Report {
   reportedBy: string;
   timestamp: Date;
   reportCount: number;
+  title: string;
+  content: string;
 }
 
 

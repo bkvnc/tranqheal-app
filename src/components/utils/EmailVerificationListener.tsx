@@ -13,7 +13,7 @@ const EmailVerificationListener: React.FC = () => {
                 await user.reload(); 
                 if (user.emailVerified) {
                     try {
-                       
+                        
                         const collectionName = 'organizations'; 
                         const docRef = doc(db, collectionName, user.uid);
                         await updateDoc(docRef, {

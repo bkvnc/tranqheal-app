@@ -5,7 +5,7 @@ import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
 import { Post } from '../../hooks/types';
 import { getAuth } from 'firebase/auth';
-import { ToastContainer, toast } from 'react-toastify'; // Import ToastContainer and toast
+import { ToastContainer, toast } from 'react-toastify'; 
 import 'react-toastify/dist/ReactToastify.css';
 
 
@@ -167,8 +167,7 @@ const PendingPosts = () => {
     };
 
     const filteredPending = posts.filter(post =>
-        (post.authorName?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
-        (post.title?.toLowerCase().includes(searchTerm.toLowerCase()) || '')
+        (post.authorName?.toLowerCase().includes(searchTerm.toLowerCase()) || '')
     );
     if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
 
