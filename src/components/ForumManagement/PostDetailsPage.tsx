@@ -608,9 +608,7 @@ const PostDetailsPage: React.FC = () => {
     return (
         <div className="container mx-auto bg-white rounded-lg p-6 shadow-lg dark:bg-boxdark relative">
                 <div className="mb-6"><p><a href={`/forums/${post.forumId}`} className="text-primary hover:underline mb-2 font-bold">Go Back to Forum</a></p></div>
-                <div className=" absolute top-4 right-4 mb-6 text-black dark:text-white text-sm font-semibold px-3 rounded-full shadow">
-                    {post.reportCount} {post.reportCount=== 1 ? 'Report' : 'Reports'} 
-                </div>
+               
             <div className="mb-6">
                 
                 <h1 className="text-4xl font-bold mb-2">{post.title}</h1>
@@ -674,6 +672,10 @@ const PostDetailsPage: React.FC = () => {
                    <path d="M4 7L4 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                    <path d="M11.7576 3.90865C8.45236 2.22497 5.85125 3.21144 4.55426 4.2192C4.32048 4.40085 4.20358 4.49167 4.10179 4.69967C4 4.90767 4 5.10138 4 5.4888V14.7319C4.9697 13.6342 7.87879 11.9328 11.7576 13.9086C15.224 15.6744 18.1741 14.9424 19.5697 14.1795C19.7633 14.0737 19.8601 14.0207 19.9301 13.9028C20 13.7849 20 13.6569 20 13.4009V5.87389C20 5.04538 20 4.63113 19.8027 4.48106C19.6053 4.33099 19.1436 4.459 18.2202 4.71504C16.64 5.15319 14.3423 5.22532 11.7576 3.90865Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                </svg>
+
+               <span className="ml-2 font-semibold">
+                        {post.reportCount} {post.reportCount === 1 ? 'report' : 'reports'}
+                    </span>
                </motion.button>
                 )}
 
@@ -766,13 +768,14 @@ const PostDetailsPage: React.FC = () => {
             .sort((a, b) => b.dateCreated - a.dateCreated) // Sort by dateCreated in descending order
             .map((comment) => (
                 <li key={comment.id} className="p-6 bg-white shadow-md rounded-lg border border-gray-200 transition-transform transform hover:scale-105">
-                    <p className="absolute top-4 right-4 text-black text-sm">
+                    {/* <p className="absolute top-4 right-4 text-black text-sm">
                         {comment.reportCount} {comment.reportCount === 1 ? 'Report' : 'Reports'}
-                    </p>
+                    </p> */}
                     <p className="text-gray-800">{comment.content}</p>
                     <p className="text-sm text-black">
                         By <a>{comment.authorName}</a> on {formattedDate(comment.dateCreated)}
                     </p>
+                    <div className='flex align-middle'>
                     <motion.button
                         onClick={() => toggleCommentReaction(comment.id)}
                         className={`flex items-center mt-2 px-2 py-1 rounded-md transition-all duration-200 ${
@@ -800,15 +803,19 @@ const PostDetailsPage: React.FC = () => {
                        {!isCommentAuthor(comment) && (
                             <motion.button
                             onClick={() => handleReportComment(comment.id)}
-                            className={`flex items-center  rounded-md transition-all duration-200 text-danger`}
+                            className={`flex items-center mt-2 px-2 py-1  rounded-md transition-all duration-200 text-danger`}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none">
                                 <path d="M4 7L4 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                                 <path d="M11.7576 3.90865C8.45236 2.22497 5.85125 3.21144 4.55426 4.2192C4.32048 4.40085 4.20358 4.49167 4.10179 4.69967C4 4.90767 4 5.10138 4 5.4888V14.7319C4.9697 13.6342 7.87879 11.9328 11.7576 13.9086C15.224 15.6744 18.1741 14.9424 19.5697 14.1795C19.7633 14.0737 19.8601 14.0207 19.9301 13.9028C20 13.7849 20 13.6569 20 13.4009V5.87389C20 5.04538 20 4.63113 19.8027 4.48106C19.6053 4.33099 19.1436 4.459 18.2202 4.71504C16.64 5.15319 14.3423 5.22532 11.7576 3.90865Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
+                            <span className="ml-1 text-sm">
+                            {comment.reportCount || 0}
+                        </span>
                         </motion.button>
                        )}
+                       </div>
                 
                     
                     {comment.authorId === auth.currentUser?.uid && (
