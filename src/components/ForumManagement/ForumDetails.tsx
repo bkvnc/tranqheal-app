@@ -93,7 +93,7 @@ const ForumDetailsPage: React.FC = () => {
 
 
     return (
-        <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
+        <div className="container mx-auto bg-white rounded-lg p-6 shadow-lg dark:bg-boxdark relative">
 
             <div className="flex items-center justify-between border-b pb-3 mb-4">
                 <div>
