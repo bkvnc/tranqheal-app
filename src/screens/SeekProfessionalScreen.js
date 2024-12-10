@@ -12,9 +12,6 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
   const { matchData, userProfileImage } = route.params;
   const bestMatch = matchData.length ? matchData[0] : null;
 
-  const [viewDetails, setViewDetails] = useState(false);
-  const [viewOtherProfessionals, setViewOtherProfessionals] = useState(false);
-
   const handleSendRequest = async () => {
     if (!bestMatch?.id) {
       console.error('Error: Professional ID is missing in match data.');
@@ -27,9 +24,6 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
       console.error('Error: User ID is undefined.');
       return;
     }
-    console.log('Database instance:', firestore);
-    console.log('Professional ID:', bestMatch.id);
-    console.log('User ID:', currentUser?.uid);
   
     try {
       const professionalRef = doc(firestore, 'professionals', bestMatch.id); 
@@ -74,16 +68,9 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
   };
   
   const handleToggleViewProfessional = () => {
-    setViewDetails(prevState => {
-      if (prevState) {
-        setViewOtherProfessionals(false); 
-      }
-      return !prevState;
-    });
-  };
-
-  const handleViewOtherProfessionals = () => {
-    setViewOtherProfessionals(true);
+    if (bestMatch) {
+      navigation.navigate('ProfessionalDetails', { professionalId: bestMatch.id, fromMatching: true });
+    }
   };
 
   return (
@@ -115,67 +102,9 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
                 style={[styles.button, styles.viewButton]}
                 onPress={handleToggleViewProfessional}
               >
-                <Text style={styles.buttonText}>
-                  {viewDetails ? 'Hide Professional' : 'View Professional'}
-                </Text>
+                <Text style={styles.buttonText}>View Professional</Text>
               </TouchableOpacity>
             </View>
-
-            {/* Professional Details Section */}
-            {viewDetails && (
-              <View style={styles.detailsContainer}>
-                <Text style={styles.detailText}>Name: {bestMatch.name}</Text>
-                <Text style={styles.detailText}>Age: {bestMatch.age}</Text>
-                <Text style={styles.detailText}>Gender: {bestMatch.gender}</Text>
-                <Text style={styles.detailText}>
-                  Specialization: 
-                  {Object.entries(bestMatch.specialization)
-                    .filter(([, value]) => value)
-                    .map(([key]) => ` ${key}`)
-                    .join(',')}
-                </Text>
-                <Text style={styles.detailText}>Rating: {bestMatch.rating}</Text>
-                <Text style={styles.detailText}>
-                  Availability: 
-                  {Object.entries(bestMatch.availability)
-                    .filter(([, available]) => available)
-                    .map(([time]) => ` ${time}`)
-                    .join(',')}
-                </Text>
-              </View>
-            )}
-
-            {/* View Other Professionals Button - only shown after viewing the best match */}
-            {viewDetails && matchData.length > 1 && (
-              <TouchableOpacity
-                style={[styles.button, styles.viewButton]}
-                onPress={handleViewOtherProfessionals}
-              >
-                <Text style={styles.buttonText}>View Other Professionals</Text>
-              </TouchableOpacity>
-            )}
-
-            {/* List of Other Matched Professionals */}
-            {viewOtherProfessionals && (
-              <View style={styles.otherProfessionalsContainer}>
-                {matchData
-                  .filter((professional, index) => index !== 0) 
-                  .map((professional, index) => (
-                    <View key={index} style={styles.otherProfessionalCard}>
-                      <Image
-                        source={{ uri: professional.profileImage }}
-                        style={styles.profilePicture}
-                      />
-                      <View style={styles.otherProfessionalDetails}>
-                        <Text style={styles.otherProfessionalName}>{professional.name}</Text>
-                        <Text style={styles.otherProfessionalRating}>
-                          {`⭐ ${professional.rating}`}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-              </View>
-            )}
           </>
         ) : (
           <Text style={styles.noMatchText}>No professionals match your preferences at this time.</Text>

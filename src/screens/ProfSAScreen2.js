@@ -63,9 +63,9 @@ export const ProfSAScreen2 = ({ navigation }) => {
 
         const userAssessmentRef = doc(firestore, 'professionals', userId);
         const selfAssessment = {
-          depTotal,
-          anxTotal,
-          stressTotal,
+          anxiety: anxTotal,
+          depression: depTotal,
+          stress: stressTotal,
 
         };
       
