@@ -3,8 +3,8 @@ import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'rea
 import { RootLayout } from '../navigation/RootLayout';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AuthenticatedUserContext } from '../providers';
-import { doc, getDoc } from 'firebase/firestore';
-import { firestore } from '../config';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { firestore, Colors } from '../config';
 import { LoadingIndicator } from 'src/components';
 
 const SPECIALIZATION_MAPPING = {
@@ -14,7 +14,7 @@ const SPECIALIZATION_MAPPING = {
 };
 
 export const ProfessionalDetailsScreen = ({ route, navigation }) => {
-  const { professionalId } = route.params || {}; 
+  const { professionalId, fromMatching } = route.params; 
   const { userType } = useContext(AuthenticatedUserContext);
   const [professional, setProfessional] = useState(null);
   const [organizationData, setOrganizationData] = useState(null);
@@ -59,7 +59,7 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
             specialization,
             underOrg: data.underOrg,
           };
-  
+
           setProfessional(professionalData);
   
           // Fetch organization details if `underOrg` exists
@@ -86,8 +86,6 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
     fetchDetails();
   }, [professionalId]);
   
-
-  
   const renderStars = (rating = 0) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -101,6 +99,61 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
       );
     }
     return stars;
+  };
+
+  const handleSendRequest = async () => {
+    if (!professionalId) {
+      console.error('Error: Professional ID is missing in match data.');
+      return;
+    }
+
+    const currentUser = auth.currentUser;
+  
+    if (!currentUser?.uid) {
+      console.error('Error: User ID is undefined.');
+      return;
+    }
+  
+    try {
+      const professionalRef = doc(firestore, 'professionals', professionalId); 
+      const matchingRequestsRef = collection(professionalRef, 'matchingRequests'); 
+      const requestDocRef = doc(matchingRequestsRef,  currentUser?.uid); 
+      const profSnapshot = await getDoc(professionalRef);
+      const userSnapshot = await getDoc(doc(firestore, 'users', currentUser?.uid));
+  
+      const requestData = {
+        userId: currentUser?.uid,
+        professionalId: professionalId,
+        requesterName: userSnapshot.data().firstName + ' ' + userSnapshot.data().lastName,
+        status: 'pending',
+        requestedAt: serverTimestamp(),
+      };
+
+      const notificationRef = doc(collection(firestore, `notifications/${professionalId}/messages`)); 
+
+      await setDoc(notificationRef, {
+        recipientId: professionalId,
+        recipientType: profSnapshot.data().userType,  
+        message: `You've been matched! A seeker is seeking you expertise. Please review and respond to the request at your earliest convenience.`,
+        type: `matching`,
+        createdAt: serverTimestamp(), 
+        isRead: false,
+      });
+
+      const notificationDoc = await getDoc(notificationRef);
+      const notificationData = notificationDoc.data();
+
+      if (notificationData && notificationData.createdAt) {
+        const createdAtDate = notificationData.createdAt.toDate();
+        console.log("Notification createdAt:", createdAtDate);
+      }
+
+      await setDoc(requestDocRef, requestData); 
+      console.log('Request sent successfully!');
+      navigation.navigate('Success');
+    } catch (error) {
+      console.error('Error sending request:', error);
+    }
   };
 
   if (isloading) {
@@ -138,11 +191,17 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
             </Text>
             <View style={styles.starContainer}>{renderStars(professional.rating || 0)}</View>
           </View>
-          <TouchableOpacity 
+          {fromMatching ? (
+            <TouchableOpacity style={[styles.button, styles.sendButton]} onPress={handleSendRequest}>
+              <Text style={styles.buttonText}>Send Request</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
             style={styles.iconContainer} 
             onPress={() => console.log('Facebook icon clicked')}>
-            <Ionicons name="logo-facebook" size={28} color="#3b5998" />
-          </TouchableOpacity>
+              <Ionicons name="logo-facebook" size={28} color="#3b5998" />
+            </TouchableOpacity>
+          )}
         </View>
         <View style={styles.divider} />
         <View style={styles.card}>
@@ -213,12 +272,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   verified: {
-   
+    backgroundColor: Colors.purple,
+    borderColor: Colors.black,
   },
   unverified: {
+    backgroundColor: Colors.red,
+    borderColor: Colors.black,
   },
   statusText: {
-    color: '#333',
+    color: Colors.white,
     fontSize: 16,
     fontWeight: '500',
   },  
@@ -281,6 +343,21 @@ const styles = StyleSheet.create({
     marginBottom : 10,
     width: '90%',
     alignSelf: 'center',
+  },
+  button: {
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    borderRadius: 30,
+    width: '45%',
+    alignItems: 'center',
+  },
+  sendButton: {
+    backgroundColor: Colors.purple,
+  },
+  buttonText: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 
