@@ -281,6 +281,15 @@ const handleDeletePost = () => {
       Alert.alert('Error', 'Your comment contains blacklisted words. Please remove them and try again.');
       return;
     }
+
+    let status = null;
+    if (authorType === 'professional') {
+      const userRef = doc(firestore, 'professionals', user.uid);
+      const userSnapshot = await getDoc(userRef);
+      if (userSnapshot.exists()) {
+        status = userSnapshot.data().status; // Set the status (Verified/Unverified)
+      }
+    }
   
     console.log("Adding comment with isAnonymous:", anonymous);
     // Proceed to add the comment if no blacklisted words are found
@@ -290,6 +299,7 @@ const handleDeletePost = () => {
       authorName: authorName,
       authorType: authorType,
       authorId: user.uid,
+      status: status,
       isAnonymous: anonymous,
     };
   
@@ -670,29 +680,38 @@ if (loading) {
 //Render Comments  
 const renderCommentItem = ({ item }) => (
   <View style={styles.commentItem}>
-    <Text style={styles.commentAuthor}>
-      {item.isAnonymous ? 'Anonymous' : item.authorName}
-      {item.status !== undefined && (
-        
-          <Text style={styles.statusText, item.status === 'Verified' ? styles.statusText : null}>{item.status}</Text>
-        
-       
-   )}
-    </Text>
+    {/* Author and Status Row */}
+    <View style={styles.authorRow}>
+      <Text style={styles.commentAuthor}>
+        {item.isAnonymous ? 'Anonymous' : item.authorName}
+      </Text>
 
-  
+      {/* Conditionally render the status tag only if it exists (i.e., only for professionals) */}
+      {!item.isAnonymous && item.status && (
+        <Text
+          style={[
+            styles.statusText,
+            item.status === 'Verified' ? styles.verifiedStatus : styles.unverifiedStatus,
+          ]}
+        >
+          {item.status}
+        </Text>
+      )}
+    </View>
+
+    {/* Comment Content */}
     <Text style={styles.commentContent}>{item.content}</Text>
     <Text style={styles.commentDate}>
       {item.dateCreated ? moment(item.dateCreated).fromNow() : 'Unknown date'}
     </Text>
-    
+
+    {/* Action Icons */}
     <View style={styles.iconRow}>
-      {/* Edit and Delete Options for the Comment Author */}
+      {/* Edit and Delete Options */}
       {item.authorId === user.uid ? (
         <>
           <TouchableOpacity
             onPress={() => {
-              console.log("Editing comment:", item);
               setCommentToEdit(item);
               setEditCommentText(item.content);
               setIsEditCommentModalVisible(true);
@@ -709,20 +728,20 @@ const renderCommentItem = ({ item }) => (
           <Ionicons name="alert-circle-outline" size={20} color="#000" />
         </TouchableOpacity>
       )}
-      
-      {/* Reaction (Heart) Icon and Count */}
+
+      {/* Reaction Icon */}
       <TouchableOpacity onPress={() => handleCommentReact(item.id)} style={styles.reactionIconContainer}>
         <Ionicons
-          name={item.userReacted ? "heart" : "heart-outline"} 
-          style={[styles.reactionIcon, { color: item.userReacted ? 'red' : '#333' }]}  
+          name={item.userReacted ? 'heart' : 'heart-outline'}
+          style={[styles.reactionIcon, { color: item.userReacted ? 'red' : '#333' }]}
         />
-        <Text style={styles.reactionCount}>
-          {item.commentReacted || 0}
-        </Text>
+        <Text style={styles.reactionCount}>{item.commentReacted || 0}</Text>
       </TouchableOpacity>
     </View>
   </View>
 );
+
+
 
  return (
     <RootLayout navigation={navigation} screenName="Post Details" userType={userType}>
@@ -1089,30 +1108,38 @@ commentAuthor: {
   fontWeight: '600', 
   fontSize: 14, 
   color: '#333', 
-  marginRight: 8,
 },
-tagsContainer: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  marginBottom: 12, 
-  backgroundColor: '#7f4dff',
-},
-statusBadge: {
-  
+authorRow: {
+  flexDirection: 'row',         
+  alignItems: 'center',         
+  justifyContent: 'flex-start', 
+  gap: 8,                       
 },
 
 statusText: {
+  fontSize: 10, 
+  fontWeight: '400',
+  paddingHorizontal: 8, 
+  paddingVertical: 3,
+  borderRadius: 20,
+  backgroundColor: '#B9A2F1', 
   color: '#fff', 
-  fontSize: 12,  
-  fontWeight: '300',
-  backgroundColor: '#B9A2F1',
-  marginLeft: 10, // Adds space between the author name and badge
-  paddingHorizontal: 10, // Horizontal padding for oval shape
-  paddingVertical: 5, // Vertical padding for oval shape
-  borderRadius: 15, // Makes the container oval
-  justifyContent: 'center',
-  alignItems: 'center',
+  flexShrink: 1, 
 },
+
+verifiedStatus: {
+  backgroundColor: '#B9A2F1',  
+  color: '#fff', 
+  maxWidth: 80, 
+},
+
+unverifiedStatus: {
+  backgroundColor: '#B9A2F1',  
+  color: '#fff', 
+  maxWidth: 80, 
+},
+
+
 commentContent: {
   marginVertical: 6, 
   fontSize: 14, 

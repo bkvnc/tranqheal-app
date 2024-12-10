@@ -294,11 +294,11 @@ export const ViewRequestScreen = ({ navigation }) => {
             <>
               <Text style={styles.detailsModalTitle}>Latest Self-Assessment</Text>
               <Text style={styles.detailsModalDetail}><Text style={styles.boldText}>GAD-7: </Text> 
-              {selectedRequestDetails.selfAssessment.gad7Total || 'N/A'} - {selectedRequestDetails.selfAssessment.gad7Interpretation || 'N/A'}</Text>
+              {selectedRequestDetails.selfAssessment.gad7Total} - {selectedRequestDetails.selfAssessment.gad7Interpretation || 'N/A'}</Text>
               <Text style={styles.detailsModalDetail}><Text style={styles.boldText}>PHQ-9: </Text> 
-              {selectedRequestDetails.selfAssessment.phq9Total || 'N/A'} - {selectedRequestDetails.selfAssessment.phq9Interpretation || 'N/A'}</Text>
+              {selectedRequestDetails.selfAssessment.phq9Total} - {selectedRequestDetails.selfAssessment.phq9Interpretation || 'N/A'}</Text>
               <Text style={styles.detailsModalDetail}><Text style={styles.boldText}>PSS: </Text> 
-              {selectedRequestDetails.selfAssessment.pssTotal || 'N/A'} - {selectedRequestDetails.selfAssessment.pssInterpretation || 'N/A'}</Text>
+              {selectedRequestDetails.selfAssessment.pssTotal} - {selectedRequestDetails.selfAssessment.pssInterpretation || 'N/A'}</Text>
             </>
           ) : (
             <Text style={styles.noDataText}>No self-assessment data available.</Text>
