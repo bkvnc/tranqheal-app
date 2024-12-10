@@ -27,12 +27,12 @@ const ForumDetailsPage: React.FC = () => {
    
    
 
-    const userStatus = {
-        canJoin: isAuthor && !isMember,   
-        canAddPosts: isAuthor || isMember,
-        canDeletePosts: isAuthor,
-        canJoinOrLeave: !isAuthor && !isMember, 
-    };
+        const userStatus = {
+            canJoin: isAuthor && !isMember,   
+            canAddPosts: isAuthor || isMember,
+            canDeletePosts: isAuthor,
+            canJoinOrLeave: !isAuthor && !isMember, 
+        };
     
 
     const auth = getAuth();
@@ -110,7 +110,7 @@ const ForumDetailsPage: React.FC = () => {
                         <button
                             onClick={handleJoinLeaveForum}
                             aria-label={isMember ? 'Leave Forum' : 'Join Forum'}
-                            className={`mt-2 px-4 py-2 ${isMember ? 'bg-[#9F4FDD] hover:bg-danger' : 'bg-[#9F4FDD]'}  hover:bg-[#9F4FDD] text-white hover:text-white rounded-md hover:bg-opacity-90`}
+                            className={`mt-2 px-4 py-2 ${isMember ? 'bg-[#9F4FDD] hover:bg-danger' : 'bg-[#9F4FDD]'}  hover:bg-[#9F4FDD] hover:shadow-lg hover:shadow-[#9F4FDD]/50 text-white hover:text-white rounded-md hover:bg-opacity-90`}
                         >
                             {isMember ? 'Leave Forum' : 'Join Forum'}
                         </button>
@@ -126,56 +126,59 @@ const ForumDetailsPage: React.FC = () => {
             <div className="mt-8">
                 <h2 className="text-2xl font-semibold mb-4 text-black dark:text-white">Posts</h2>
                 {posts.length > 0 ? (
-                    <ul className="space-y-6">
-                        {posts.filter(post => post.status === 'approved').map(post => (
-                            <li key={post.id} className="p-6 bg-white shadow-md rounded-lg border border-gray-200 transition-transform transform hover:scale-105">
-                                <div className="flex items-start space-x-4">
+    <ul className="space-y-6">
+        {posts
+            .filter(post => post.status === 'approved') // Filter posts with 'approved' status
+            .sort((a, b) => b.dateCreated - a.dateCreated) // Sort by dateCreated in descending order
+            .map(post => (
+                <li key={post.id} className="p-6 bg-white shadow-md rounded-lg border border-gray-200 transition-transform transform hover:scale-105">
+                    <div className="flex items-start space-x-4">
+                        <img
+                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'Anonymous')}&background=random`}
+                            alt={post.authorName || 'Anonymous'}
+                            className="w-10 h-10 rounded-full"
+                        />
+                        <div className="flex-1">
+                            <Link to={`/forums/${forumId}/posts/${post.id}`} className="text-black hover:underline">
+                                {post.title}
+                            </Link>
+                            <p className="text-sm text-gray-500 mt-2">
+                                {post.content}
+                            </p>
+                            
+                            {post.imageUrl && (
+                                <div className="mt-3">
                                     <img
-                                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'Anonymous')}&background=random`}
-                                        alt={post.authorName || 'Anonymous'}
-                                        className="w-10 h-10 rounded-full"
+                                        src={post.imageUrl}
+                                        alt="Post content"
+                                        className="rounded-lg max-h-64 object-cover"
+                                        onClick={() => window.open(post.imageUrl, '_blank')}
+                                        style={{ cursor: 'pointer' }}
                                     />
-                                    <div className="flex-1">
-                                        <Link to={`/forums/${forumId}/posts/${post.id}`} className="text-black hover:underline">
-                                            {post.title}
-                                        </Link>
-                                        <p className="text-sm text-gray-500 mt-2">
-                                            {post.content}
-                                        </p>
-                                        
-                                      
-                                        {post.imageUrl && (
-                                            <div className="mt-3">
-                                                <img
-                                                    src={post.imageUrl}
-                                                    alt="Post content"
-                                                    className="rounded-lg max-h-64 object-cover"
-                                                    onClick={() => window.open(post.imageUrl, '_blank')}
-                                                    style={{ cursor: 'pointer' }}
-                                                />
-                                            </div>
-                                        )}
-                                        
-                                        <p className="text-sm text-gray-500 mt-2">
-                                            By <a href={`/profile/${post.authorId}`} className="text-primary hover:underline">{post.authorName}</a> on {formattedDate(post.dateCreated)}
-                                        </p>
-                                        
-                                        {userStatus.canDeletePosts && (
-                                            <button 
-                                                onClick={() => handleDeletePost(post.id)} 
-                                                className="mt-2 text-danger hover:text-white hover:bg-danger hover:bg-opacity-90 px-4 py-2 rounded-md hover:shadow-lg hover:shadow-danger/50 transition"
-                                            >
-                                                Delete
-                                            </button>
-                                        )}
-                                    </div>
                                 </div>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-gray-600">No posts available.</p>
-                )}
+                            )}
+                            
+                            <p className="text-sm text-gray-500 mt-2">
+                                By <a>{post.authorName}</a> on {formattedDate(post.dateCreated)}
+                            </p>
+                            
+                            {userStatus.canDeletePosts && (
+                                <button 
+                                    onClick={() => handleDeletePost(post.id)} 
+                                    className="mt-2 text-danger hover:text-white hover:bg-danger hover:bg-opacity-90 px-4 py-2 rounded-md hover:shadow-lg hover:shadow-danger/50 transition"
+                                >
+                                    Delete
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </li>
+            ))}
+    </ul>
+) : (
+    <p className="text-gray-600">No posts available.</p>
+)}
+
             </div>
 
             {userStatus.canAddPosts && (

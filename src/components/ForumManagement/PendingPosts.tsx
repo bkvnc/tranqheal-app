@@ -11,10 +11,12 @@ import 'react-toastify/dist/ReactToastify.css';
 
 const PendingPosts = () => {
     const [posts, setPosts] = useState<Post[]>([]);
-    const [currentPage, setCurrentPage] = useState(1);
+    
     const [loading, setLoading] = useState(false);
-    const pendingsPerPage = 5;
+    const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState<string>("");
+
+    const pendingsPerPage = 5;
     
 
     useEffect(() => {
@@ -166,9 +168,14 @@ const PendingPosts = () => {
         }
     };
 
-    const filteredPending = posts.filter(post =>
-        (post.authorName?.toLowerCase().includes(searchTerm.toLowerCase()) || '')
-    );
+    const filteredPending = posts.filter(post => {
+        const lowerCaseSearch = searchTerm.trim().toLowerCase();
+        return (
+            post.authorName?.toLowerCase().includes(lowerCaseSearch) || 
+            post.content?.toLowerCase().includes(lowerCaseSearch)
+        );
+    });
+    
     if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
 
     const indexOfLastPending = currentPage * pendingsPerPage;
@@ -185,7 +192,7 @@ const PendingPosts = () => {
                 <div className="flex items-center">
                     <input
                         type="text"
-                        placeholder="Search post by title or author"
+                        placeholder="Search post by content or author"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="mb-3 w-100 rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"

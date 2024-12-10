@@ -93,10 +93,16 @@ const RemoveProfessionalTable = () => {
         setSelectedProfessional(null);
     };
 
-    const filteredProfessionals = professionals.filter(professional =>
-        professional.firstName?.toLowerCase().includes(searchTerm.toLowerCase() || '') ||
-        professional.lastName?.toLowerCase().includes(searchTerm.toLowerCase() || '')
-    );
+    
+
+    const filteredProfessionals = professionals.filter(professional => {
+        const lowerCaseSearch = searchTerm.trim().toLowerCase();
+        return (
+            professional.firstName?.toLowerCase().includes(lowerCaseSearch) || 
+            professional.lastName?.toLowerCase().includes(lowerCaseSearch) ||
+            professional.email?.toLowerCase().includes(lowerCaseSearch)
+        );
+    });
 
     const indexOfLastProfessional = currentPage * professionalsPerPage;
     const indexOfFirstProfessional = indexOfLastProfessional - professionalsPerPage;

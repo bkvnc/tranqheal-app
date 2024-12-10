@@ -262,6 +262,79 @@ const useForum = (forumId: string) => {
         const regex = new RegExp(`\\b(${blacklistedWords.join('|')})\\b`, 'gi');
         return content.replace(regex, (match) => `<span style="color:red;">${match}</span>`);
     };
+
+    const handleEditPost = async (
+        postId: string,
+        updatedTitle: string,
+        updatedContent: string,
+        updatedImage: File | null
+    ) => {
+        if (!auth.currentUser) {
+            toast.error('Please log in to edit the post.');
+            return;
+        }
+    
+        if (!forum) {
+            toast.error('Forum data not found.');
+            return;
+        }
+    
+        if (containsBlacklistedWords(updatedContent, blacklistedWords)) {
+            toast.error('Your post contains inappropriate language.');
+            return;
+        }
+    
+        try {
+            const user = auth.currentUser;
+            const postRef = doc(db, 'forums', forum.id, 'posts', postId);
+            const postDoc = await getDoc(postRef);
+    
+            if (!postDoc.exists()) {
+                toast.error('Post not found.');
+                return;
+            }
+    
+            const postData = postDoc.data();
+            if (postData.authorId !== user.uid) {
+                toast.error('You are not authorized to edit this post.');
+                return;
+            }
+    
+            let imageUrl = postData.imageUrl || null;
+            if (updatedImage) {
+                const storage = getStorage();
+                const imageRef = storageRef(
+                    storage,
+                    `forums/posts/${forum.id}/${Date.now()}_${updatedImage.name}`
+                );
+    
+                await uploadBytes(imageRef, updatedImage);
+                imageUrl = await getDownloadURL(imageRef);
+            }
+    
+            await updateDoc(postRef, {
+                title: updatedTitle,
+                content: updatedContent,
+                imageUrl: imageUrl,
+                lastUpdated: serverTimestamp(),
+            });
+    
+            // Update posts state
+            setPosts((prevPosts) =>
+                prevPosts.map((post) =>
+                    post.id === postId
+                        ? { ...post, title: updatedTitle, content: updatedContent, imageUrl, lastUpdated: new Date() }
+                        : post
+                )
+            );
+    
+            toast.success('Post updated successfully.');
+        } catch (error: any) {
+            console.error('Error editing post:', error);
+            toast.error(`Failed to edit post: ${error.message || 'An unknown error occurred.'}`);
+        }
+    };
+    
     
     // Function to handle changes in the post title
     const handlePostTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -493,6 +566,7 @@ const useForum = (forumId: string) => {
         handleImageChange,
         imagePreview,
         setSelectedImage,
+        handleEditPost,
     };
 };
 

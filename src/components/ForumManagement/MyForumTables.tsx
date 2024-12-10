@@ -128,9 +128,14 @@ const MyForumTable: React.FC = () => {
         }
     };
 
-    const filteredForums = forums.filter(forum =>
-        (forum.title?.toLowerCase().includes(searchTerm.toLowerCase()) || '')
-    );
+   
+
+    const filteredForums = forums.filter(forum => {
+        const lowerCaseSearch = searchTerm.trim().toLowerCase();
+        return (
+            forum.title?.toLowerCase().includes(lowerCaseSearch)
+        );
+    });
     const indexOfLastForum = currentPage * forumsPerPage;
     const indexOfFirstForum = indexOfLastForum - forumsPerPage;
     const currentForums = filteredForums.slice(indexOfFirstForum, indexOfLastForum);
