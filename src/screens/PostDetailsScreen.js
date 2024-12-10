@@ -687,7 +687,7 @@ const renderCommentItem = ({ item }) => (
       </Text>
 
       {/* Conditionally render the status tag only if it exists (i.e., only for professionals) */}
-      {item.status && (
+      {!item.isAnonymous && item.status && (
         <Text
           style={[
             styles.statusText,
