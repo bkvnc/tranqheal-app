@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { collection, getDocs, doc, getDoc, addDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
 import dayjs from 'dayjs'; 
-import Alert from '../../pages/UiElements/Alerts';
 import { NavLink, Link } from 'react-router-dom';
 import { UserData, Forum } from '../../hooks/types';
+import { toast, ToastContainer } from 'react-toastify'; // Import toast
+import 'react-toastify/dist/ReactToastify.css'; // Import toast styles
 
 
 
@@ -78,56 +79,51 @@ const MyForumTable: React.FC = () => {
             }
         }, [userData]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const currentDate = new Date();
-
-        try {
-            const forumRef = collection(db, 'forums');
-            const user = auth.currentUser; 
-
-            if (!user) {
-                throw new Error('User not authenticated');
+        const handleSubmit = async (e: React.FormEvent) => {
+            e.preventDefault();
+            const currentDate = new Date();
+    
+            try {
+                const forumRef = collection(db, 'forums');
+                const user = auth.currentUser;
+    
+                if (!user) {
+                    throw new Error('User not authenticated');
+                }
+    
+                await addDoc(forumRef, {
+                    title,
+                    content,
+                    dateCreated: currentDate,
+                    totalComments: 0,
+                    tags,
+                    totalMembers: 0,
+                    authorId: user.uid,
+                    authorName: userData?.organizationName || 'Anonymous',
+                    authorType: userData?.userType || 'user',
+                });
+    
+                toast.success('Forum created successfully!'); // Show success toast
+                handleModalClose(); // Close modal and reset form
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (error) {
+                console.error('Error creating forum: ', error);
+                toast.error('Failed to create forum.'); // Show error toast
             }
-
-            await addDoc(forumRef, {
-                title,
-                content,
-                dateCreated: currentDate,
-                totalComments: 0,
-                tags,
-                totalMembers: 0,
-                authorId: user.uid, 
-                authorName: userData?.organizationName || 'Anonymous',
-                authorType: userData?.userType || 'user',
-            });
-
-            
-            setAlert({ type: 'success', message: 'Forum created successfully!' });
-            setTimeout(() => {
-                setAlert(null);
-                window.location.reload(); 
-            }, 1000);
-
-            handleModalClose(); // Close modal and reset form
-        } catch (error) {
-            console.error('Error creating forum: ', error);
-            setAlert({ type: 'error', message: 'Failed to create forum.' });
-        }
-    };
-
-    const handleDelete = async (forumId: string) => {
-        const forumDocRef = doc(db, 'forums', forumId);
-
-        try {
-            await deleteDoc(forumDocRef);
-            setForums((prevForums) => prevForums.filter((forum) => forum.id !== forumId));
-            setAlert({ type: 'success', message: 'Forum deleted successfully!' });
-        } catch (error) {
-            console.error('Error deleting forum: ', error);
-        }
-    };
-
+        };
+    
+        const handleDelete = async (forumId: string) => {
+            const forumDocRef = doc(db, 'forums', forumId);
+    
+            try {
+                await deleteDoc(forumDocRef);
+                setForums((prevForums) => prevForums.filter((forum) => forum.id !== forumId));
+                toast.success('Forum deleted successfully!'); // Show success toast
+            } catch (error) {
+                console.error('Error deleting forum: ', error);
+                toast.error('Failed to delete forum.'); // Show error toast
+            }
+        };
    
 
     const filteredForums = forums.filter(forum => {
@@ -143,7 +139,9 @@ const MyForumTable: React.FC = () => {
 
     return (
         <>
+        
             <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
+            <ToastContainer />
                 <div className="max-w-full overflow-x-auto">
                     <div className="flex items-center">
                     <div className="flex items-center">
@@ -200,7 +198,7 @@ const MyForumTable: React.FC = () => {
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <button className="mr-2 text-sm ">
-                                            <NavLink to={`/forums/${forum.id}`} className="flex items-center justify-center hover:shadow-lg hover:bg-success hover:text-white rounded-md py-1 px-5">
+                                            <NavLink to={`/forums/${forum.id}`} className="flex items-center justify-center hover:shadow-lg hover:bg-success hover:shadow-success/50 hover:text-white rounded-md py-1 px-5">
                                                 View
                                             </NavLink>
                                         </button>
@@ -297,7 +295,7 @@ const MyForumTable: React.FC = () => {
                     </div>
                 </div>
             )}
-            {alert && <Alert type={alert.type} message={alert.message} />}
+            
         </>
     );
 };

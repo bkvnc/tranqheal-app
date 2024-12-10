@@ -220,7 +220,9 @@ const PendingPosts = () => {
                                 <td colSpan={6} className="text-center">No pending posts</td>
                             </tr>
                         ) : (
-                            currentPending.map(post => (
+                            currentPending
+                            .sort((a, b) => b.dateCreated - a.dateCreated) 
+                            .map(post => (
                                 <tr key={post.id}>
                                     <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">{post.id}</td>
                                     <td className="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">{post.author} {post.authorName}</td>
