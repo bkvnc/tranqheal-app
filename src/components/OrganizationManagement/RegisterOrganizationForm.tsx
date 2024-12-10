@@ -160,7 +160,7 @@ const Register: React.FC = () => {
             await setDoc(doc(db, collectionName, user.uid), userData);
 
            
-            toast.success('Registration successful! Please check your email to verify your account.');
+            toast.success('Registration successful! Please let the organization check their email to verify their account.');
 
          
         } catch (error: any) {
@@ -187,6 +187,9 @@ const Register: React.FC = () => {
 
         setLoading(false);
     };
+
+    
+
 
     return (
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">

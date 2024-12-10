@@ -92,7 +92,7 @@ const SuspendedUsers: React.FC = () => {
         return;
       }
   
-      // Check if suspension period has expired
+   
       if (user.suspendedUntil && new Date() < user.suspendedUntil) {
         toast.warning("User's suspension period has not yet expired.");
         return;
@@ -101,8 +101,7 @@ const SuspendedUsers: React.FC = () => {
       const suspendedUserDoc = doc(db, `forums/${forumId}/suspendedUsers`, userId);
   
       await deleteDoc(suspendedUserDoc);
-  
-      // Notify success
+ 
       toast.success(`User "${user.authorName}" has been unsuspended.`);
     } catch (error) {
       console.error('Error unsuspending user:', error);

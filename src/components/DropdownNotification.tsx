@@ -82,7 +82,7 @@ const DropdownNotification = () => {
     if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
     
-    // If more than a day ago, return the full date
+ 
     return date.toLocaleDateString();
   };
 

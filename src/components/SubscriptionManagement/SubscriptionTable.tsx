@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import dayjs from 'dayjs'; // Import Day.js
 import { db } from '../../config/firebase';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { toast } from 'react-toastify'; // Import Toastify styles
+import 'react-toastify/dist/ReactToastify.css';
 
 const SubscriptionTable = () => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -19,6 +21,7 @@ const SubscriptionTable = () => {
                 setSubscriptions(subs);
             } catch (error) {
                 console.error('Error fetching subscriptions:', error);
+                toast.error('Failed to fetch subscriptions. Please try again.');
             }
         };
 
@@ -32,13 +35,66 @@ const SubscriptionTable = () => {
             try {
                 await deleteDoc(doc(db, 'subscriptions', subscriptionId)); // Delete from Firestore
                 setSubscriptions(subscriptions.filter((sub) => sub.id !== subscriptionId)); // Remove from state
-                alert('Subscription deleted successfully!');
+                toast.success('Subscription deleted successfully!');
             } catch (error) {
                 console.error('Error deleting subscription:', error);
-                alert('Failed to delete the subscription.');
+                toast.error('Failed to delete the subscription.');
             }
         }
     };
+
+    const handleSetInactive = async (subscriptionId: string, userId: string, endDate: any) => {
+        try {
+           
+            const endDateObj = endDate instanceof Timestamp ? endDate.toDate() : new Date(endDate);
+    
+           
+            if (new Date() < endDateObj) {
+                toast.warning("Subscription has not yet expired. You cannot set it to inactive.");
+                return;
+            }
+    
+            
+            const subscriptionDocRef = doc(db, 'subscriptions', subscriptionId);
+            await updateDoc(subscriptionDocRef, { status: 'inactive' });
+    
+            
+            try {
+                const organizationDocRef = doc(db, 'organizations', userId);
+                await updateDoc(organizationDocRef, { subscriptionStatus: 'Expired' });
+            } catch (error) {
+                console.error('Error updating organization subscription status:', error);
+            }
+    
+           
+            setSubscriptions((prevSubscriptions) =>
+                prevSubscriptions.map((sub) =>
+                    sub.id === subscriptionId ? { ...sub, status: 'inactive' } : sub
+                )
+            );
+    
+          
+            const notificationRef = doc(
+                collection(db, `notifications/${userId}/messages`)
+            );
+            await setDoc(notificationRef, {
+                recipientId: userId,
+                recipientType: "organization",
+                message: `Your subscription has expired. Please renew your subscription to continue using our services.`,
+                type: `subscription_expired`,
+                createdAt: serverTimestamp(),
+                isRead: false,
+            });
+    
+            toast.success('Subscription status updated to inactive and organization marked as expired!');
+        } catch (error) {
+            console.error('Error setting subscription to inactive:', error);
+            toast.error('Failed to update the subscription and organization status.');
+        }
+    };
+    
+    
+    
 
     const indexOfLastSubscription = currentPage * subscriptionsPerPage;
     const indexOfFirstSubscription = indexOfLastSubscription - subscriptionsPerPage;
@@ -102,12 +158,20 @@ const SubscriptionTable = () => {
                                     </td>
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <div className="flex items-center space-x-3.5">
-                                            <button 
-                                                className="text-danger hover:text-white hover:bg-danger hover:shadow-lg hover:shadow-danger/50 rounded-md py-1 px-3  transition flex items-center" 
-                                                onClick={() => handleDelete(subscription.id)} // Delete button
+                                            <button
+                                                className="text-danger hover:text-white hover:bg-danger hover:shadow-lg hover:shadow-danger/50 rounded-md py-1 px-3 transition flex items-center"
+                                                onClick={() => handleDelete(subscription.id)}
                                             >
                                                 Delete
                                             </button>
+                                            <button
+                                                        className="text-warning hover:text-white hover:bg-warning hover:shadow-lg hover:shadow-warning/50 rounded-md py-1 px-3 transition flex items-center"
+                                                        onClick={() => handleSetInactive(subscription.id, subscription.userId, subscription.endDate)} // Pass both subscriptionId and userId
+                                                    >
+                                                        Set Inactive
+                                                    </button>
+
+
                                         </div>
                                     </td>
                                 </tr>
