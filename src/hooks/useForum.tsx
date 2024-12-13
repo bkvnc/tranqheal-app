@@ -443,7 +443,7 @@ const useForum = (forumId: string) => {
                 dateCreated: Timestamp.fromDate(new Date()),
                 authorId: user.uid,
                 forumId: forum.id,
-                status: 'pending',
+                status: 'approved',
                 title: postTitle,
                 hasImage: hasImage,
                 reacted: 0,
@@ -465,36 +465,12 @@ const useForum = (forumId: string) => {
                 totalPosts: increment(1)
             });
     
-            const forumRef = doc(db, 'forums', forum.id);
-            const postSnap = await getDoc(forumRef);
-    
-            const notificationRef = doc(collection(db, `notifications/${postSnap.data().authorId}/messages`));
-            await setDoc(notificationRef, {
-                recipientId: postSnap.data().authorId,
-                recipientType: postSnap.data().authorType,
-                message: `${authorName} has submitted a new post for review.`,
-                type: `post_review`,
-                createdAt: serverTimestamp(),
-                isRead: false,
-                additionalData: {
-                    postId: newPostRef.id,
-                    forumId: forumId,
-                },
-            });
-    
-            const notificationDoc = await getDoc(notificationRef);
-            const notificationData = notificationDoc.data();
-    
-            if (notificationData && notificationData.createdAt) {
-                const createdAtDate = notificationData.createdAt.toDate();
-                console.log("Notification createdAt:", createdAtDate);
-            }
     
             setPostContent('');
             setPostTitle('');
             setSelectedImage(null);
             setImagePreview(null);
-            toast.success('Post submitted for review successfully.');
+            
             
         } catch (error: any) {
             console.error('Post creation error:', error);

@@ -26,9 +26,11 @@ const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose
             <p><strong>Reason:</strong> {report.reason}</p>
             <p><strong>Type:</strong> {report.contentType}</p>
             <p><strong>Title of the {report.contentType}:</strong> {report.title}</p>
+            <p><strong>Content:</strong> {report.content}</p>
             <p><strong>Report Count:</strong> {report.reportCount}</p>
             <p><strong> {report.contentType} ID: {report.forumId || report.postId || report.commentId}</strong></p>
             <p><strong>Reported By:</strong> {report.reportedBy}</p>
+            <p><strong>Name of Reporter:</strong> {report.reporterName}</p>
             <p><strong>Timestamp:</strong> {report.timestamp.toLocaleString()}</p>
           </div>
         ) : (
@@ -120,6 +122,7 @@ const UserTable = () => {
                 reportedBy: doc.data().reportedBy || '',
                 timestamp: doc.data().timestamp?.toDate() || new Date(),
                 reportCount: forumReportCount,
+                reporterName: doc.data().reporterName || '',
               }));
               
               setReports(prev => {
@@ -159,6 +162,7 @@ const UserTable = () => {
                       reportedBy: doc.data().reportedBy || '',
                       timestamp: doc.data().timestamp?.toDate() || new Date(),
                       reportCount: postReportCount,
+                      reporterName: doc.data().reporterName || '',
                     }));
                     
                     setReports(prev => {
@@ -199,6 +203,7 @@ const UserTable = () => {
                             reportedBy: doc.data().reportedBy || '',
                             timestamp: doc.data().timestamp?.toDate() || new Date(),
                             reportCount: commentReportCount,
+                            reporterName: doc.data().reporterName || '',
                           }));
                           
                           setReports(prev => {

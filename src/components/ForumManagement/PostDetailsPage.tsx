@@ -540,6 +540,7 @@ const PostDetailsPage: React.FC = () => {
                 authorName: authorName,
                 reporterName: reporterName,
                 authorType: authorType,
+                title: title,
                 authorId: authorId,
                 reportedBy: auth.currentUser.uid,
                 reason: 'Inappropriate content',

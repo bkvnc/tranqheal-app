@@ -36,6 +36,7 @@ export interface Report {
   reportCount: number;
   title: string;
   content: string;
+  reporterName: string;
 }
 
 
@@ -141,6 +142,7 @@ export interface Notification {
     message: string;
     isRead: boolean;
     createdAt: Date;
+    destination: string;
 }
 
 export interface PaymentIntent {
