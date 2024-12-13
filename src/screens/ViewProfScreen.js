@@ -2,7 +2,6 @@ import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image,  FlatList, RefreshControl } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
-import RNPickerSelect from 'react-native-picker-select';
 import { Picker } from '@react-native-picker/picker';
 import { LoadingIndicator } from '../components';
 import { RootLayout } from '../navigation/RootLayout';

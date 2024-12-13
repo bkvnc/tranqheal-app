@@ -84,23 +84,40 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
     };
   
     fetchDetails();
-  }, [professionalId]);
+  }, [professionalId]); 
   
   const renderStars = (rating = 0) => {
+
+    if (professional.status !== 'Verified') {
+      return null; 
+    }
+
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       stars.push(
         <Ionicons
           key={i}
-          name={i <= Math.round(rating) ? 'star' : 'star-outline'}
+          name={i <= Math.round(rating) ? "star" : "star-outline"}
           size={30}
           color="#FFD700"
+          style={{ marginHorizontal: 2 }} 
         />
       );
     }
-    return stars;
+    return (
+      <View style={styles.ratingRow}> 
+        <View style={styles.starContainer}>{stars}</View>
+        <TouchableOpacity
+          style={styles.plusIconContainer} 
+          onPress={() => navigation.navigate("Rating", { professionalId })}
+        >
+          <Ionicons name="add-circle-outline" size={30} color="#666666" />
+        </TouchableOpacity>
+      </View>
+    );
   };
-
+  
+  
   const handleSendRequest = async () => {
     if (!professionalId) {
       console.error('Error: Professional ID is missing in match data.');
@@ -186,8 +203,8 @@ export const ProfessionalDetailsScreen = ({ route, navigation }) => {
           </View>
 
           <View style={styles.ratingRow}>
-            <Text style={{ fontWeight: 'bold', marginRight: 5 }}>
-              {professional.rating?.toFixed(1) || 'N/A'}
+            <Text style={{ fontWeight: 'bold', marginRight: 5, marginTop: 6, }}>
+              {professional.rating?.toFixed(1)}
             </Text>
             <View style={styles.starContainer}>{renderStars(professional.rating || 0)}</View>
           </View>
@@ -292,14 +309,17 @@ const styles = StyleSheet.create({
   },
   starContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
   },
   ratingRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
-    marginTop: 5,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  plusIconContainer: {
+    marginTop: 2,
+    marginLeft: 5, 
+    alignSelf: 'center',
   },
   iconContainer: {
     alignItems: 'center',

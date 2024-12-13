@@ -3,7 +3,7 @@ import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
 import { firestore, auth } from '../config';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore'; 
 
 export const MatchingScreen = ({ route, navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);

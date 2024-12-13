@@ -5,7 +5,7 @@ import { HomeScreen, MenuScreen, NotificationScreen, ProfileScreen, EditProfileS
     ViewProfScreen, ProfessionalDetailsScreen, ViewOrgScreen, OrganizationDetailsScreen,
     SAPreferenceScreen, SAScreen, SelfAssessmentLogs, SAScreen2, SAScreen3, SAResultScreen, 
     MoodScreen, MoodProcessScreen, MoodMeterScreen, MoodResultScreen, MoodLogsScreen, MatchingScreen, 
-    SeekProfessionalScreen, SuccessScreen, AboutUs
+    SeekProfessionalScreen, SuccessScreen, AboutUs, RatingScreen
 } from '../screens';
 
 
@@ -41,6 +41,7 @@ export const AppStack = () => {
             <Stack.Screen name="Matching" component={MatchingScreen} />
             <Stack.Screen name="SeekProfessional" component={SeekProfessionalScreen} />
             <Stack.Screen name="Success" component={SuccessScreen} />
+            <Stack.Screen name="Rating" component={RatingScreen} />
         </Stack.Navigator>
     );
 }
