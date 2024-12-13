@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { RootLayout } from '../navigation/RootLayout';
 import { LoadingIndicator } from '../components';
 import { Colors, auth } from '../config';
 import { AuthenticatedUserContext } from '../providers';
-import { getFirestore, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, limit, getDocs, updateDoc } from 'firebase/firestore';
 
 export const SAResultScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
@@ -41,6 +41,32 @@ export const SAResultScreen = ({ navigation }) => {
     fetchAssessmentData();
   }, []);
 
+  const handleSeekProf = async () => {
+    const user = auth.currentUser;
+    if (user && assessmentData) {
+      try {
+        const userId = user.uid;
+        const assessmentsRef = collection(getFirestore(), 'users', userId, 'selfAssessment');
+        const q = query(assessmentsRef, orderBy('createdAt', 'desc'), limit(1));
+        const querySnapshot = await getDocs(q);
+  
+        if (!querySnapshot.empty) {
+          const docSnap = querySnapshot.docs[0];
+          const docRef = docSnap.ref; 
+          await updateDoc(docRef, { seekProf: true }); 
+          console.log('seekProf updated successfully');
+          navigation.navigate('Matching', { assessmentData }); 
+        } else {
+          console.error('No assessments found!');
+        }
+      } catch (error) {
+        console.error('Error updating seekProf:', error);
+      }
+    } else {
+      console.error('User not authenticated or assessment data missing!');
+    }
+  };  
+
   if (loading) {
     return <LoadingIndicator />
   }
@@ -73,7 +99,7 @@ export const SAResultScreen = ({ navigation }) => {
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Matching', { assessmentData })}>
+          <TouchableOpacity style={styles.button} onPress={handleSeekProf}>
             <Text style={styles.buttonText}>Seek Professional</Text>
           </TouchableOpacity>
 
