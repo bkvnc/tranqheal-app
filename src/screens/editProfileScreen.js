@@ -1,10 +1,10 @@
 import React, { useEffect, useContext, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import RNPickerSelect from 'react-native-picker-select';
+import { Picker } from '@react-native-picker/picker';
 import { LoadingIndicator } from 'src/components';
 import { AuthenticatedUserContext } from 'src/providers';
 import { RootLayout } from '../navigation/RootLayout';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { auth, firestore } from '../config';
 
 export const EditProfileScreen = ({ navigation, route }) => {
@@ -29,6 +29,11 @@ export const EditProfileScreen = ({ navigation, route }) => {
     const user = auth.currentUser;
     if(!user) {
       alert('User not authenticated!');
+      return;
+    }
+
+    if(age < 16){
+      alert('Enter a valid age.');
       return;
     }
 
@@ -119,19 +124,16 @@ export const EditProfileScreen = ({ navigation, route }) => {
             <View style={styles.editRow}>
               <Text style={styles.label}>Gender:</Text>
               <View style={styles.pickerContainer}>
-                <RNPickerSelect
+                <Picker
+                  selectedValue={gender}
                   onValueChange={(value) => setGender(value)}
-                  items={[
-                    { label: 'Male', value: 'Male' },
-                    { label: 'Female', value: 'Female' },
-                    { label: 'Other', value: 'Other' },
-                  ]}
-                  placeholder={{ label: 'Select Gender', value: null }}
-                  style={{
-                    inputIOS: styles.pickerText,
-                    inputAndroid: styles.pickerText,
-                  }}
-                />
+                  style={styles.pickerText}
+                >
+                  <Picker.Item label="Select Gender" value={null} />
+                  <Picker.Item label="Male" value="Male" />
+                  <Picker.Item label="Female" value="Female" />
+                  <Picker.Item label="Other" value="Other" />
+                </Picker>
               </View>
             </View>
 

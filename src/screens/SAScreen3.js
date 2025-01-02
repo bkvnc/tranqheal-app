@@ -114,6 +114,7 @@ export const SAScreen3 = ({navigation, route}) => {
           gad7Interpretation,
           pssInterpretation,
           createdAt: new Date(),
+          seekProf: false,
         });
         navigation.navigate('SelfAssessmentResult');
       } catch (error) {

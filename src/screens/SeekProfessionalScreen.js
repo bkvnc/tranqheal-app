@@ -4,16 +4,13 @@ import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
 import { Colors } from '../config';
 import { auth, firestore } from 'src/config';
-import { collection, doc, addDoc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, query, orderBy, limit, getDocs, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 
 export const SeekProfessionalScreen = ({ navigation, route }) => {
   const { userType } = useContext(AuthenticatedUserContext);
   const { matchData, userProfileImage } = route.params;
   const bestMatch = matchData.length ? matchData[0] : null;
-
-  const [viewDetails, setViewDetails] = useState(false);
-  const [viewOtherProfessionals, setViewOtherProfessionals] = useState(false);
 
   const handleSendRequest = async () => {
     if (!bestMatch?.id) {
@@ -27,16 +24,23 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
       console.error('Error: User ID is undefined.');
       return;
     }
-    console.log('Database instance:', firestore);
-    console.log('Professional ID:', bestMatch.id);
-    console.log('User ID:', currentUser?.uid);
   
     try {
+      const userId = currentUser.uid;
+      const assessmentsRef = collection(firestore, 'users', userId, 'selfAssessment');
+      const q = query(assessmentsRef, orderBy('createdAt', 'desc'), limit(1)); 
       const professionalRef = doc(firestore, 'professionals', bestMatch.id); 
       const matchingRequestsRef = collection(professionalRef, 'matchingRequests'); 
       const requestDocRef = doc(matchingRequestsRef,  currentUser?.uid); 
       const profSnapshot = await getDoc(professionalRef);
       const userSnapshot = await getDoc(doc(firestore, 'users', currentUser?.uid));
+      const querySnapshot = await getDocs(q);
+  
+      if (!querySnapshot.empty) {
+        const docSnap = querySnapshot.docs[0];
+        const docRef = doc(firestore, docSnap.ref.path); 
+        await updateDoc(docRef, { profId : bestMatch.id });
+      };
   
       const requestData = {
         userId: currentUser?.uid,
@@ -46,7 +50,7 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
         requestedAt: serverTimestamp(),
       };
 
-      const notificationRef = doc(collection(firestore, `notifications/${bestMatch.id}/messages`));
+      const notificationRef = doc(collection(firestore, `notifications/${bestMatch.id}/messages`)); 
 
       await setDoc(notificationRef, {
         recipientId: bestMatch.id,
@@ -74,16 +78,9 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
   };
   
   const handleToggleViewProfessional = () => {
-    setViewDetails(prevState => {
-      if (prevState) {
-        setViewOtherProfessionals(false); 
-      }
-      return !prevState;
-    });
-  };
-
-  const handleViewOtherProfessionals = () => {
-    setViewOtherProfessionals(true);
+    if (bestMatch) {
+      navigation.navigate('ProfessionalDetails', { professionalId: bestMatch.id, fromMatching: true });
+    }
   };
 
   return (
@@ -115,67 +112,9 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
                 style={[styles.button, styles.viewButton]}
                 onPress={handleToggleViewProfessional}
               >
-                <Text style={styles.buttonText}>
-                  {viewDetails ? 'Hide Professional' : 'View Professional'}
-                </Text>
+                <Text style={styles.buttonText}>View Professional</Text>
               </TouchableOpacity>
             </View>
-
-            {/* Professional Details Section */}
-            {viewDetails && (
-              <View style={styles.detailsContainer}>
-                <Text style={styles.detailText}>Name: {bestMatch.name}</Text>
-                <Text style={styles.detailText}>Age: {bestMatch.age}</Text>
-                <Text style={styles.detailText}>Gender: {bestMatch.gender}</Text>
-                <Text style={styles.detailText}>
-                  Specialization: 
-                  {Object.entries(bestMatch.specialization)
-                    .filter(([, value]) => value)
-                    .map(([key]) => ` ${key}`)
-                    .join(',')}
-                </Text>
-                <Text style={styles.detailText}>Rating: {bestMatch.rating}</Text>
-                <Text style={styles.detailText}>
-                  Availability: 
-                  {Object.entries(bestMatch.availability)
-                    .filter(([, available]) => available)
-                    .map(([time]) => ` ${time}`)
-                    .join(',')}
-                </Text>
-              </View>
-            )}
-
-            {/* View Other Professionals Button - only shown after viewing the best match */}
-            {viewDetails && matchData.length > 1 && (
-              <TouchableOpacity
-                style={[styles.button, styles.viewButton]}
-                onPress={handleViewOtherProfessionals}
-              >
-                <Text style={styles.buttonText}>View Other Professionals</Text>
-              </TouchableOpacity>
-            )}
-
-            {/* List of Other Matched Professionals */}
-            {viewOtherProfessionals && (
-              <View style={styles.otherProfessionalsContainer}>
-                {matchData
-                  .filter((professional, index) => index !== 0) 
-                  .map((professional, index) => (
-                    <View key={index} style={styles.otherProfessionalCard}>
-                      <Image
-                        source={{ uri: professional.profileImage }}
-                        style={styles.profilePicture}
-                      />
-                      <View style={styles.otherProfessionalDetails}>
-                        <Text style={styles.otherProfessionalName}>{professional.name}</Text>
-                        <Text style={styles.otherProfessionalRating}>
-                          {`⭐ ${professional.rating}`}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-              </View>
-            )}
           </>
         ) : (
           <Text style={styles.noMatchText}>No professionals match your preferences at this time.</Text>

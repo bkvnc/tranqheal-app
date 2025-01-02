@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
 import RNPickerSelect from 'react-native-picker-select';
+import { Picker } from '@react-native-picker/picker';
 import { firestore } from '../config';
 import { collection, getDocs } from 'firebase/firestore';
 import { Alert } from 'react-native';
@@ -48,17 +49,19 @@ export const ProfessionalRegisterScreen = ({ navigation, route }) => {
       <Text style={styles.mainText}>Are you part on any of this organizations?</Text>
       
       {/* Organization List */}
-      <RNPickerSelect
-        onValueChange={(value) => {
-          const selectedOrganization = organizations.find(org => org.value === value);
-          setSelectedOrg(selectedOrganization);
-        }}
-        items={organizations}
-        placeholder={{ label: 'Select an organization', value: null }}
-        style={{
-          inputAndroid: styles.dropdown
-        }}
-      />
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={selectedOrg}
+          onValueChange={(value) => setSelectedOrg(value)} 
+          style={styles.picker}
+        >
+          <Picker.Item label="Select an organization" value="" />
+          {organizations.map((org) => (
+            <Picker.Item key={org.value} label={org.label} value={org.value} />
+          ))}
+        </Picker>
+      </View>
+
       {/* Yes Button */}
       <TouchableOpacity 
         style={styles.button}
@@ -104,6 +107,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     color: '#000',
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginBottom: 20,
+    width: '100%',
+  },
+  picker: {
+    height: 55,
+    width: '100%',
   },
   dropdown: {
     padding: 10,

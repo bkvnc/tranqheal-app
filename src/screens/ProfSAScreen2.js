@@ -63,9 +63,9 @@ export const ProfSAScreen2 = ({ navigation }) => {
 
         const userAssessmentRef = doc(firestore, 'professionals', userId);
         const selfAssessment = {
-          depTotal,
-          anxTotal,
-          stressTotal,
+          anxiety: anxTotal,
+          depression: depTotal,
+          stress: stressTotal,
 
         };
       
@@ -95,7 +95,6 @@ export const ProfSAScreen2 = ({ navigation }) => {
 
         {/* Questions */}
         <Text style={styles.sectionTitle}>Exploration Skills:</Text>
-
         {profassessmentQuestions.Exploration.map((question) => (
           <View style={styles.inputSection} key={question.key}>
             <Text style={styles.label}>{question.label}</Text>
@@ -180,8 +179,8 @@ export const ProfSAScreen2 = ({ navigation }) => {
 
         {/* Next Button */}
         <TouchableOpacity style={styles.button} onPress={handleFinish}>
-        <Text style={styles.buttonText}>Finish</Text>
-      </TouchableOpacity>
+          <Text style={styles.buttonText}>Finish</Text>
+        </TouchableOpacity>
       </ScrollView>
     </RootLayout>
   );

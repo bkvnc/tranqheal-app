@@ -35,6 +35,7 @@ import { PostDetailsScreen } from './PostDetailsScreen';
 import { ForumPostScreen } from './ForumPostScreen';
 import { OrganizationDetailsScreen } from './OrganizationDetailsScreen';
 import { ProfessionalDetailsScreen } from './ProfessionalDetailsScreen';
+import {RatingScreen} from './RatingScreen';
 import { EditProfileScreen } from './editProfileScreen';
 import { ProfessionalHomeScreen } from './ProfessionalHomeScreen';
 import { ViewRequestScreen } from './ViewRequestScreen';
@@ -57,4 +58,5 @@ export { WelcomeScreen, RegisterAsScreen, LoginScreen,
     ForumPostScreen, OrganizationDetailsScreen, ProfessionalDetailsScreen,
     EditProfileScreen, ProfessionalHomeScreen, ViewRequestScreen, ForgotPassword, AboutUs,
     ViewRequestHistoryScreen, MoodMeterScreen, MoodResultScreen, MoodProcessScreen, ViewAcceptedRequestsScreen, SuccessScreen,
-    EditProfessionalProfileScreen, ProfessionalProfileScreen, SeekProfessionalScreen, MoodLogsScreen, MatchingScreen, SelfAssessmentLogs,ViewSkillsSelfAssessmentScreen,ProfSAScreen2 };
+    EditProfessionalProfileScreen, ProfessionalProfileScreen, SeekProfessionalScreen, MoodLogsScreen, MatchingScreen, SelfAssessmentLogs,
+    ViewSkillsSelfAssessmentScreen,ProfSAScreen2, RatingScreen};

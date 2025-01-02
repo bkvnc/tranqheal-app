@@ -99,6 +99,7 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
   const {
     profilePicture,
     organizationName,
+    status,
     email,
     phoneNumber,
     servicesOffered,
@@ -107,7 +108,9 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
     days = {}, 
     address,
   } = organizationData || {};
-  const daysArray = Object.values(days);
+
+  const predefinedOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const daysArray = Object.values(days || {}).sort((a, b) => predefinedOrder.indexOf(a) - predefinedOrder.indexOf(b));
 
   
   const convertTo12HourFormat = (time24) => {
@@ -124,9 +127,12 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
       <ScrollView contentContainerStyle={styles.container}>
         <Image source={{ uri: profilePicture }} style={styles.orgImage} />
         <Text style={styles.orgName}>{organizationName}</Text>
+
+
         <TouchableOpacity style={styles.iconContainer} onPress={() => console.log('Facebook icon clicked')}>
             <Ionicons name="logo-facebook" size={28} color="#3b5998" />
         </TouchableOpacity>
+
         <View style={styles.divider} />
         <Text style={styles.detailsText}>Email: {email || 'N/A'}</Text>
         <Text style={styles.detailsText}>Phone: {phoneNumber || 'N/A'}</Text>
@@ -147,7 +153,7 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
 
         <View style={styles.card}>
           <Text style={styles.detailsTitle}>Days Available:</Text>
-          {formatBulletedList(daysArray, 4)}
+          {formatBulletedList(daysArray, 7)}
         </View>
         
         {userType === 'professional' && !profileData?.underOrg && (
@@ -187,10 +193,30 @@ const styles = StyleSheet.create({
     color: '#333', 
     marginBottom: 10,
   },
+  statusBadge: {
+    borderRadius: 20,  
+    borderWidth: 2,
+    marginVertical: 10, 
+    marginTop: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 5,  
+    paddingHorizontal: 5, 
+    alignSelf: 'center',
+  },
+  verified: {
+  },
+  unverified: {
+  },
+  statusText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+  },  
   divider: {
     height: 1,
     backgroundColor: '#e0e0e0', 
-    marginVertical: 20,
+    marginVertical: 10,
   },
   detailsTitle: {
     fontSize: 20,

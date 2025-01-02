@@ -2,12 +2,14 @@ import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image,  FlatList, RefreshControl } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
-import RNPickerSelect from 'react-native-picker-select';
+import { Picker } from '@react-native-picker/picker';
 import { LoadingIndicator } from '../components';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '../config';
+import { filterProfessionals } from 'src/utils/filterProfessionals';
+
 
 export const ViewProfScreen = ({ navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
@@ -30,12 +32,12 @@ export const ViewProfScreen = ({ navigation }) => {
           const data = doc.data();
           return { id: doc.id, ...data };
         })
-        .filter((professional) => professional.status === 'Verified');
+        //.filter((professional) => professional.status === 'Verified');
 
       setProfessionals(professionalList);
     } catch (error) {
       console.error('Error fetching professionals:', error.message);
-    } finally {
+    } finally { 
       setLoading(false);
     }
   };
@@ -120,99 +122,110 @@ export const ViewProfScreen = ({ navigation }) => {
 
   return (
     <RootLayout navigation={navigation} screenName="ViewProf" userType={userType}>
-      <View style={styles.container}>
-        <Text style={styles.title}>View Professionals</Text>
-        <View style={styles.searchBarRow}>
-          <TouchableOpacity style={styles.sliderButton} onPress={toggleFilterModal}>
-            <Ionicons name="options-outline" size={24} color="white" />
-          </TouchableOpacity>
-          <View style={styles.searchBar}>
-            <Ionicons name="search-outline" size={20} color="gray" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search by name"
-              placeholderTextColor="gray"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-        </View>
-        <FlatList
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          data={filteredProfessionals}
-          renderItem={renderProfessional}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.professionalsList}
-        />
-        <Modal isVisible={isFilterModalVisible} onBackdropPress={toggleFilterModal}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Filter Professionals By</Text>
-            <Text style={styles.filterLabel}>Specialization</Text>
-            <RNPickerSelect
-              onValueChange={(value) => setSelectedSpecialty(value)}
-              items={[
-                { label: 'All', value: '' },
-                { label: 'Anxiety', value: 'anxiety' },
-                { label: 'Depress', value: 'depress' },
-                { label: 'Stress', value: 'stress' },
-              ]}
-              placeholder={{ label: 'Select Specialty', value: '' }}
-              style={pickerSelectStyles}
-            />
-            <Text style={styles.filterLabel}>Gender</Text>
-            <RNPickerSelect
-              onValueChange={(value) => setSelectedGender(value)}
-              items={[
-                { label: 'All', value: '' },
-                { label: 'Male', value: 'Male' },
-                { label: 'Female', value: 'Female' },
-              ]}
-              placeholder={{ label: 'Select Gender', value: '' }}
-              style={pickerSelectStyles}
-              value={selectedGender}
-            />
-            <Text style={styles.filterLabel}>Minimum Rating</Text>
-            <RNPickerSelect
-              onValueChange={(value) => setMinRating(value)}
-              items={[
-                { label: 'All', value: 0 },
-                { label: '1', value: 1 },
-                { label: '2', value: 2 },
-                { label: '3', value: 3 },
-                { label: '4', value: 4 },
-                { label: '5', value: 5 },
-              ]}
-              placeholder={{ label: 'Select Minimum Rating', value: 0 }}
-              style={pickerSelectStyles}
-              value={minRating}
-            />
-            <Text style={styles.filterLabel}>Available Time</Text>
-            <RNPickerSelect
-              onValueChange={(value) => setSelectedTimeAvailable(value)}
-              items={[
-                { label: 'All', value: '' },
-                { label: 'Morning', value: 'morning' },
-                { label: 'Afternoon', value: 'afternoon' },
-                { label: 'Evening', value: 'evening' },
-              ]}
-              placeholder={{ label: 'Select Time Available', value: '' }}
-              style={pickerSelectStyles}
-              value={selectedTimeAvailable}
-            />
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.button} onPress={handleApplyFilters}>
-                <Text style={styles.buttonText}>Apply Filters</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.clearButton]} onPress={handleClearFilters}>
-                <Text style={styles.buttonText}>Clear Filters</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={toggleFilterModal}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
+        <View style={styles.container}>
+          <Text style={styles.title}>View Professionals</Text>
+          <View style={styles.searchBarRow}>
+            <TouchableOpacity style={styles.sliderButton} onPress={toggleFilterModal}>
+              <Ionicons name="options-outline" size={24} color="white" />
+            </TouchableOpacity>
+            <View style={styles.searchBar}>
+              <Ionicons name="search-outline" size={20} color="gray" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by name"
+                placeholderTextColor="gray"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
             </View>
           </View>
-        </Modal>
-      </View>
+          <FlatList
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            data={filteredProfessionals}
+            renderItem={renderProfessional}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.professionalsList}
+          />
+          <Modal isVisible={isFilterModalVisible} onBackdropPress={toggleFilterModal}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Filter Professionals By</Text>
+
+              <Text style={styles.filterLabel}>Specialization</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={selectedSpecialty}
+                  onValueChange={(value) => setSelectedSpecialty(value)}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Select Specialty" value="" />
+                  {filterProfessionals.specializationItems.map((item) => (
+                    <Picker.Item key={item.value} label={item.label} value={item.value} />
+                  ))}
+                </Picker>
+              </View>
+
+              <Text style={styles.filterLabel}>Gender</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={selectedGender}
+                  onValueChange={(value) => setSelectedGender(value)}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Select Gender" value="" />
+                  {filterProfessionals.genderItems.map((item) => (
+                    <Picker.Item key={item.value} label={item.label} value={item.value} />
+                  ))}
+                </Picker>
+              </View>
+
+              <Text style={styles.filterLabel}>Minimum Rating</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={minRating}
+                  onValueChange={(value) => setMinRating(value)}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Select Minimum Rating" value={0} />
+                  {filterProfessionals.ratingItems.map((item) => (
+                    <Picker.Item key={item.value} label={item.label} value={item.value} />
+                  ))}
+                </Picker>
+              </View>
+
+              <Text style={styles.filterLabel}>Available Time</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={selectedTimeAvailable}
+                  onValueChange={(value) => setSelectedTimeAvailable(value)}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Select Time Available" value="" />
+                  {filterProfessionals.timeItems.map((item) => (
+                    <Picker.Item key={item.value} label={item.label} value={item.value} />
+                  ))}
+                </Picker>
+              </View>
+
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity style={styles.button} onPress={handleApplyFilters}>
+                  <Text style={styles.buttonText}>Apply Filters</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.clearButton]}
+                  onPress={handleClearFilters}
+                >
+                  <Text style={styles.buttonText}>Clear Filters</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={toggleFilterModal}
+                >
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        </View>
     </RootLayout>
   );
 };
@@ -316,6 +329,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    backgroundColor: 'white',
+    marginBottom: 15,
+  },
+  picker: {
+    height: 50,
+    color: 'black',
   },
   
   buttonContainer: {
