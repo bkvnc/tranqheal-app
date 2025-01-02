@@ -20,7 +20,8 @@ export const SuccessScreen = ({ navigation }) => {
         <Text style={styles.successText}>Request Sent Successfully!</Text>
        
         <Text style={styles.descriptionText}>
-            The professional has been notified and will review your request soon. You can track the request in your notifications or matching requests.
+            The professional has been notified and will review your request soon. 
+            You will be notified when the professional has accepted your request.
         </Text>
        
         </View>
@@ -35,48 +36,61 @@ export const SuccessScreen = ({ navigation }) => {
 };
 
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 30,
   },
   successImage: {
-    width: 150,
-    height: 150,
+    width: 120,
+    height: 120,
     marginBottom: 20,
+    resizeMode: 'contain', 
   },
   successText: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
     color: Colors.green,
     textAlign: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
+ 
+    letterSpacing: 1,
   },
   descriptionText: {
     fontSize: 16,
     color: Colors.gray,
     textAlign: 'center',
     marginBottom: 30,
-    lineHeight: 22,
+    lineHeight: 24,
+    paddingHorizontal: 10,
+  },
+  bottomContainer: {
+    width: '100%',
+    position: 'absolute',
+    bottom: 40,
+    alignItems: 'center',
   },
   button: {
     backgroundColor: Colors.purple,
-    paddingVertical: 15,
-    paddingHorizontal: 40,
-    borderRadius: 30,
+    paddingVertical: 14,
+    paddingHorizontal: 50,
+    borderRadius: 25,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
     elevation: 5,
+    alignSelf: 'center',
   },
   buttonText: {
     fontSize: 18,
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '600',
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
 });

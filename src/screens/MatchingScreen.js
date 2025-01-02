@@ -3,7 +3,7 @@ import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
 import { firestore, auth } from '../config';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore'; 
 
 export const MatchingScreen = ({ route, navigation }) => {
   const { userType } = useContext(AuthenticatedUserContext);
@@ -41,15 +41,16 @@ export const MatchingScreen = ({ route, navigation }) => {
 
         // Combine assessment data and preferences
         const requestData = {
+          userId: userId,
           preferences: {
             preferredProfAge: preferences.preferredProfAge,
             preferredProfGender: preferences.preferredProfGender,
             preferredProfAvailability: preferences.preferredProfAvailability,
           },
           selfAssessmentScores: {
-            gad7Interpretation: assessmentData.gad7Interpretation,
-            phq9Interpretation: assessmentData.phq9Interpretation,
-            pssInterpretation: assessmentData.pssInterpretation,
+            gad7: assessmentData.gad7Total,
+            phq9: assessmentData.phq9Total,
+            pss: assessmentData.pssTotal,
           },
         };
 

@@ -111,27 +111,44 @@ export const PostDetailsScreen = ({ route, navigation }) => {
       const snapshot = await getDocs(commentsRef);
   
       if (!snapshot.empty) {
-        const fetchedComments = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            dateCreated: data.dateCreated ? data.dateCreated.toDate() : null,
-            userReacted: data.commentReactedBy && data.commentReactedBy.includes(user.uid), // Check if the user has reacted to this comment
-          };
-        });
+        const fetchedComments = await Promise.all(
+          snapshot.docs.map(async (docSnap) => {
+            const data = docSnap.data();
+            let status = null;
+  
+            // Fetch the status for professionals or organizations
+            if (data.authorType === 'professional') {
+              const userRef = doc(firestore, 'professionals', data.authorId);
+              const userSnapshot = await getDoc(userRef);
+  
+              if (userSnapshot.exists()) {
+                const userData = userSnapshot.data();
+                status = userData.status; // Set verified/unverified
+              }
+            }
+  
+            return {
+              id: docSnap.id,
+              ...data,
+              status, // Add status to the comment object
+              dateCreated: data.dateCreated ? data.dateCreated.toDate() : null,
+              userReacted: Array.isArray(data.commentReactedBy) && data.commentReactedBy.includes(user.uid),
+            };
+          })
+        );
+  
         setComments(fetchedComments);
       } else {
         console.log('No comments found for this post.');
-        setComments([]); // Clear the comments if none exist
+        setComments([]);
       }
     } catch (error) {
-      console.error("Error fetching comments: ", error.message);
+      console.error('Error fetching comments: ', error.message);
       Alert.alert('Error', 'Could not fetch comments.');
     }
   };
   
-
+  
   // Function to handle the delete post action
 const handleDeletePost = () => {
   Alert.alert(
@@ -264,6 +281,15 @@ const handleDeletePost = () => {
       Alert.alert('Error', 'Your comment contains blacklisted words. Please remove them and try again.');
       return;
     }
+
+    let status = null;
+    if (authorType === 'professional') {
+      const userRef = doc(firestore, 'professionals', user.uid);
+      const userSnapshot = await getDoc(userRef);
+      if (userSnapshot.exists()) {
+        status = userSnapshot.data().status; // Set the status (Verified/Unverified)
+      }
+    }
   
     console.log("Adding comment with isAnonymous:", anonymous);
     // Proceed to add the comment if no blacklisted words are found
@@ -273,6 +299,7 @@ const handleDeletePost = () => {
       authorName: authorName,
       authorType: authorType,
       authorId: user.uid,
+      status: status,
       isAnonymous: anonymous,
     };
   
@@ -664,21 +691,38 @@ if (loading) {
 //Render Comments  
 const renderCommentItem = ({ item }) => (
   <View style={styles.commentItem}>
-    <Text style={styles.commentAuthor}>
-      {item.isAnonymous ? 'Anonymous' : item.authorName}
-    </Text>
+    {/* Author and Status Row */}
+    <View style={styles.authorRow}>
+      <Text style={styles.commentAuthor}>
+        {item.isAnonymous ? 'Anonymous' : item.authorName}
+      </Text>
+
+      {/* Conditionally render the status tag only if it exists (i.e., only for professionals) */}
+      {!item.isAnonymous && item.status && (
+        <Text
+          style={[
+            styles.statusText,
+            item.status === 'Verified' ? styles.verifiedStatus : styles.unverifiedStatus,
+          ]}
+        >
+          {item.status}
+        </Text>
+      )}
+    </View>
+
+    {/* Comment Content */}
     <Text style={styles.commentContent}>{item.content}</Text>
     <Text style={styles.commentDate}>
       {item.dateCreated ? moment(item.dateCreated).fromNow() : 'Unknown date'}
     </Text>
-    
+
+    {/* Action Icons */}
     <View style={styles.iconRow}>
-      {/* Edit and Delete Options for the Comment Author */}
+      {/* Edit and Delete Options */}
       {item.authorId === user.uid ? (
         <>
           <TouchableOpacity
             onPress={() => {
-              console.log("Editing comment:", item);
               setCommentToEdit(item);
               setEditCommentText(item.content);
               setIsEditCommentModalVisible(true);
@@ -695,20 +739,20 @@ const renderCommentItem = ({ item }) => (
           <Ionicons name="alert-circle-outline" size={20} color="#000" />
         </TouchableOpacity>
       )}
-      
-      {/* Reaction (Heart) Icon and Count */}
+
+      {/* Reaction Icon */}
       <TouchableOpacity onPress={() => handleCommentReact(item.id)} style={styles.reactionIconContainer}>
         <Ionicons
-          name={item.userReacted ? "heart" : "heart-outline"} 
-          style={[styles.reactionIcon, { color: item.userReacted ? 'red' : '#333' }]}  
+          name={item.userReacted ? 'heart' : 'heart-outline'}
+          style={[styles.reactionIcon, { color: item.userReacted ? 'red' : '#333' }]}
         />
-        <Text style={styles.reactionCount}>
-          {item.commentReacted || 0}
-        </Text>
+        <Text style={styles.reactionCount}>{item.commentReacted || 0}</Text>
       </TouchableOpacity>
     </View>
   </View>
 );
+
+
 
  return (
     <RootLayout navigation={navigation} screenName="Post Details" userType={userType}>
@@ -1076,6 +1120,36 @@ commentAuthor: {
   fontSize: 14, 
   color: '#333', 
 },
+authorRow: {
+  flexDirection: 'row',         
+  alignItems: 'center',         
+  justifyContent: 'flex-start', 
+  gap: 8,                       
+},
+
+statusText: {
+  fontSize: 10, 
+  fontWeight: '400',
+  paddingHorizontal: 8, 
+  paddingVertical: 3,
+  borderRadius: 20,
+  backgroundColor: '#B9A2F1', 
+  color: '#fff', 
+  flexShrink: 1, 
+},
+
+verifiedStatus: {
+  backgroundColor: '#B9A2F1',  
+  color: '#fff', 
+  maxWidth: 80, 
+},
+
+unverifiedStatus: {
+  backgroundColor: '#B9A2F1',  
+  color: '#fff', 
+  maxWidth: 80, 
+},
+
 
 commentContent: {
   marginVertical: 6, 

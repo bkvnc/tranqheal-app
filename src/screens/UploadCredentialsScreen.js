@@ -128,6 +128,7 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
         createdAt: new Date(),
         isRead: false,
         notificationType: 'Application',
+
         
       });
       console.log('Professional notification added successfully!');
