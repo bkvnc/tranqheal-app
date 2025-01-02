@@ -303,6 +303,7 @@ const handleDeletePost = () => {
           message: `${newCommentObj.authorName} commented on your post.`,
           type: 'comment',
           createdAt: serverTimestamp(),
+          destination: `/forums/${forumId}/posts/${postId}`,
           isRead: false,
           additionalData: {
             postId: postId,
@@ -561,6 +562,7 @@ const handleReportPost = async (postId) => {
                 reportedBy: auth.currentUser.uid,
                 reason: 'Inappropriate content',  
                 timestamp: new Date(),
+                destination:`/forums/${forumId}/posts/${postId}`
               });
 
               Alert.alert("Success", "Post has been reported.");
@@ -616,6 +618,7 @@ const handleReportComment = async (commentId) => {
                 reportedBy: auth.currentUser.uid,
                 reason: 'Inappropriate content',  
                 timestamp: new Date(),
+                destination: `/forums/${forumId}/posts/${postId}`,
               });
 
               Alert.alert("Success", "Comment has been reported.");

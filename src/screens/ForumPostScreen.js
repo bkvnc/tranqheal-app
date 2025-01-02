@@ -400,6 +400,7 @@ const handleSaveForumEdits = async () => {
           reacted: 0,
           reactedBy: [],
           isAnonymous: isAnonymous,
+          destination: `/forums/${forumId}/posts/${postId}`,
         };
 
         
@@ -602,6 +603,7 @@ const handleReportForum = async () => {
                 reportedBy: auth.currentUser.uid,
                 reason: "Inappropriate content",
                 timestamp: new Date(),
+                destination: `/forums/${forumId}`,
               });
 
               Alert.alert("Success", "Report submitted.");
