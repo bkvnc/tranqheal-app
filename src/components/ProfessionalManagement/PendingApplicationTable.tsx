@@ -93,7 +93,7 @@ const PendingApplicationTable = () => {
     
         try {
             // Update application and professional status
-            await updateDoc(applicationDocRef, { status: 'Approved', approvedAt: new Date(), approvedBy: currentUser.uid, professionalStatus: 'Verified' });
+            await updateDoc(applicationDocRef, { status: 'Approved', approvedAt: new Date(), approvedBy: currentUser.uid, professionalStatus: 'Verified', pending: false });
             await updateDoc(professionalDocRef, { status: 'Verified', underOrg: currentUser.uid});
              
             const professionalSnapshot = await getDoc(professionalDocRef);
@@ -110,9 +110,9 @@ const PendingApplicationTable = () => {
     
             await updateDoc(professionalDocRef, updateData);
             
-            await setDoc(doc(collection(db, `notifications/${professionalSnapshot.data().profesionalId}/messages`), `${applicationId}_verified`), {
-                recipientId:  professionalSnapshot.data().profesionalId,
-                recipientType:  professionalSnapshot.data().userType,
+            await setDoc(doc(collection(db, `notifications/${professionalId}/messages`), `${applicationId}_verified`), {
+                recipientId:  professionalId,
+                recipientType:  professionalData.userType,
                 type: "application_approved",
                 message: `Your application has been approved!`,
                 isRead: false,
@@ -122,16 +122,6 @@ const PendingApplicationTable = () => {
                     applicationId: applicationId,
                 },
             });
-    
-           
-
-        
-    
-        
-            
-
-
-        
     
             try{
             const organizationProfessionalRef = doc(db, `organizations/${currentUser.uid}/professionals`, professionalId);
