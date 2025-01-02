@@ -128,7 +128,6 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
         createdAt: new Date(),
         isRead: false,
         notificationType: 'Application',
-        
       });
       console.log('Professional notification added successfully!');
 
@@ -138,7 +137,10 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
         createdAt: new Date(),
         isRead: false,
         notificationType: 'Application',
-        destination: `/pending-applications`
+        destination: `/pending-applications`,
+        recipientType: 'Organization',
+        recipientId: organizationId,
+
       });
       console.log('Organization notification added successfully!');
 
