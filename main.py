@@ -135,7 +135,7 @@ def match_professionals(assessment: AssessmentData, k: int = 5):
         *user_specialization_flags
     ])
 
-    professionals_ref = db.collection("professionals")
+    professionals_ref = db.collection("professionals").where("status", "==", "Verified")
     professionals_docs = professionals_ref.stream()
 
     # Weighting factors
