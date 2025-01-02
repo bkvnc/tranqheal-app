@@ -132,30 +132,6 @@ export const LoginScreen = ({ navigation }) => {
               <Button style={styles.button} onPress={handleSubmit}>
                 <Text style={styles.buttonText}>Log In</Text>
               </Button>
-
-              {/* Google Sign-In Button */}
-              <Text style={styles.orSignInText}>or sign in with</Text>
-              <Button
-                style={styles.googleButton}
-                onPress={async () => {
-                  if (!request) {
-                    console.error("Authentication request not ready.");
-                    setErrorState("Google Sign-In request not ready. Please try again later.");
-                    return;
-                  }
-
-                  try {
-                    console.log("Prompting Google Sign-In...");
-                    const result = await promptAsync();
-                    console.log("promptAsync result:", result);
-                  } catch (error) {
-                    console.error("promptAsync error:", error);
-                    setErrorState("An error occurred during Google Sign-In.");
-                  }
-                }}
-              >
-                <Text style={styles.googleText}>Sign in with Google</Text>
-              </Button>
             </>
           )}
         </Formik>
