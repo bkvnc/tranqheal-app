@@ -4,7 +4,7 @@ import { RootLayout } from '../navigation/RootLayout';
 import { AuthenticatedUserContext } from '../providers';
 import { Colors } from '../config';
 import { auth, firestore } from 'src/config';
-import { collection, doc, addDoc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, query, orderBy, limit, getDocs, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 
 export const SeekProfessionalScreen = ({ navigation, route }) => {
@@ -26,11 +26,21 @@ export const SeekProfessionalScreen = ({ navigation, route }) => {
     }
   
     try {
+      const userId = currentUser.uid;
+      const assessmentsRef = collection(firestore, 'users', userId, 'selfAssessment');
+      const q = query(assessmentsRef, orderBy('createdAt', 'desc'), limit(1)); 
       const professionalRef = doc(firestore, 'professionals', bestMatch.id); 
       const matchingRequestsRef = collection(professionalRef, 'matchingRequests'); 
       const requestDocRef = doc(matchingRequestsRef,  currentUser?.uid); 
       const profSnapshot = await getDoc(professionalRef);
       const userSnapshot = await getDoc(doc(firestore, 'users', currentUser?.uid));
+      const querySnapshot = await getDocs(q);
+  
+      if (!querySnapshot.empty) {
+        const docSnap = querySnapshot.docs[0];
+        const docRef = doc(firestore, docSnap.ref.path); 
+        await updateDoc(docRef, { profId : bestMatch.id });
+      };
   
       const requestData = {
         userId: currentUser?.uid,
