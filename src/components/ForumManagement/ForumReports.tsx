@@ -83,25 +83,25 @@ const ForumReports = () => {
     fetchReports();
   }, []);
 
-  const handleKickUser = async (forumId: string, userId: string) => {
-    try {
-      const forumRef = doc(db, 'forums', forumId);
-      await updateDoc(forumRef, {
-        members: arrayRemove(userId),
-      });
-      toast.success(`User ${userId} has been kicked from the forum.`);
-      setForums((prevForums) =>
-        prevForums.map((forum) =>
-          forum.id === forumId
-            ? { ...forum, members: forum.members.filter((member: string) => member !== userId) }
-            : forum
-        )
-      );
-    } catch (error) {
-      console.error('Error kicking user:', error);
-      toast.error('Failed to kick the user. Please try again.');
-    }
-  };
+  // const handleKickUser = async (forumId: string, userId: string) => {
+  //   try {
+  //     const forumRef = doc(db, 'forums', forumId);
+  //     await updateDoc(forumRef, {
+  //       members: arrayRemove(userId),
+  //     });
+  //     toast.success(`User ${userId} has been kicked from the forum.`);
+  //     setForums((prevForums) =>
+  //       prevForums.map((forum) =>
+  //         forum.id === forumId
+  //           ? { ...forum, members: forum.members.filter((member: string) => member !== userId) }
+  //           : forum
+  //       )
+  //     );
+  //   } catch (error) {
+  //     console.error('Error kicking user:', error);
+  //     toast.error('Failed to kick the user. Please try again.');
+  //   }
+  // };
 
   const openModal = (forum: any) => {
     setSelectedForum(forum);
@@ -189,16 +189,17 @@ const ForumReports = () => {
 
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
+      <div className="max-w-full overflow-x-auto">
       <h1 className="text-2xl font-bold mb-6">Forum Reports</h1>
       <table className="w-full table-auto">
         <thead>
           <tr className="bg-gray-2 text-left dark:bg-meta-4">
             <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">Forum Title</th>
             <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">Author</th>
-            <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">Forum Reports</th>
-            <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">Post Reports</th>
-            <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">Comment Reports</th>
-            <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">Action</th>
+            <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-5">Forum Reports</th>
+            <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-4">Post Reports</th>
+            <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-4">Comment Reports</th>
+            <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-14">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -210,7 +211,7 @@ const ForumReports = () => {
               <td className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">{forum.totalPostReports}</td>
               <td className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">{forum.totalCommentReports}</td>
               <td className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">
-                <button onClick={() => openModal(forum)} className="text-blue-500 hover:underline">
+                <button onClick={() => openModal(forum)} className="text-primary rounded-md hover:bg-primary hover:text-white hover:shadow-md hover:shadow-primary/50 px-2">
                   Members
                 </button>
               </td>
@@ -248,14 +249,14 @@ const ForumReports = () => {
             <ul>
               {selectedForum.members && selectedForum.members.length > 0 ? (
                 selectedForum.members.map((memberId: string) => (
-                  <li key={memberId} className="flex justify-between items-center p-3 rounded-lg border border-gray-300 hover:bg-gray-100">
+                  <li key={memberId} className="flex justify-between items-center p-3 ">
                     <span>{userData[memberId]?.name || 'Unknown User'}</span>
-                    <button
-                      onClick={() => handleKickUser(selectedForum.id, memberId)}
-                      className="text-danger rounded-md hover:bg-danger hover:text-white transition-all hover:shadow-md hover:shadow-danger/50 duration-200 px-2"
-                    >
-                      Kick
-                    </button>
+                      {/* <button
+                        onClick={() => handleKickUser(selectedForum.id, memberId)}
+                        className="text-danger rounded-md hover:bg-danger hover:text-white transition-all hover:shadow-md hover:shadow-danger/50 duration-200 px-2"
+                      >
+                        Kick
+                      </button> */}
                   </li>
                 ))
               ) : (
@@ -273,6 +274,7 @@ const ForumReports = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
