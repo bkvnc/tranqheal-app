@@ -13,7 +13,6 @@ const PendingApplicationTable = () => {
     const [applicants, setApplicants] = useState<Application[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const [searchTerm, setSearchTerm] = useState<string>("");
     const pendingsPerPage = 5;
 
     useEffect(() => {
@@ -55,7 +54,7 @@ const PendingApplicationTable = () => {
                 const organizationRef = collection(db,  `organizations/${currentUser.uid}/applications`,);
                 const applicationQuery = query(
                     organizationRef,
-                    where('pending' , '==', true)
+                    where('pending', '==', true)
                 );
                 const applicationSnapshot = await getDocs(applicationQuery);
                 const pendingApplications = applicationSnapshot.docs.map(doc => {
@@ -181,14 +180,12 @@ const PendingApplicationTable = () => {
         }
     };
 
-    const filteredPending = applicants.filter(application =>
-        application.applicantName?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+ 
 
     const indexOfLastPending = currentPage * pendingsPerPage;
     const indexOfFirstPending = indexOfLastPending - pendingsPerPage;
-    const currentPending = filteredPending.slice(indexOfFirstPending, indexOfLastPending);
-    const totalPages = Math.ceil(filteredPending.length / pendingsPerPage);
+    const currentPending = applicants.slice(indexOfFirstPending, indexOfLastPending);
+    const totalPages = Math.ceil(applicants.length / pendingsPerPage);
 
     return (
         <>
@@ -200,22 +197,7 @@ const PendingApplicationTable = () => {
                         </h4>
                     </div>
 
-                    {/* Search Input */}
-                    <div className="flex items-center mb-3">
-                        <input
-                            type="text"
-                            placeholder="Search post by title or author"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-100 rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-                        />
-                        <Link
-                            to="#"
-                            className="h-12 w-40 ml-4 inline-flex items-center justify-center rounded-md bg-[#9F4FDD] py-4 px-10 text-center font-medium text-white hover:bg-opacity-90 lg:px-8 xl:px-10"
-                        >
-                            Search
-                        </Link>
-                    </div>
+                  
 
                     
                     <table className="w-full table-auto">

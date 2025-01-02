@@ -18,41 +18,55 @@ const SignIn = () => {
   const handleSignIn = async (event: React.FormEvent) => {
     event.preventDefault();
     setAlert(null);
-
+  
     if (!validateEmail(email)) {
       setAlert({ type: 'error', message: 'Please enter a valid email address.' });
       return;
     }
-
+  
     if (password.length < 6) {
       setAlert({ type: 'error', message: 'Password must be at least 6 characters long.' });
       return;
     }
-
+  
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
+  
       const orgRef = doc(db, 'organizations', user.uid);
       const adminRef = doc(db, 'admins', user.uid);
-
+  
       const orgSnap = await getDoc(orgRef);
       const adminSnap = await getDoc(adminRef);
-
+  
+      let userDoc;
       if (orgSnap.exists()) {
-        await updateDoc(orgRef, { lastLogin: Timestamp.now() });
-        navigate('/'); // Navigate to organization dashboard
+        userDoc = orgSnap.data();
       } else if (adminSnap.exists()) {
-        await updateDoc(adminRef, { lastLogin: Timestamp.now() });
-        navigate('/'); // Navigate to admin dashboard
+        userDoc = adminSnap.data();
       } else {
         setAlert({ type: 'error', message: 'User not found. Please check your credentials.' });
+        return;
       }
+  
+      if (userDoc.userType !== 'admin' && userDoc.status !== 'Verified') {
+        setAlert({ type: 'error', message: 'Your account is not verified. Please check your email.' });
+        return;
+      }
+  
+  
+  
+      // Update last login timestamp
+      const userRef = orgSnap.exists() ? orgRef : adminRef;
+      await updateDoc(userRef, { lastLogin: Timestamp.now() });
+  
+      // Redirect user to the dashboard
+      navigate('/');
     } catch (error) {
       setAlert({ type: 'error', message: 'Failed to sign in. Please check your credentials.' });
     }
   };
-
+  
   return (
     <>
       <div className="min-h-screen rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">

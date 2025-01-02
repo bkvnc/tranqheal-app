@@ -10,7 +10,7 @@ const db = getFirestore();
 const storage = getStorage();
 
 const DEFAULT_PROFILE_PICTURE_PATH = '/defaultImages/defaultAva.png'; // Path in Firestore storage
-const DEFAULT_BACKGROUD_PICTURE = 'src/images/cover/cover-01.png';
+const DEFAULT_BACKGROUD_PICTURE = '/defaultImages/cover-01.png';
 
 type UserType = 'organization' | 'admin';
 
@@ -55,14 +55,15 @@ const Register: React.FC = () => {
 
     const [loading, setLoading] = useState<boolean>(false);
     const [profilePictureUrl, setProfilePictureUrl] = useState<string>('');
+    const [backgroundPictureUrl, setBackgroundPictureUrl] = useState<string>('');
 
-    // Fetch the default profile picture URL from Firebase Storage
+
     useEffect(() => {
         const fetchDefaultProfilePicture = async () => {
             try {
                 const profilePictureRef = ref(storage, DEFAULT_PROFILE_PICTURE_PATH);
                 const url = await getDownloadURL(profilePictureRef);
-                setProfilePictureUrl(url); // Store the URL in state
+                setProfilePictureUrl(url); 
             } catch (error) {
                 console.error('Error fetching profile picture:', error);
                 toast.error('Error fetching default profile picture.');
@@ -70,6 +71,21 @@ const Register: React.FC = () => {
         };
 
         fetchDefaultProfilePicture();
+    }, []);
+
+    useEffect(() => {
+        const fetchDefaultBackgroundPicture = async () => {
+            try {
+                const backgroundPictureRef = ref(storage, DEFAULT_BACKGROUD_PICTURE);
+                const url = await getDownloadURL(backgroundPictureRef);
+                setBackgroundPictureUrl(url); 
+            } catch (error) {
+                console.error('Error fetching background picture:', error);
+                toast.error('Error fetching default background picture.');
+            }
+        };
+
+        fetchDefaultBackgroundPicture();
     }, []);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -84,7 +100,7 @@ const Register: React.FC = () => {
         e.preventDefault();
         setLoading(true);
 
-        // Validation checks
+     
         if (formData.password !== formData.confirmPassword) {
             toast.error("Passwords don't match");
             setLoading(false);
@@ -126,7 +142,8 @@ const Register: React.FC = () => {
                 userType: formData.userType,
                 createdAt: serverTimestamp(),
                 profilePicture: profilePictureUrl || '', 
-                backgroundPicture: DEFAULT_BACKGROUD_PICTURE,
+                backgroundPicture: backgroundPictureUrl || '',
+                status: 'Unverified',
             };
 
             if (formData.userType === 'organization') {
@@ -135,17 +152,17 @@ const Register: React.FC = () => {
                 userData.adminName = formData.adminName;
             }
 
-            // Determine the collection name based on user type
+       
             const collectionName: 'organizations' | 'admins' =
                 formData.userType === 'organization' ? 'organizations' : 'admins';
 
-            // Save the user data to Firestore
+         
             await setDoc(doc(db, collectionName, user.uid), userData);
 
-            // Show success toast
-            toast.success('Registration successful! Please check your email to verify your account.');
+           
+            toast.success('Registration successful! Please let the organization check their email to verify their account.');
 
-            // Optionally, redirect user to login page or show additional instructions
+         
         } catch (error: any) {
             let errorMessage = 'An unknown error occurred';
 
@@ -170,6 +187,9 @@ const Register: React.FC = () => {
 
         setLoading(false);
     };
+
+    
+
 
     return (
         <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">

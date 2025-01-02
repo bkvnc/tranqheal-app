@@ -127,7 +127,7 @@ const handleSuspendUser = async () => {
       status: 'suspended',
     });
 
-    // Add to notification (same as before)
+
     const notificationRef = doc(
       collection(db, `notifications/${reportData.authorId}/messages`)
     );
@@ -140,11 +140,11 @@ const handleSuspendUser = async () => {
       isRead: false,
     });
 
-    // Delete the report
-    const reportRef = getReportRef();
-    batch.delete(reportRef);  // Delete the report after suspension
 
-    // Commit batch operations
+    const reportRef = getReportRef();
+    batch.delete(reportRef); 
+
+    
     await batch.commit();
 
     // Success

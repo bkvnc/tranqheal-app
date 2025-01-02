@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import dayjs from 'dayjs';
+import { toast } from 'react-toastify';
 
 interface SuspendedUser {
   id: string;
@@ -77,6 +78,39 @@ const SuspendedUsers: React.FC = () => {
     };
   }, []);
 
+  const handleUnsuspend = async (userId: string) => {
+    try {
+      const user = suspendedUsers.find((user) => user.id === userId);
+      if (!user) {
+        toast.error("User not found.");
+        return;
+      }
+  
+      const forumId = user.forumId;
+      if (!forumId) {
+        toast.error("Forum ID not found.");
+        return;
+      }
+  
+   
+      if (user.suspendedUntil && new Date() < user.suspendedUntil) {
+        toast.warning("User's suspension period has not yet expired.");
+        return;
+      }
+  
+      const suspendedUserDoc = doc(db, `forums/${forumId}/suspendedUsers`, userId);
+  
+      await deleteDoc(suspendedUserDoc);
+ 
+      toast.success(`User "${user.authorName}" has been unsuspended.`);
+    } catch (error) {
+      console.error('Error unsuspending user:', error);
+      toast.error('Failed to unsuspend user. Please try again.');
+    }
+  };
+  
+  
+
   const indexOfLastSuspended = currentPage * suspendedPerPage;
   const indexOfFirstSuspended = indexOfLastSuspended - suspendedPerPage;
   const currentBan = suspendedUsers.slice(indexOfFirstSuspended,indexOfLastSuspended);
@@ -101,6 +135,7 @@ const SuspendedUsers: React.FC = () => {
               <th className="px-4 text-black dark:text-white">Reason</th>
               <th className="px-4 text-black dark:text-white">Suspended At</th>
               <th className="px-4 text-black dark:text-white">Until</th>
+              <th className="px-4 text-black dark:text-white">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -114,6 +149,14 @@ const SuspendedUsers: React.FC = () => {
                 <td className="whitespace-nowrap px-4 py-3.5 dark:text-white">
                   {user.suspendedUntil ? dayjs(user.suspendedUntil).format('YYYY-MM-DD HH:mm:ss') : 'N/A'}
                 </td>
+                <button
+                  onClick={() => handleUnsuspend(user.id)}
+                  className="py-2 px-4 text-success hover:bg-success hover:text-white hover:shadow-lg hover:shadow-success/50 rounded-md"
+                >
+                  Unsuspend
+                </button>
+
+
               </tr>
             ))}
           </tbody>

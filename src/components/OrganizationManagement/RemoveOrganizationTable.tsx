@@ -125,9 +125,9 @@ const RemoveOrganizationTable = () => {
                 <th className="min-w-[150px] py-4 px-4 font-medium text-black dark:text-white cursor-pointer">
                   Last Logged In
                 </th>
-                {/* <th className="min-w-[150px] py-4 px-4 font-medium text-black dark:text-white cursor-pointer">
+                <th className="min-w-[150px] py-4 px-4 font-medium text-black dark:text-white cursor-pointer">
                   Status
-                </th> */}
+                </th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
               </tr>
             </thead>
@@ -156,17 +156,17 @@ const RemoveOrganizationTable = () => {
                         {org.lastLogin ? dayjs(org.lastLogin).format("DD/MM/YYYY HH:mm") : "N/A"}
                       </p>
                     </td>
-                    {/* <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                      {org.status === "active" ? (
+                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                      {org.status === "Verified" ? (
                         <p className="inline-flex rounded-full bg-success bg-opacity-10 py-1 px-3 text-sm font-medium text-success">
-                          Active
+                          Verified
                         </p>
                       ) : (
                         <p className="inline-flex rounded-full bg-danger bg-opacity-10 py-1 px-3 text-sm font-medium text-danger">
-                          Inactive
+                          Unverified
                         </p>
                       )}
-                    </td> */}
+                    </td>
                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                       <button className="text-danger hover:bg-danger hover:text-white rounded-md px-2 hover:shadow-lg hover:shadow-danger/50 ml-2" onClick={() => handleDeleteOrganization(org.orgId)}>
                         Delete

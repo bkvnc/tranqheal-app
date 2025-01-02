@@ -49,6 +49,7 @@ const DropdownNotification = () => {
             createdAt: doc.data().createdAt.toDate(), 
             isRead: doc.data().isRead || false,
             type: doc.data().type,
+            destination: doc.data().destination
           }));
 
           setNotifications(userNotifications);
@@ -82,7 +83,7 @@ const DropdownNotification = () => {
     if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
     
-    // If more than a day ago, return the full date
+ 
     return date.toLocaleDateString();
   };
 
@@ -200,7 +201,8 @@ const DropdownNotification = () => {
               <li key={message.id}>
                 <Link
                   className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
-                  to="#"
+                  to={message.destination}
+                  onClick={() => handleMarkAsRead(message.id)}
                 >
                   <p className="text-sm text-black dark:text-white">{message.message}</p>
                   <span className="text-xs text-bodydark2">

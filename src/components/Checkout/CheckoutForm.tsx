@@ -435,7 +435,7 @@ const handleRedirectPayment = async () => {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-blue-600 text-[#9F4FDD] hover:text-white py-2 px-4 rounded-lg hover:bg-[#9F4FDD] transition-colors disabled:bg-blue-300"
+        className="w-full  text-[#9F4FDD] hover:text-white hover:shadow-lg hover:shadow-[#9F4FDD]/50 py-2 px-4 rounded-lg hover:bg-[#9F4FDD] transition-colors disabled:bg-blue-300"
       >
         {loading ? 'Processing...' : `Pay ₱${plan.price.toLocaleString()}`}
       </button>

@@ -74,10 +74,14 @@ const ManageForumTable = () => {
 
     
           
-            const filteredForums = forums.filter(forum =>
-                forum.authorName && forum.authorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                forum.title && forum.title.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+          
+            const filteredForums = forums.filter(forum => {
+                const lowerCaseSearch = searchTerm.trim().toLowerCase();
+                return (
+                    forum.authorName?.toLowerCase().includes(lowerCaseSearch) || 
+                    forum.title?.toLowerCase().includes(lowerCaseSearch)
+                );
+            });
 
 
     // Pagination logic

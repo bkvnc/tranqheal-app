@@ -44,6 +44,10 @@ const useForum = (forumId: string) => {
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [hasImage, setHasImage] = useState<boolean>(false);
+    const [editingPostId, setEditingPostId] = useState<string | null>(null);
+    const [editedTitle, setEditedTitle] = useState<string>('');
+    const [editedContent, setEditedContent] = useState<string>('');
+    const [editedImage, setEditedImage] = useState<File | null>(null);
   
 
     const fetchForumById = async (forumId: string) => {
@@ -262,6 +266,80 @@ const useForum = (forumId: string) => {
         const regex = new RegExp(`\\b(${blacklistedWords.join('|')})\\b`, 'gi');
         return content.replace(regex, (match) => `<span style="color:red;">${match}</span>`);
     };
+
+    const handleEditPost = async (
+        postId: string,
+        updatedTitle: string,
+        updatedContent: string,
+        updatedImage: string | null // Corrected type
+    ) => {
+        if (!auth.currentUser) {
+            toast.error('Please log in to edit the post.');
+            return;
+        }
+    
+        if (!forum) {
+            toast.error('Forum data not found.');
+            return;
+        }
+    
+        if (containsBlacklistedWords(updatedContent, blacklistedWords)) {
+            toast.error('Your post contains inappropriate language.');
+            return;
+        }
+    
+        try {
+            const user = auth.currentUser;
+            const postRef = doc(db, 'forums', forum.id, 'posts', postId);
+            const postDoc = await getDoc(postRef);
+    
+            // Check if the post exists
+            if (!postDoc.exists()) {
+                toast.error('Post not found.');
+                return;
+            }
+    
+            const postData = postDoc.data();
+    
+            // Ensure the user is the author of the post
+            if (!postData.authorId || postData.authorId !== user.uid) {
+                toast.error('You are not authorized to edit this post.');
+                return;
+            }
+    
+            // Use the updated image URL if it exists
+            let imageUrl = postData.imageUrl || null;
+            if (updatedImage) {
+                imageUrl = updatedImage; // This will be the new image URL from Firebase
+            }
+    
+            // Update the post in Firestore
+            await updateDoc(postRef, {
+                title: updatedTitle,
+                content: updatedContent,
+                imageUrl: imageUrl,
+                lastUpdated: serverTimestamp(),
+            });
+    
+            // Update the local posts state
+            setPosts((prevPosts) =>
+                prevPosts.map((post) =>
+                    post.id === postId
+                        ? { ...post, title: updatedTitle, content: updatedContent, imageUrl, lastUpdated: new Date() }
+                        : post
+                )
+            );
+    
+            toast.success('Post updated successfully.');
+        } catch (error: any) {
+            console.error('Error editing post:', error);
+            toast.error(`Failed to edit post: ${error.message || 'An unknown error occurred.'}`);
+        }
+    };
+    
+    
+    
+    
     
     // Function to handle changes in the post title
     const handlePostTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -365,7 +443,7 @@ const useForum = (forumId: string) => {
                 dateCreated: Timestamp.fromDate(new Date()),
                 authorId: user.uid,
                 forumId: forum.id,
-                status: 'pending',
+                status: 'approved',
                 title: postTitle,
                 hasImage: hasImage,
                 reacted: 0,
@@ -387,36 +465,12 @@ const useForum = (forumId: string) => {
                 totalPosts: increment(1)
             });
     
-            const forumRef = doc(db, 'forums', forum.id);
-            const postSnap = await getDoc(forumRef);
-    
-            const notificationRef = doc(collection(db, `notifications/${postSnap.data().authorId}/messages`));
-            await setDoc(notificationRef, {
-                recipientId: postSnap.data().authorId,
-                recipientType: postSnap.data().authorType,
-                message: `${authorName} has submitted a new post for review.`,
-                type: `post_review`,
-                createdAt: serverTimestamp(),
-                isRead: false,
-                additionalData: {
-                    postId: newPostRef.id,
-                    forumId: forumId,
-                },
-            });
-    
-            const notificationDoc = await getDoc(notificationRef);
-            const notificationData = notificationDoc.data();
-    
-            if (notificationData && notificationData.createdAt) {
-                const createdAtDate = notificationData.createdAt.toDate();
-                console.log("Notification createdAt:", createdAtDate);
-            }
     
             setPostContent('');
             setPostTitle('');
             setSelectedImage(null);
             setImagePreview(null);
-            toast.success('Post submitted for review successfully.');
+            
             
         } catch (error: any) {
             console.error('Post creation error:', error);
@@ -463,6 +517,63 @@ const useForum = (forumId: string) => {
         }
     };
 
+    const startEditingPost = (post: { id: string; title: string; content: string }) => {
+        const confirmDelete = window.confirm("Are you sure you want to edit this post?");
+        if (!confirmDelete) return;
+    
+        try {
+            setEditingPostId(post.id);
+            setEditedTitle(post.title);
+            setEditedContent(post.content);
+        } catch (error) {
+            console.error("Error starting post editing:", error);
+            toast.error("Failed to start editing post");
+        }
+    };
+    
+
+    const cancelEditingPost = () => {
+        setEditingPostId(null);
+        setEditedTitle('');
+        setEditedContent('');
+    };
+
+    const submitEditPost = async (e: React.FormEvent) => {
+        e.preventDefault();
+    
+        // If an image is selected, upload it to Firebase and get the URL
+        let imageUrl: string | null = null;
+        if (selectedImage) {
+            try {
+                const storage = getStorage();
+                const imageRef = storageRef(
+                    storage,
+                    `forums/posts/${forum.id}/${Date.now()}_${selectedImage.name}`
+                );
+                await uploadBytes(imageRef, selectedImage); // Upload the selected image
+                imageUrl = await getDownloadURL(imageRef); // Get the image URL from Firebase Storage
+            } catch (error) {
+                toast.error('Failed to upload image.');
+                return;
+            }
+        }
+    
+        // Now call handleEditPost and pass imageUrl (a string)
+        await handleEditPost(editingPostId, editedTitle, editedContent, imageUrl);
+    
+        // Close the edit form by setting editingPostId to null
+        setEditingPostId(null); // This will close the edit form
+    };
+    
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files ? e.target.files[0] : null;
+        if (file) {
+            setSelectedImage(file);
+        }
+    };
+    
+
     return {
         forum,
         posts,
@@ -493,6 +604,19 @@ const useForum = (forumId: string) => {
         handleImageChange,
         imagePreview,
         setSelectedImage,
+        handleEditPost,
+        editingPostId,
+        selectedImage,
+        editedTitle,
+        editedContent,
+        startEditingPost,
+        cancelEditingPost,
+        submitEditPost,
+        setEditingPostId,
+        setEditedTitle,
+        setEditedContent,
+        handleImageUpload,
+
     };
 };
 
