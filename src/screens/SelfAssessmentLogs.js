@@ -191,10 +191,10 @@ export const SelfAssessmentLogs = ({ navigation }) => {
                   <>
                     <Text style={styles.modalText}>
                       Matched Professional: 
-                      <TouchableOpacity onPress={() => navigation.navigate('ProfessionalDetails', { professionalId: selectedLog.professional.id })}>
-                        <Text style={styles.profName}>{selectedLog.professional.fullName}</Text>
-                      </TouchableOpacity>
                     </Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('ProfessionalDetails', { professionalId: selectedLog.professional.id })}>
+                      <Text style={styles.profName}>{selectedLog.professional.fullName}</Text>
+                    </TouchableOpacity>
                   </>
                 )}
                 <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
@@ -313,7 +313,6 @@ const styles = StyleSheet.create({
   },
   profName: {
     fontSize: 18,
-    marginBottom: 10,
     color: Colors.purple,
     textDecorationLine: 'underline',
   },
