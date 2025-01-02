@@ -32,6 +32,11 @@ export const EditProfileScreen = ({ navigation, route }) => {
       return;
     }
 
+    if(age < 16){
+      alert('Enter a valid age.');
+      return;
+    }
+
     const profileData = {
       firstName,
       middleName,

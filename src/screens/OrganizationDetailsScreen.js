@@ -108,7 +108,9 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
     days = {}, 
     address,
   } = organizationData || {};
-  const daysArray = Object.values(days);
+
+  const predefinedOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const daysArray = Object.values(days || {}).sort((a, b) => predefinedOrder.indexOf(a) - predefinedOrder.indexOf(b));
 
   
   const convertTo12HourFormat = (time24) => {
@@ -151,7 +153,7 @@ export const OrganizationDetailsScreen = ({ navigation, route }) => {
 
         <View style={styles.card}>
           <Text style={styles.detailsTitle}>Days Available:</Text>
-          {formatBulletedList(daysArray, 4)}
+          {formatBulletedList(daysArray, 7)}
         </View>
         
         {userType === 'professional' && !profileData?.underOrg && (

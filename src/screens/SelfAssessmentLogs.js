@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, Modal, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RootLayout } from '../navigation/RootLayout';
 import { Colors, firestore, auth } from '../config';
 import { AuthenticatedUserContext } from '../providers';
-import { collection, getDocs, query, where, orderBy, writeBatch, doc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, writeBatch, doc, getDoc } from 'firebase/firestore';
 import { LoadingIndicator } from '../components';
 
 export const SelfAssessmentLogs = ({ navigation }) => {
@@ -13,6 +13,7 @@ export const SelfAssessmentLogs = ({ navigation }) => {
   const [isloading, setIsLoading] = useState(true);
   const [ modalVisible, setModalVisible ] = useState(false);
   const [ selectedLog, setSelectedLog ] = useState(null);
+  const [ prof, setProf] = useState(null);
 
   const fetchSelfAssessmentLogs = async () => {
     const currentUser = auth.currentUser;
@@ -24,13 +25,44 @@ export const SelfAssessmentLogs = ({ navigation }) => {
 
     try {
       const querySnapshot = await getDocs(selfAssessmentQuery);
-      const logs = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const logs = await Promise.all(
+        querySnapshot.docs.map(async (doc) => {
+          const logData = { id: doc.id, ...doc.data() };
+          if (logData.seekProf && logData.profId) {
+            const professional = await fetchProfessionalData(logData.profId);
+            logData.professional = professional; 
+          }
+          return logData;
+        })
+      );
       setSelfAssessments(logs);
     } catch (error) {
       console.error('Error fetching self-assessment logs:', error);
       Alert.alert('Error', 'There was an error fetching your self-assessment logs.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchProfessionalData = async (profId) => {
+    try {
+      const profRef = doc(firestore, `professionals`, profId);
+      const profSnapshot = await getDoc(profRef);
+      if (profSnapshot.exists()) {
+        const profData = profSnapshot.data();
+
+        const fullName = [
+          profData.firstName,
+          profData.middleName,
+          profData.lastName
+        ].filter(Boolean).join(' ');
+        
+        return { id: profId, fullName, ...profSnapshot.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching professional data:', error);
+      return null;
     }
   };
 
@@ -109,12 +141,12 @@ export const SelfAssessmentLogs = ({ navigation }) => {
                       {new Date(item.createdAt.toDate()).toLocaleDateString()}
                     </Text>
                     <View style={styles.scoreRow}>
-                    <Text style={styles.logLabel}>PHQ-9:</Text>
-                    <Text style={styles.logValue}>{item.phq9Total || '0'}</Text>
-                    <Text style={styles.logLabel}>GAD-7:</Text>
-                    <Text style={styles.logValue}>{item.gad7Total || '0'}</Text>
-                    <Text style={styles.logLabel}>PSS:</Text>
-                    <Text style={styles.logValue}>{item.pssTotal || '0'}</Text>
+                      <Text style={styles.logLabel}>PHQ-9:</Text>
+                      <Text style={styles.logValue}>{item.phq9Total || '0'}</Text>
+                      <Text style={styles.logLabel}>GAD-7:</Text>
+                      <Text style={styles.logValue}>{item.gad7Total || '0'}</Text>
+                      <Text style={styles.logLabel}>PSS:</Text>
+                      <Text style={styles.logValue}>{item.pssTotal || '0'}</Text>
                     </View>
                   </View>
               </TouchableOpacity>
@@ -155,6 +187,16 @@ export const SelfAssessmentLogs = ({ navigation }) => {
                 <Text style={styles.modalText}>
                   Interpretation: {selectedLog.pssInterpretation || 'N/A'}
                 </Text>
+                {selectedLog.professional && (
+                  <>
+                    <Text style={styles.modalText}>
+                      Matched Professional: 
+                      <TouchableOpacity onPress={() => navigation.navigate('ProfessionalDetails', { professionalId: selectedLog.professional.id })}>
+                        <Text style={styles.profName}>{selectedLog.professional.fullName}</Text>
+                      </TouchableOpacity>
+                    </Text>
+                  </>
+                )}
                 <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
                   <Text style={styles.closeButtonText}>Close</Text>
                 </TouchableOpacity>
@@ -269,4 +311,11 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
+  profName: {
+    fontSize: 18,
+    marginBottom: 10,
+    color: Colors.purple,
+    textDecorationLine: 'underline',
+  },
+  
 });
