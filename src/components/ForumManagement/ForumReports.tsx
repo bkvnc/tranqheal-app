@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, doc, getDocs, updateDoc, arrayRemove, getDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, updateDoc, arrayRemove, getDoc,setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase'; // Adjust the import based on your setup
 import toast from 'react-hot-toast';
 
@@ -83,25 +83,52 @@ const ForumReports = () => {
     fetchReports();
   }, []);
 
-  // const handleKickUser = async (forumId: string, userId: string) => {
-  //   try {
-  //     const forumRef = doc(db, 'forums', forumId);
-  //     await updateDoc(forumRef, {
-  //       members: arrayRemove(userId),
-  //     });
-  //     toast.success(`User ${userId} has been kicked from the forum.`);
-  //     setForums((prevForums) =>
-  //       prevForums.map((forum) =>
-  //         forum.id === forumId
-  //           ? { ...forum, members: forum.members.filter((member: string) => member !== userId) }
-  //           : forum
-  //       )
-  //     );
-  //   } catch (error) {
-  //     console.error('Error kicking user:', error);
-  //     toast.error('Failed to kick the user. Please try again.');
-  //   }
-  // };
+  const handleKickUser = async (forumId: string, userId: string) => {
+    const confirmKick = window.confirm(
+      `Are you sure you want to kick the user with ID ${userId} from this forum?`
+    );
+  
+    if (!confirmKick) {
+      return; // Exit the function if the user cancels
+    }
+  
+    try {
+      const forumRef = doc(db, 'forums', forumId);
+      await updateDoc(forumRef, {
+        members: arrayRemove(userId),
+      });
+  
+      toast.success(`User ${userId} has been kicked from the forum.`);
+  
+      // Update the selectedForum state to refresh the modal content
+      setSelectedForum((prevForum: any) => ({
+        ...prevForum,
+        members: prevForum.members.filter((member: string) => member !== userId),
+      }));
+
+      
+              const forumSnap = await getDoc(forumRef );
+
+      const notificationRef = doc(collection(db, `notifications/${forumSnap.data().authorId}/messages`));
+              await setDoc(notificationRef, {
+                  recipientId: forumSnap.data().authorId,
+                  recipientType: forumSnap.data().authorType,  
+                  message: `You have been kicked from the " ${forumSnap.data().title} " forum .`,
+                  type: `react_post`,
+                  createdAt: serverTimestamp(), 
+                  isRead: false,
+                  additionalData: {
+                      forumId: forumId,
+                  },
+              });
+
+    } catch (error) {
+      console.error('Error kicking user:', error);
+      toast.error('Failed to kick the user. Please try again.');
+    }
+  };
+  
+  
 
   const openModal = (forum: any) => {
     setSelectedForum(forum);
@@ -199,7 +226,7 @@ const ForumReports = () => {
             <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-5">Forum Reports</th>
             <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-4">Post Reports</th>
             <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-4">Comment Reports</th>
-            <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-14">Action</th>
+            {/* <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-14">Action</th> */}
           </tr>
         </thead>
         <tbody>
@@ -210,11 +237,11 @@ const ForumReports = () => {
               <td className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">{forum.forumReportCount}</td>
               <td className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">{forum.totalPostReports}</td>
               <td className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">{forum.totalCommentReports}</td>
-              <td className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">
+              {/* <td className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">
                 <button onClick={() => openModal(forum)} className="text-primary rounded-md hover:bg-primary hover:text-white hover:shadow-md hover:shadow-primary/50 px-2">
                   Members
                 </button>
-              </td>
+              </td> */}
             </tr>
           ))}
         </tbody>
@@ -242,38 +269,39 @@ const ForumReports = () => {
       </div>
 
       {/* Modal */}
-      {isModalOpen && selectedForum && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md mx-4 sm:mx-0">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Forum Members</h2>
-            <ul>
-              {selectedForum.members && selectedForum.members.length > 0 ? (
-                selectedForum.members.map((memberId: string) => (
-                  <li key={memberId} className="flex justify-between items-center p-3 ">
-                    <span>{userData[memberId]?.name || 'Unknown User'}</span>
-                      {/* <button
-                        onClick={() => handleKickUser(selectedForum.id, memberId)}
-                        className="text-danger rounded-md hover:bg-danger hover:text-white transition-all hover:shadow-md hover:shadow-danger/50 duration-200 px-2"
-                      >
-                        Kick
-                      </button> */}
-                  </li>
-                ))
-              ) : (
-                <li>No members found.</li>
-              )}
-            </ul>
-            <div className="mt-6 flex justify-end">
-                    <button
-                    onClick={closeModal}
-                    className="px-6 py-2 text-primary hover:bg-primary hover:text-white rounded-md hover:shadow-md hover:shadow-primary/50 focus:outline-none transition-all duration-200"
-                    >
-                    Close
-                    </button>
-                </div>
+          {isModalOpen && selectedForum && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg w-full max-w-md mx-4 sm:mx-0">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Forum Members</h2>
+          <ul>
+            {selectedForum.members && selectedForum.members.length > 0 ? (
+              selectedForum.members.map((memberId: string) => (
+                <li key={memberId} className="flex justify-between items-center p-3 ">
+                  <span>{userData[memberId]?.name || 'Unknown User'}</span>
+                  <button
+                    onClick={() => handleKickUser(selectedForum.id, memberId)}
+                    className="text-danger rounded-md hover:bg-danger hover:text-white transition-all hover:shadow-md hover:shadow-danger/50 duration-200 px-2"
+                  >
+                    Kick
+                  </button>
+                </li>
+              ))
+            ) : (
+              <li>No members found.</li>
+            )}
+          </ul>
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={closeModal}
+              className="px-6 py-2 text-primary hover:bg-primary hover:text-white rounded-md hover:shadow-md hover:shadow-primary/50 focus:outline-none transition-all duration-200"
+            >
+              Close
+            </button>
           </div>
         </div>
-      )}
+      </div>
+    )}
+
       </div>
     </div>
   );

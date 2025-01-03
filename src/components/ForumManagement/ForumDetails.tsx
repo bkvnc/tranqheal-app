@@ -3,10 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { toast } from 'react-toastify'; // Import toast
 import useForum from '../../hooks/useForum';
 import dayjs from 'dayjs';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, getDoc, doc } from 'firebase/firestore';
 import { highlightText } from '../../hooks/hightlightText';
 import { getBlacklistedWords } from '../../hooks/getBlacklistedWords';
-import { getAuth } from 'firebase/auth';
+import { getAuth, } from 'firebase/auth';
+import { db, auth } from '../../config/firebase';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import '../../styles.css';
@@ -19,6 +20,20 @@ import '../../styles.css';
 const ForumDetailsPage: React.FC = () => {
     const { forumId } = useParams<{ forumId: string }>();
     const [showPostForm, setShowPostForm] = useState<boolean>(false);
+    const [userType, setUserType] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchUserType = async () => {
+            if (auth.currentUser) {
+                const userDocRef = doc(db, 'organizations', auth.currentUser.uid); 
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    setUserType(userDoc.data()?.userType || null);
+                }
+            }
+        };
+        fetchUserType();
+    }, []);
     
 
 
@@ -360,12 +375,14 @@ const ForumDetailsPage: React.FC = () => {
                                                     >
                                                         Edit
                                                     </button>
-                                                    <button 
-                                                        onClick={() => handleDeletePost(post.id)} 
-                                                        className="mt-2 text-danger hover:text-white hover:bg-danger hover:bg-opacity-90 px-4 py-2 rounded-md hover:shadow-lg hover:shadow-danger/50 transition"
-                                                    >
-                                                        Delete
-                                                    </button>
+                                                   
+                                                        <button 
+                                                            onClick={() => handleDeletePost(post.id)} 
+                                                            className="mt-2 text-danger hover:text-white hover:bg-danger hover:bg-opacity-90 px-4 py-2 rounded-md hover:shadow-lg hover:shadow-danger/50 transition"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    
                                                 </div>
                                             )}  
                         </div>
