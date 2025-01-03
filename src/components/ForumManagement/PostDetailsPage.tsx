@@ -54,6 +54,20 @@ const PostDetailsPage: React.FC = () => {
         setBlacklistedWords,
         isMember, 
     } = useForum(forumId);
+    const [userType, setUserType] = useState<string | null>(null);
+
+useEffect(() => {
+    const fetchUserType = async () => {
+        if (auth.currentUser) {
+            const userDocRef = doc(db, 'organizations', auth.currentUser.uid); // Adjust collection name
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                setUserType(userDoc.data()?.userType || null);
+            }
+        }
+    };
+    fetchUserType();
+}, []);
 
     const isPostAuthor = post?.authorId === auth.currentUser?.uid;
     const isCommentAuthor = (comment: Comment) => comment.authorId === auth.currentUser?.uid;
@@ -425,20 +439,51 @@ const PostDetailsPage: React.FC = () => {
     
 
     const handleDeleteComment = async (forumId: string, postId: string, commentId: string) => {
-
         const confirmDelete = window.confirm("Are you sure you want to delete this comment?");
         if (!confirmDelete) {
             return; 
         }
     
-  
         const commentDocRef = doc(db, 'forums', forumId, 'posts', postId, 'comments', commentId);
+    
         try {
+            // Fetch the comment document to get the author's ID
+            const commentDocSnap = await getDoc(commentDocRef);
+            if (!commentDocSnap.exists()) {
+                throw new Error('Comment not found');
+            }
+    
+            const commentData = commentDocSnap.data();
+            const commentAuthorId = commentData.authorId;
+            const commentAuthorType = commentData.authorType;
+    
+            // Delete the comment
             await deleteDoc(commentDocRef);
+    
+            // If the current user is an organization, send a notification
+            if (userType === 'organization') {
+                const notificationRef = doc(collection(db, `notifications/${commentAuthorId}/messages`));
+                              await setDoc(notificationRef, {
+                                  recipientId: commentAuthorId,
+                                  recipientType: commentAuthorType,  
+                                  message: `Your comment has been removed by a Mental Health Organization as it was deemed inappropriate. `,
+                                  type: `react_post`,
+                                  createdAt: serverTimestamp(), 
+                                  isRead: false,
+                                  additionalData: {
+                                      forumId: forumId,
+                                  },
+                              });
+            }
+    
+            // Provide feedback to the user
+            toast.success("Comment deleted successfully!");
         } catch (error) {
             console.error('Failed to delete comment:', error);
+            toast.error("Failed to delete the comment. Please try again.");
         }
     };
+    
     
     const handleEditComment = (commentId: string, content: string) => {
         setEditCommentId(commentId);
@@ -819,22 +864,24 @@ const PostDetailsPage: React.FC = () => {
                        </div>
                 
                     
-                    {comment.authorId === auth.currentUser?.uid && (
-                        <div className="flex space-x-2 mt-2 ">
+                       {(comment.authorId === auth.currentUser?.uid || userType === 'organization') && (
                             <button
                                 onClick={() => handleDeleteComment(forumId, postId, comment.id)}
                                 className="mt-2 text-danger hover:text-white hover:bg-danger hover:bg-opacity-90 px-4 py-2 rounded-md hover:shadow-lg hover:shadow-danger/50 transition"
                             >
                                 Delete
                             </button>
+                        )}
+
+                        {/* Edit Button: Only the author can edit */}
+                        {comment.authorId === auth.currentUser?.uid && (
                             <button
                                 onClick={() => handleEditComment(comment.id, comment.content)}
                                 className="mt-2 text-primary hover:text-white hover:bg-primary hover:bg-opacity-90 px-4 py-2 rounded-md hover:shadow-lg hover:shadow-primary/50 transition"
                             >
                                 Edit
                             </button>
-                        </div>
-                    )}
+                        )}
                 </li>
             ))}
     </ul>

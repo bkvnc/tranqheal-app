@@ -47,7 +47,7 @@ const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose
   </CSSTransition>
 );
 
-const UserTable = () => {
+const SuspendTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [reportsPerPage] = useState(5);
   const [reports, setReports] = useState<Report[]>([]);
@@ -254,47 +254,36 @@ const UserTable = () => {
 
   const renderActions = (report: Report) => (
     <div className="flex items-center space-x-3.5">
-      {/* View Details Button */}
       <button onClick={() => setSelectedReport(report)}>View Details</button>
-      {selectedReport && (
-        <ReportDetailsModal report={selectedReport} onClose={() => setSelectedReport(null)} />
-      )}
-  
-      {/* Conditional Actions */}
+      {selectedReport && <ReportDetailsModal report={selectedReport} onClose={() => setSelectedReport(null)} />}
       {userData?.userType === 'admin' && (
         report.contentType === 'Forum' ? (
-          <button
-            onClick={() => handleRemoveForum(report.forumId)}
-            className="text-danger hover:bg-danger hover:text-white px-3 py-1 rounded-md"
-          >
+          <button onClick={() => handleRemoveForum(report.forumId)} className="text-danger hover:bg-danger hover:text-white px-3 py-1 rounded-md">
             Remove Forum
           </button>
         ) : (
-          <BanUserButton
-            forumId={report.forumId}
-            postId={report.postId || ''}
-            commentId={report.commentId || ''}
-            reportId={report.id}
-            adminId={user?.uid || ''}
-            onBan={() => handleBanUser(report.id)}
-          />
+          <>
+            <SuspendUserButton
+             forumId={report.forumId}
+             postId={report.postId || ''}
+             commentId={report.commentId || ''}
+             reportId={report.id}
+             adminId={user?.uid || ''}
+             organizationId=''
+             onSuspend={() => handleBanUser(report.id)}/>
+            <BanUserButton 
+              forumId={report.forumId}
+              postId={report.postId || ''}
+              commentId={report.commentId || ''}
+              reportId={report.id}
+              adminId={user?.uid || ''}
+              onBan={() => handleBanUser(report.id)}
+            />
+          </>
         )
-      )}
-  
-      {userData?.userType === 'organization' && (
-        <SuspendUserButton
-          forumId={report.forumId}
-          postId={report.postId || ''}
-          commentId={report.commentId || ''}
-          reportId={report.id}
-          adminId=''
-          organizationId={user?.uid || ''}
-          onSuspend={() => handleBanUser(report.id)}
-        />
       )}
     </div>
   );
-  
 
   const indexOfLastReport = currentPage * reportsPerPage;
   const indexOfFirstReport = indexOfLastReport - reportsPerPage;
@@ -358,4 +347,4 @@ const UserTable = () => {
   );
 };
 
-export default UserTable;
+export default SuspendTable;

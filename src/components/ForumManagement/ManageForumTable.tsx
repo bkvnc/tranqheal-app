@@ -127,10 +127,10 @@ const ManageForumTable = () => {
                             <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
                                 Posts
                             </th>
-                            <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
+                            {/* <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
                                 Reports
-                            </th>
-                            <th className="py-4 px-4 font-medium text-black dark:text-white">
+                            </th> */}
+                            <th className="py-4 px-4 font-medium text-black dark:text-white xl:pl-15">
                                 Actions
                             </th>
                         </tr>
@@ -154,15 +154,15 @@ const ManageForumTable = () => {
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <p className="text-black dark:text-white">{dayjs(forum.dateCreated).format('MMM D, YYYY')}</p>
                                     </td>
-                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark xl:pl-11">
                                         <p className="text-black dark:text-white">{forum.totalMembers}</p>
                                     </td>
-                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                                        <p className="text-black dark:text-white">{forum.totalPosts}</p>
+                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark xl:pl-8">
+                                        <p className="text-black dark:text-white ">{forum.totalPosts}</p>
                                     </td>
-                                    <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
+                                    {/* <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <p className="text-black dark:text-white">{forum.reportCount}</p>
-                                    </td>
+                                    </td> */}
                                    
                                     <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                                         <button className="mr-2 text-sm dark:text-white">

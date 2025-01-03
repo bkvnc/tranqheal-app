@@ -5,6 +5,8 @@
 
 
 import ForumReports from "../../../components/ForumManagement/ForumReports";
+import SuspendedUsers from "../../../components/Cards/BannedUserCards/SuspendedUsers";
+import UserTable from "../../../components/UserManagement/UserTable";
 
 const ViewForumReports = () => {
     return (
@@ -18,7 +20,14 @@ const ViewForumReports = () => {
 
             <div className="">
                 {/* ALL RESOURCES TABLE */}
-                <ForumReports  />
+                
+                <UserTable />
+               
+
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-2 2xl:gap-7.5 pt-2">
+            <ForumReports  />
+            <SuspendedUsers />
             </div>
         </>
     );

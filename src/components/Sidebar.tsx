@@ -473,7 +473,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen}: SidebarProps) => {
                                 (isActive && '!text-white')
                               }
                             >
-                              Forum Reports
+                              Reports
                             </NavLink>
                           </li>
                           <li>

@@ -20,6 +20,7 @@ interface SuspendButtonProps {
   commentId: string;
   reportId: string;
   adminId: string;
+  organizationId: string;
   onSuspend: (reportId: string) => Promise<void>;
 }
 
@@ -35,7 +36,7 @@ const SuspendButton: React.FC<SuspendButtonProps> = ({
   postId,
   commentId,
   reportId, 
-  adminId, 
+  organizationId,
   onSuspend 
 }) => {
   const [reason, setReason] = useState('');
@@ -86,7 +87,7 @@ const handleSuspendUser = async () => {
     return;
   }
 
-  if (!adminId) {
+  if (!organizationId) {
     toast.error('Admin ID is required');
     return;
   }
@@ -121,7 +122,7 @@ const handleSuspendUser = async () => {
       authorType: reportData.authorType,
       reportSource: source,
       suspendedAt: serverTimestamp(),
-      suspendedBy: adminId,
+      suspendedBy: organizationId,
       reason: reason.trim(),
       suspendedUntil,
       status: 'suspended',
