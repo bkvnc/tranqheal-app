@@ -200,6 +200,70 @@ export const ViewRequestScreen = ({ navigation }) => {
         console.error('Error declining request:', error);
       }
     };
+
+    const handleAccept = async (selectedRequest) => {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.error('No user or selected request found.');
+        return;
+      }  
+      
+      try {
+        const matchingRequestDocRef = doc(
+          firestore,
+          'professionals',
+          currentUser.uid,
+          'matchingRequests',
+          selectedRequest.id
+        );
+  
+        const acceptRequestDocRef = doc(
+          firestore,
+          'professionals',
+          currentUser.uid,
+          'acceptedRequests',
+          selectedRequest.id
+        );
+  
+        const requestHistoryRef = collection(
+          firestore,
+          'professionals',
+          currentUser.uid,
+          'requestHistory'
+        );
+  
+        const requestDocRef = doc(requestHistoryRef, selectedRequest.id);
+        await setDoc(requestDocRef, {
+          ...selectedRequest,
+          status: 'accepted',
+          acceptedAt: serverTimestamp(),
+        });
+  
+        await setDoc(acceptRequestDocRef, {
+          ...selectedRequest,
+          status: 'accepted',
+          acceptedAt: serverTimestamp(),
+        });
+  
+        const notificationRef = doc(
+          collection(firestore, `notifications/${selectedRequest.userId}/messages`)
+        );
+        await setDoc(notificationRef, {
+          recipientId: selectedRequest.userId,
+          message: `Your matching request has been accepted.`,
+          type: 'matching',
+          createdAt: serverTimestamp(),
+          isRead: false,
+        });
+  
+        await deleteDoc(matchingRequestDocRef);
+        console.log('Request accepted and added successfully!');
+        
+        fetchRequests();
+      } catch (error) {
+        console.error('Error accepting request:', error);
+      }
+    };
   
     const renderItem = ({ item }) => {
       const requestedAt = item.requestedAt?.toDate();

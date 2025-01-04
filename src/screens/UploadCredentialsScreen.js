@@ -127,7 +127,7 @@ export const UploadCredentialsScreen = ({ navigation, route }) => {
         message: `Your application for ${organizationName} has been submitted.`,
         createdAt: new Date(),
         isRead: false,
-        notificationType: 'Application',
+        notificationType: 'Application',        
       });
       console.log('Professional notification added successfully!');
 
